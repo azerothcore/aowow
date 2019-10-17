@@ -123,7 +123,8 @@ A: Some server configurations or external services (like Cloudflare) come with m
 A: Whenever you try to view a new character, AoWoW needs to fetch it first. Since the data is structured for the needs of TrinityCore and not for easy viewing, AoWoW needs to save and restructure it locally. To this end, every char request is placed in a queue. While the queue is not empty, a single instance of `prQueue` is run in the background as not to overwhelm the characters database with requests. This also means, some more exotic search queries can't be run agains the characters database and have to use the incomplete/outdated cached profiles of AoWoW.
 
 **Q: Failed to connect to database.**  
-A: check your file config in `www-aowow/config/config.php`, if everything is correct, check if your password has **"#"** character contained in the password and replace it with the *encoded (URL) character* correspondent **"%23"**, do the same for special characters if you still get this error.
+A: check your file config in `www-aowow/config/config.php`, if everything is correct, check if your password has **"#"** character contained in the password and replace it with the *encoded (URL) character* correspondent **"%23"**, do the same for special characters if you still get this error.  
+If you do not resolve, try to don't use **"#"** in your password.
 
 
 ## Thanks
