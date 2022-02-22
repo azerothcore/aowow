@@ -269,7 +269,7 @@ class SoundPage extends GenericPage
             }
         }
 
-        $creatureIds = DB::World()->selectCol('SELECT ct.CreatureID FROM creature_text ct LEFT JOIN broadcast_text bct ON bct.ID = ct.BroadCastTextId WHERE bct.SoundId = ?d OR ct.Sound = ?d', $this->typeId, $this->typeId);
+        $creatureIds = DB::World()->selectCol('SELECT ct.CreatureID FROM creature_text ct LEFT JOIN broadcast_text bct ON bct.ID = ct.BroadCastTextId WHERE bct.SoundEntriesID = ?d OR ct.Sound = ?d', $this->typeId, $this->typeId);
 
         // can objects or areatrigger play sound...?
         if ($goosp = SmartAI::getOwnerOfSoundPlayed($this->typeId, TYPE_NPC))

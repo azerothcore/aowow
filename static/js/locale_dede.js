@@ -2430,7 +2430,7 @@ var g_conditions = {
     35: 'Das Ziel ist$: nicht; $2 $1m entfernt',
     36: 'Das Ziel ist$: nicht; am Leben',
     37: 'Die Gesundheit des Ziels ist$: nicht; $2 $1',
-    37: 'Die Gesundheit des Ziels ist$: nicht; $2 $1%'
+    38: 'Die Gesundheit des Ziels ist$: nicht; $2 $1%'
 };
 /* end aowow custom */
 
@@ -2991,6 +2991,7 @@ var LANG = {
     tooltip_reqlockpicking:            "Benötigte Schlossknackenfertigkeit",
     tooltip_smartloot:                 "Nur für Spieler erhältlich, die den<br />zugehörigen Beruf ausüben und das<br />Rezept noch nicht besitzen.",
     tooltip_deprecated:                "Kann nicht benutzt oder angelegt werden",
+    tooltip_noequipcooldown:           "Dieser Gegenstand ist sofort nach dem Anlegen<br />ohne eine normale 30-sekündige Abklingzeit benutzbar.",
     tooltip_realduration:              "Die Dauer dieses Gegenstands läuft, anstelle von Spielzeit,<br />in Realzeit ab. Sie läuft auch dann ab,<br />während Ihr offline seid.",
     tooltip_cannotrollneed:            "Ihr könnt nicht für Bedarf um diesen Gegenstand werfen.",
     tooltip_spellnotfound:             "Zauber nicht gefunden  :(",
@@ -3242,7 +3243,9 @@ var LANG = {
         vein:           "Erzadern",
         spirithealer:   "Geistheiler",
         boss:           "Bosse",
-        areatrigger:    "Areatrigger"                       // aowow - custom
+        areatrigger:    "Areatrigger",                      // aowow - custom
+        mail:           "Briefkästen",
+        pool:           "Fischschwärme"
     },
 
     markup_b:       "Fett",

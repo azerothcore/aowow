@@ -12,7 +12,7 @@ SqlGen::register(new class extends SetupScript
     protected $command = 'spell';
 
     protected $tblDependencyAowow = ['icons'];
-    protected $tblDependencyTC    = ['item_template', 'creature_template', 'creature_template_addon', 'smart_scripts', 'trainer_spell', 'disables', 'spell_ranks', 'spell_dbc', 'skill_discovery_template'];
+    protected $tblDependencyTC    = ['item_template', 'creature_template', 'creature_template_addon', 'smart_scripts', 'npc_trainer', 'disables', 'spell_ranks', 'spell_dbc', 'skill_discovery_template'];
     protected $dbcSourceFiles     = ['spell', 'spellradius', 'spellduration', 'spellrunecost', 'spellcasttimes', 'skillline', 'skilllineability', 'skillraceclassinfo', 'talent', 'talenttab', 'glyphproperties', 'spellicon'];
 
     public function generate(array $ids = []) : bool
@@ -22,10 +22,10 @@ SqlGen::register(new class extends SetupScript
                 id AS ARRAY_KEY,
                 id,
                 0 AS category,
-                DispelType AS Dispel,
+                Dispel,
                 Mechanic,
-                Attributes,         AttributesEx,       AttributesExB,      AttributesExC,      AttributesExD,      AttributesExE,      AttributesExF,      AttributesExG,
-                ShapeshiftMask AS Stances,     ShapeshiftExclude AS StancesNot,
+                Attributes,         AttributesEx,       AttributesEx2,      AttributesEx3,      AttributesEx4,      AttributesEx5,      AttributesEx6,      AttributesEx7,
+                Stances,            StancesNot,
                 Targets,
                 0 AS spellFocus,
                 CastingTimeIndex,
@@ -39,33 +39,31 @@ SqlGen::register(new class extends SetupScript
                 0 AS powerPerSecond,
                 0 AS powerPerSecondPerLevel,
                 RangeIndex,
-                StackAmount,
+                CumulativeAura AS StackAmount,
                 0 AS tool1,         0 AS tool2,
                 0 AS reagent1,      0 AS reagent2,      0 AS reagent3,      0 AS reagent4,      0 AS reagent5,      0 AS reagent6,      0 AS reagent7,      0 AS reagent8,
                 0 AS reagentCount1, 0 AS reagentCount2, 0 AS reagentCount3, 0 AS reagentCount4, 0 AS reagentCount5, 0 AS reagentCount6, 0 AS reagentCount7, 0 AS reagentCount8,
                 EquippedItemClass,
-                EquippedItemSubClassMask,
-                EquippedItemInventoryTypeMask,
-                Effect1,                                Effect2,                                Effect3,
-                EffectDieSides1,                        EffectDieSides2,                        EffectDieSides3,
-                EffectRealPointsPerLevel1,              EffectRealPointsPerLevel2,              EffectRealPointsPerLevel3,
-                EffectBasePoints1,                      EffectBasePoints2,                      EffectBasePoints3,
-                EffectMechanic1,                        EffectMechanic2,                        EffectMechanic3,
-                EffectImplicitTargetA1,                 EffectImplicitTargetA2,                 EffectImplicitTargetA3,
-                EffectImplicitTargetB1,                 EffectImplicitTargetB2,                 EffectImplicitTargetB3,
-                EffectRadiusIndex1,                     EffectRadiusIndex2,                     EffectRadiusIndex3,
-                EffectApplyAuraName1,                   EffectApplyAuraName2,                   EffectApplyAuraName3,
-                EffectAmplitude1,                       EffectAmplitude2,                       EffectAmplitude3,
-                EffectMultipleValue1,                   EffectMultipleValue2,                   EffectMultipleValue3,
+                EquippedItemSubclass AS EquippedItemSubClassMask,
+                EquippedItemInvTypes AS EquippedItemInventoryTypeMask,
+                Effect_1 AS Effect1,                                Effect_2 AS Effect2,                                Effect_3 AS Effect3,
+                EffectDieSides_1 AS EffectDieSides1,                        EffectDieSides_2 AS EffectDieSides2,                        EffectDieSides_3 AS EffectDieSides3,
+                EffectRealPointsPerLevel_1 AS EffectRealPointsPerLevel1,              EffectRealPointsPerLevel_2 AS EffectRealPointsPerLevel2,              EffectRealPointsPerLevel_3 AS EffectRealPointsPerLevel3,
+                EffectBasePoints_1 AS EffectBasePoints1,                      EffectBasePoints_2 AS EffectBasePoints2,                      EffectBasePoints_3 AS EffectBasePoints3,
+                EffectMechanic_1 AS EffectMechanic1,                        EffectMechanic_2 AS EffectMechanic2,                        EffectMechanic_3 AS EffectMechanic3,
+                ImplicitTargetA_1 AS EffectImplicitTargetA1,                 ImplicitTargetA_2 AS EffectImplicitTargetA2,                 ImplicitTargetA_3 AS EffectImplicitTargetA3,
+                ImplicitTargetB_1 AS EffectImplicitTargetB1,                 ImplicitTargetB_2 AS EffectImplicitTargetB2,                 ImplicitTargetB_3 AS EffectImplicitTargetB3,
+                EffectRadiusIndex_1 AS EffectRadiusIndex1,                     EffectRadiusIndex_2 AS EffectRadiusIndex2,                     EffectRadiusIndex_3 AS EffectRadiusIndex3,
+                EffectMultipleValue_1 AS EffectMultipleValue1,                   EffectMultipleValue_2 AS EffectMultipleValue2,                   EffectMultipleValue_3 AS EffectMultipleValue3,
                 0 AS effect1ChainTarget,                0 AS effect2ChainTarget,                0 AS effect3ChainTarget,
-                EffectItemType1,                        EffectItemType2,                        EffectItemType3,
-                EffectMiscValue1,                       EffectMiscValue2,                       EffectMiscValue3,
-                EffectMiscValueB1,                      EffectMiscValueB2,                      EffectMiscValueB3,
-                EffectTriggerSpell1,                    EffectTriggerSpell2,                    EffectTriggerSpell3,
+                EffectItemType_1 AS EffectItemType1,                        EffectItemType_2 AS EffectItemType2,                        EffectItemType_3 AS EffectItemType3,
+                EffectMiscValue_1 AS EffectMiscValue1,                       EffectMiscValue_2 AS EffectMiscValue2,                       EffectMiscValue_3 AS EffectMiscValue3,
+                EffectMiscValueB_1 AS EffectMiscValueB1,                      EffectMiscValueB_2 AS EffectMiscValueB2,                      EffectMiscValueB_3 AS EffectMiscValueB3,
+                EffectTriggerSpell_1 AS EffectTriggerSpell1,                    EffectTriggerSpell_2 AS EffectTriggerSpell2,                    EffectTriggerSpell_3 AS EffectTriggerSpell3,
                 0 AS effect1PointsPerComboPoint,        0 AS effect2PointsPerComboPoint,        0 AS effect3PointsPerComboPoint,
-                EffectSpellClassMaskA1,                 EffectSpellClassMaskA2,                 EffectSpellClassMaskA3,
-                EffectSpellClassMaskB1,                 EffectSpellClassMaskB2,                 EffectSpellClassMaskB3,
-                EffectSpellClassMaskC1,                 EffectSpellClassMaskC2,                 EffectSpellClassMaskC3,
+                EffectSpellClassMaskA_1 AS EffectSpellClassMaskA1,                 EffectSpellClassMaskA_2 AS EffectSpellClassMaskA2,                 EffectSpellClassMaskA_3 AS EffectSpellClassMaskA3,
+                EffectSpellClassMaskB_1 AS EffectSpellClassMaskB1,                 EffectSpellClassMaskB_2 AS EffectSpellClassMaskB2,                 EffectSpellClassMaskB_3 AS EffectSpellClassMaskB3,
+                EffectSpellClassMaskC_1 AS EffectSpellClassMaskC1,                 EffectSpellClassMaskC_2 AS EffectSpellClassMaskC2,                 EffectSpellClassMaskC_3 AS EffectSpellClassMaskC3,
                 0 AS iconId,                            0 AS iconIdAlt,
                 0 AS rankId,                            0 AS spellVisualId1,
                 CONCAT("Serverside - ",SpellName) AS name_loc0,CONCAT("Serverside - ",SpellName) AS name_loc2,CONCAT("Serverside - ",SpellName) AS name_loc3,CONCAT("Serverside - ",SpellName) AS name_loc4,CONCAT("Serverside - ",SpellName) AS name_loc6,CONCAT("Serverside - ",SpellName) AS name_loc8,
@@ -76,13 +74,13 @@ SqlGen::register(new class extends SetupScript
                 0 AS startRecoveryCategory,
                 0 AS startRecoveryTime,
                 MaxTargetLevel,
-                SpellFamilyName,
-                SpellFamilyFlags1,
-                SpellFamilyFlags2,
-                SpellFamilyFlags3,
-                MaxAffectedTargets,
-                DmgClass,
-                DmgMultiplier1,                         DmgMultiplier2,                         DmgMultiplier3,
+                SpellClassSet AS SpellFamilyName,
+                SpellClassMask_1 AS SpellFamilyFlags1,
+                SpellClassMask_2 AS SpellFamilyFlags2,
+                SpellClassMask_3 AS SpellFamilyFlags3,
+                MaxTargets AS MaxAffectedTargets,
+                DefenseType AS DmgClass,
+                Field227 AS DmgMultiplier1,                         Field228 AS DmgMultiplier2,                         Field229 AS DmgMultiplier3,
                 0 AS toolCategory1,                     0 AS toolCategory2,
                 SchoolMask,
                 0 AS runeCostId,
@@ -346,7 +344,7 @@ SqlGen::register(new class extends SetupScript
         }
 
         // fill learnedAt, trainingCost from trainer
-        if ($trainer = DB::World()->select('SELECT SpellID AS ARRAY_KEY, MIN(ReqSkillRank) AS reqSkill, MIN(MoneyCost) AS cost, ReqAbility1 AS reqSpellId, COUNT(*) AS count FROM trainer_spell GROUP BY SpellID'))
+        if ($trainer = DB::World()->select('SELECT SpellID AS ARRAY_KEY, MIN(ReqSkillRank) AS reqSkill, MIN(MoneyCost) AS cost, COUNT(*) AS count FROM npc_trainer GROUP BY SpellID'))
         {
             $spells = DB::Aowow()->select('SELECT id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE id IN (?a)', array_keys($trainer));
             $links  = [];
@@ -370,7 +368,7 @@ SqlGen::register(new class extends SetupScript
                     $l = &$links[$effects['effect'.$i.'TriggerSpell']];
 
                     if (!isset($l))
-                        $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
+                        $l = [$tData['reqSkill'], $tData['cost']];
 
                     if ($tData['reqSkill'] < $l[0])
                         $l[0] = $tData['reqSkill'];
@@ -384,7 +382,7 @@ SqlGen::register(new class extends SetupScript
                     $l = &$links[$spell];
 
                     if (!isset($l))
-                        $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
+                        $l = [$tData['reqSkill'], $tData['cost']];
 
                     if ($tData['reqSkill'] < $l[0])
                         $l[0] = $tData['reqSkill'];
@@ -483,9 +481,25 @@ SqlGen::register(new class extends SetupScript
             if (isset($itemInfo[$itemId]))
                 DB::Aowow()->query('UPDATE ?_spell s, ?_icons ic, dbc_spellicon si SET s.iconIdAlt = ?d, s.cuFlags = s.cuFlags | ?d WHERE s.iconIdBak = si.id AND ic.name = LOWER(SUBSTRING_INDEX(si.iconPath, "\\\\", -1)) AND s.id = ?d', -$itemInfo[$itemId]['d'], ((7 - $itemInfo[$itemId]['q']) << 8), $sId);
 
+        // apply specializations [trainerTemplate => reqSpell]
+        $specs = array(
+            201007 => 9788,
+            201008 => 9787,
+            201015 => 20222,
+            201016 => 20219,
+            201030 => 10660,
+            201031 => 10656,
+            201032 => 10658
+        );
+        foreach ($specs as $tt => $req)
+            if ($spells = DB::World()->selectCol('SELECT SpellID FROM npc_trainer WHERE ID = ?d', $tt))
+                DB::Aowow()->query('UPDATE ?_spell SET reqSpellId = ?d WHERE id IN (?a)', $req, $spells);
+
         $itemReqs = DB::World()->selectCol('SELECT entry AS ARRAY_KEY, requiredSpell FROM item_template WHERE requiredSpell NOT IN (?a)', [0, 34090, 34091]); // not riding
         foreach ($itemReqs AS $itemId => $req)
             DB::Aowow()->query('UPDATE ?_spell SET reqSpellId = ?d WHERE skillLine1 IN (?a) AND effect1CreateItemId = ?d', $req, [164, 165, 197, 202], $itemId);
+
+        DB::Aowow()->query('UPDATE ?_spell SET reqSpellId = id WHERE id IN (?a)', [9788, 9787, 20222, 20219, 10660, 10656, 10658, 26797, 26798, 26801, 17039, 17040, 17041]);
 
         // setting icons
         DB::Aowow()->query('UPDATE ?_spell s, ?_icons ic, dbc_spellicon si SET s.iconId = ic.id WHERE s.iconIdBak = si.id AND ic.name = LOWER(SUBSTRING_INDEX(si.iconPath, "\\\\", -1))');

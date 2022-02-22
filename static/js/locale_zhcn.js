@@ -2477,7 +2477,7 @@ var g_conditions = {
     35: 'The target is$: not; $2 $1yd away',
     36: 'The target is$: not; alive',
     37: 'The target\'s health is$: not; $2 $1',
-    37: 'The target\'s health is$: not; $2 $1%'
+    38: 'The target\'s health is$: not; $2 $1%'
 };
 /* end aowow custom */
 
@@ -2501,7 +2501,7 @@ var LANG = {
 
     date:            "日期",
     date_colon:      "日期：",
-    date_on:         "在",
+    date_on:         "在 ",
     date_ago:        "$1前",
     date_at:         "于",
     date_to:         "至",
@@ -3039,6 +3039,7 @@ var LANG = {
     tooltip_reqlockpicking:            "需要撬锁技能",
     tooltip_smartloot:                 "仅限<br />有该专业且还没有<br />改配方的玩家。",
     tooltip_deprecated:                "不可使用或装备",
+    tooltip_noequipcooldown:           "物品装备后可立即使用,<br />无常规30秒冷却时间",
     tooltip_realduration:              "该物品的耐久度以现实时间，而非游戏时间计时。<br />注销后仍在计时。",
     tooltip_cannotrollneed:            "您无法为此物品投掷”需要“。",
     tooltip_spellnotfound:             "未找到法术 :(",
@@ -3290,7 +3291,9 @@ var LANG = {
         vein:           "矿点",
         spirithealer:   "灵魂医者",
         boss:           "首领",
-        areatrigger:    "Areatrigger"                       // aowow - custom
+        areatrigger:    "Areatrigger",                      // aowow - custom
+        mail:           "邮箱",
+        pool:           "钓鱼池"
     },
 
     markup_b:       "勇敢",

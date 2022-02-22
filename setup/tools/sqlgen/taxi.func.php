@@ -106,7 +106,7 @@ SqlGen::register(new class extends SetupScript
 
         // all available flightmaster
         $fMaster = DB::World()->select(
-            'SELECT ct.entry, ct.faction, c.map, c.position_x AS posX, c.position_y AS posY FROM creature_template ct JOIN creature c ON c.id = ct.entry WHERE ct.npcflag & ?d OR c.npcflag & ?d',
+            'SELECT ct.entry, ct.faction, c.map, c.position_x AS posX, c.position_y AS posY FROM creature_template ct JOIN creature c ON c.id1 = ct.entry WHERE ct.npcflag & ?d OR c.npcflag & ?d',
             NPC_FLAG_FLIGHT_MASTER, NPC_FLAG_FLIGHT_MASTER
         );
 

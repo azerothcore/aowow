@@ -324,6 +324,7 @@ define('PROFILER_CU_NEEDS_RESYNC',          0x10);
 
 define('MAX_LEVEL',                         80);
 define('MAX_SKILL',                         450);
+define('MAX_LOCALES',                       16);            // technical limitation, 6 in use here
 define('WOW_BUILD',                         12340);
 
 // Loot handles
@@ -479,6 +480,10 @@ define('LANG_GOBLIN_BINARY',                38);
 define('TEAM_ALLIANCE',                     0);
 define('TEAM_HORDE',                        1);
 define('TEAM_NEUTRAL',                      2);
+
+// Lock Types
+define('LOCK_TYPE_ITEM',                    1);
+define('LOCK_TYPE_SKILL',                   2);
 
 // Lock-Properties (also categorizes GOs)
 define('LOCK_PROPERTY_FOOTLOCKER',          1);

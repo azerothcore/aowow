@@ -29,6 +29,7 @@ function setup() : void
         ['dbconfig',          null,                      'testDB',    'Please enter your database credentials.', 'could not establish connection to:'],
         ['siteconfig',        null,                      'testSelf',  'SITE_HOST and STATIC_HOST '.CLI::bold('must').' be set. Also enable FORCE_SSL if needed. You may also want to change other variables such as NAME, NAME_SHORT or LOCALES.', 'could not access:'],
         // sql- and build- stuff here
+        ['SqlGen::generate',  'areatrigger',              null, null, null],
         ['SqlGen::generate',  'achievementcriteria',      null, null, null],
         ['SqlGen::generate',  'glyphproperties',          null, null, null],
         ['SqlGen::generate',  'itemenchantment',          null, null, null],
@@ -118,7 +119,7 @@ function setup() : void
         require 'config/config.php';
 
         $error   = [];
-        foreach (['world', 'aowow', 'auth'] as $idx => $what)
+        foreach (['aowow', 'world', 'auth'] as $idx => $what)
         {
             if ($what == 'auth' && (empty($AoWoWconf['auth']) || empty($AoWoWconf['auth']['host'])))
                 continue;

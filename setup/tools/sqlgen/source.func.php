@@ -12,7 +12,7 @@ SqlGen::register(new class extends SetupScript
     protected $command = 'source';
 
     protected $tblDependencyAowow = ['spell', 'achievement'];
-    protected $tblDependencyTC    = ['playercreateinfo_skills', 'playercreateinfo_item', 'skill_discovery_template', 'achievement_reward', 'skill_perfect_item_template', 'item_template', 'gameobject_template', 'quest_template', 'quest_template_addon', 'creature_template', 'creature', 'trainer_spell', 'npc_vendor', 'game_event_npc_vendor', 'reference_loot_template', 'item_loot_template', 'creature_loot_template', 'gameobject_loot_template', 'mail_loot_template', 'disenchant_loot_template', 'fishing_loot_template', 'skinning_loot_template', 'milling_loot_template', 'prospecting_loot_template', 'pickpocketing_loot_template'];
+    protected $tblDependencyTC    = ['playercreateinfo_skills', 'playercreateinfo_item', 'skill_discovery_template', 'achievement_reward', 'skill_perfect_item_template', 'item_template', 'gameobject_template', 'quest_template', 'quest_template_addon', 'creature_template', 'creature', 'npc_trainer', 'npc_vendor', 'game_event_npc_vendor', 'reference_loot_template', 'item_loot_template', 'creature_loot_template', 'gameobject_loot_template', 'mail_loot_template', 'disenchant_loot_template', 'fishing_loot_template', 'skinning_loot_template', 'milling_loot_template', 'prospecting_loot_template', 'pickpocketing_loot_template'];
     protected $dbcSourceFiles     = ['charstartoutfit', 'talent', 'spell', 'skilllineability', 'itemextendedcost', 'lock'];
 
     private function queryfy(array $data, string $query) : string
@@ -454,7 +454,7 @@ SqlGen::register(new class extends SetupScript
             'SELECT n.item AS ARRAY_KEY, n.npc, SUM(n.qty) AS qty, it.class, it.subclass, it.spellid_1, it.spelltrigger_1, it.spellid_2, it.spelltrigger_2 FROM (
                 SELECT item, entry AS npc, COUNT(1) AS qty FROM npc_vendor WHERE ExtendedCost NOT IN (?a) GROUP BY item
                 UNION
-                SELECT item, c.id AS npc, COUNT(1) AS qty FROM game_event_npc_vendor genv JOIN creature c ON c.guid = genv.guid WHERE ExtendedCost NOT IN (?a) GROUP BY item
+                SELECT item, c.id1 AS npc, COUNT(1) AS qty FROM game_event_npc_vendor genv JOIN creature c ON c.guid = genv.guid WHERE ExtendedCost NOT IN (?a) GROUP BY item
             ) n JOIN item_template it ON it.entry = n.item
             GROUP BY item',
             $xCostIds,
@@ -1043,16 +1043,22 @@ SqlGen::register(new class extends SetupScript
             $buff    = [];
 
             foreach ($qSpells as $sId => $spell)
+            {
                 for ($i = 1; $i <= 3; $i++)
-                    if ($spell['effect'.$i.'Id'] == 36)         // effect: learnSpell
-                        $this->pushBuffer($buff, TYPE_SPELL, $spell['effect'.$i.'TriggerSpell'], $quests[$sId]['qty'] > 1 ? 0 : TYPE_QUEST, $quests[$sId]['qty'] > 1 ? 0 : $quests[$sId]['id'], $quests[$sId]['side']);
+                {
+                    if ($spell['effect'.$i.'Id'] != 36)         // effect: learnSpell
+                        continue;
+
+                    $this->pushBuffer($buff, TYPE_SPELL, $spell['effect'.$i.'TriggerSpell'], $quests[$sId]['qty'] > 1 ? 0 : TYPE_QUEST, $quests[$sId]['qty'] > 1 ? 0 : $quests[$sId]['id'], $quests[$sId]['side']);
+                }
+            }
 
             DB::Aowow()->query($this->queryfy($buff, $insMore), 4, 4, 4);
         }
 
         #  6: Trainer
         CLI::write('   * #6  Trainer');
-        if ($tNpcs = DB::World()->select('SELECT SpellID AS ARRAY_KEY, cdt.CreatureId AS entry, COUNT(1) AS qty FROM `trainer_spell` ts JOIN `creature_default_trainer` cdt ON cdt.TrainerId = ts.TrainerId GROUP BY ARRAY_KEY'))
+        if ($tNpcs = DB::World()->select('SELECT SpellID AS ARRAY_KEY, ID AS entry, COUNT(1) AS qty FROM npc_trainer WHERE SpellID > 0 GROUP BY ARRAY_KEY'))
         {
             $tSpells = DB::Aowow()->select('SELECT id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE id IN (?a)', array_keys($tNpcs));
             $buff    = [];
@@ -1064,13 +1070,20 @@ SqlGen::register(new class extends SetupScript
                     continue;
 
                 $effects   = $tSpells[$spellId];
-                $trainerId = $npc['qty'] > 1 ? 0 : $npc['entry'];
+                $trainerId = $npc['entry'] > 200000 || $npc['qty'] > 1 ? 0 : $npc['entry'];
 
+                $triggered = false;
                 for ($i = 1; $i <= 3; $i++)
-                    if ($effects['effect'.$i.'Id'] == 36)       // effect: learnSpell
-                        $this->pushBuffer($buff, TYPE_SPELL, $effects['effect'.$i.'TriggerSpell'], $trainerId ? TYPE_NPC : 0, $trainerId);
+                {
+                    if ($effects['effect'.$i.'Id'] != 36)       // effect: learnSpell
+                        continue;
 
-                $this->pushBuffer($buff, TYPE_SPELL, $spellId, $trainerId ? TYPE_NPC : 0, $trainerId);
+                    $triggered = true;
+                    $this->pushBuffer($buff, TYPE_SPELL, $effects['effect'.$i.'TriggerSpell'], $trainerId ? TYPE_NPC : 0, $trainerId);
+                }
+
+                if (!$triggered)
+                    $this->pushBuffer($buff, TYPE_SPELL, $spellId, $trainerId ? TYPE_NPC : 0, $trainerId);
             }
 
             DB::Aowow()->query($this->queryfy($buff, $insMore), 6, 6, 6);

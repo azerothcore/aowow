@@ -295,6 +295,7 @@ class Profiler
 
         if (!$char['online'] && $char['logout_time'] <= $profile['lastupdated'])
         {
+            DB::Aowow()->query('UPDATE ?_profiler_profiles SET lastupdated = ?d WHERE id = ?d', time(), $profileId);
             CLI::write('char did not log in since last update. skipping...');
             return true;
         }
@@ -404,7 +405,7 @@ class Profiler
             'talentbuild2'      => '',
             'glyphs1'           => '',
             'glyphs2'           => '',
-            'activespec'        => $char['activespec'],
+            'activespec'        => $char['activeTalentGroup'],
             'guild'             => null,
             'guildRank'         => null,
             'gearscore'         => 0,
@@ -429,9 +430,9 @@ class Profiler
             // talents
             for ($j = 0; $j < 3; $j++)
             {
-                $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell IN (?a), `rank`, 0)) FROM ?_talents WHERE class = ?d AND tab = ?d GROUP BY id ORDER BY row, col ASC', !empty($t[$i]) ? $t[$i] : [0], $char['class'], $j);
+                $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell IN (?a), `rank`, 0)) FROM ?_talents WHERE class = ?d AND tab = ?d GROUP BY id ORDER BY `row`, `col` ASC', !empty($t[$i]) ? $t[$i] : [0], $char['class'], $j);
                 $data['talentbuild'.($i + 1)] .= implode('', $_);
-                if ($char['activespec'] == $i)
+                if ($data['activespec'] == $i)
                     $data['talenttree'.($j + 1)] = array_sum($_);
             }
 

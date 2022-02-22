@@ -119,7 +119,7 @@ trait TrProfiler
         {
             foreach (Profiler::getRealms() as $rId => $r)
             {
-                if (Profiler::urlize($r['name']) == $cat[1])
+                if (Profiler::urlize($r['name'], true) == $cat[1])
                 {
                     $this->realm   = $r['name'];
                     $this->realmId = $rId;
@@ -158,7 +158,7 @@ trait TrProfiler
             $this->path[] = $this->region;
 
             if ($this->realm)
-                $this->path[] = Profiler::urlize($this->realm);
+                $this->path[] = Profiler::urlize($this->realm, true);
             // else
                 // $this->path[] = Profiler::urlize(CFG_BATTLEGROUP);
         }
@@ -277,7 +277,7 @@ class GenericPage
 
         // requires authed user
         if ($this->reqAuth && !User::$id)
-            $this->forwardToSignIn($_SERVER['QUERY_STRING']);
+            $this->forwardToSignIn($_SERVER['QUERY_STRING'] ?? '');
 
         // restricted access
         if ($this->reqUGroup && !User::isInGroup($this->reqUGroup))
@@ -285,7 +285,7 @@ class GenericPage
             if (User::$id)
                 $this->error();
             else
-                $this->forwardToSignIn($_SERVER['QUERY_STRING']);
+                $this->forwardToSignIn($_SERVER['QUERY_STRING'] ?? '');
         }
 
         if (CFG_MAINTENANCE && !User::isInGroup(U_GROUP_EMPLOYEE))

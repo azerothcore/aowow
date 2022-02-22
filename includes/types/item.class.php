@@ -88,6 +88,8 @@ class ItemList extends BaseType
         if ($this->error)
             return [];
 
+        $idx = $this->id;
+
         if (empty($this->vendors))
         {
             $itemz      = [];
@@ -95,7 +97,7 @@ class ItemList extends BaseType
             $rawEntries = DB::World()->select('
                 SELECT   nv.item,       nv.entry,             0  AS eventId,   nv.maxcount,   nv.extendedCost FROM            npc_vendor   nv                                                                                                  WHERE {nv.entry IN (?a) AND} nv.item IN (?a)
                 UNION
-                SELECT genv.item, c.id AS `entry`, ge.eventEntry AS eventId, genv.maxcount, genv.extendedCost FROM game_event_npc_vendor genv LEFT JOIN game_event ge ON genv.eventEntry = ge.eventEntry JOIN creature c ON c.guid = genv.guid WHERE {c.id IN (?a) AND}   genv.item IN (?a)',
+                SELECT genv.item, c.id1 AS `entry`, ge.eventEntry AS eventId, genv.maxcount, genv.extendedCost FROM game_event_npc_vendor genv LEFT JOIN game_event ge ON genv.eventEntry = ge.eventEntry JOIN creature c ON c.guid = genv.guid WHERE {c.id1 IN (?a) AND}   genv.item IN (?a)',
                 empty($filter[TYPE_NPC]) || !is_array($filter[TYPE_NPC]) ? DBSIMPLE_SKIP : $filter[TYPE_NPC],
                 array_keys($this->templates),
                 empty($filter[TYPE_NPC]) || !is_array($filter[TYPE_NPC]) ? DBSIMPLE_SKIP : $filter[TYPE_NPC],
@@ -256,6 +258,9 @@ class ItemList extends BaseType
             if (empty($data))
                 unset($result[$itemId]);
         }
+
+        // restore internal index;
+        $this->getEntry($idx);
 
         return $result;
     }
@@ -913,8 +918,8 @@ class ItemList extends BaseType
             $x .= sprintf(Lang::game('requires'), '<a class="q1" href="?faction='.$reqFac.'">'.FactionList::getName($reqFac).'</a> - '.Lang::game('rep', $this->curTpl['requiredFactionRank'])).'<br />';
 
         // locked or openable
-        if ($locks = Lang::getLocks($this->curTpl['lockId'], true))
-            $x .= '<span class="q0">'.Lang::item('locked').'<br />'.implode('<br />', $locks).'</span><br />';
+        if ($locks = Lang::getLocks($this->curTpl['lockId'], $arr, true, true))
+            $x .= '<span class="q0">'.Lang::item('locked').'<br />'.implode('<br />', array_map(function($x) { return sprintf(Lang::game('requires'), $x); }, $locks)).'</span><br />';
         else if ($this->curTpl['flags'] & ITEM_FLAG_OPENABLE)
             $x .= '<span class="q2">'.Lang::item('openClick').'</span><br />';
 
@@ -2354,7 +2359,7 @@ class ItemListFilter extends Filter
         if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
             return false;
 
-        if ($iIds = DB::World()->selectCol('SELECT item FROM npc_vendor WHERE entry = ?d UNION SELECT item FROM game_event_npc_vendor v JOIN creature c ON c.guid = v.guid WHERE c.id = ?d', $cr[2], $cr[2]))
+        if ($iIds = DB::World()->selectCol('SELECT item FROM npc_vendor WHERE entry = ?d UNION SELECT item FROM game_event_npc_vendor v JOIN creature c ON c.guid = v.guid WHERE c.id1 = ?d', $cr[2], $cr[2]))
             return ['i.id', $iIds];
         else
             return [0];

@@ -18,27 +18,26 @@ Also, this project is not meant to be used for commercial puposes of any kind!
 
 ## Requirements
 
-+ Webserver running PHP ≥ 7.1 including extensions:
-  + SimpleXML
-  + GD
-  + Mysqli
-  + mbString
-+ MySQL ≥ 5.6
++ Webserver running PHP ≥ 7.1 — 8.0 including extensions:
+  + [SimpleXML](https://www.php.net/manual/en/book.simplexml.php)
+  + [GD](https://www.php.net/manual/en/book.image)
+  + [MySQL Improved](https://www.php.net/manual/en/book.mysqli.php)
+  + [Multibyte String](https://www.php.net/manual/en/book.mbstring.php)
+  + [File Information](https://www.php.net/manual/en/book.fileinfo.php)
+  + [GNU Multiple Precision](https://www.php.net/manual/en/book.gmp.php) (When using TrinityCore as auth source)
++ MySQL ≥ 5.5.30
++ [TDB 335.21101](https://github.com/TrinityCore/TrinityCore/releases/tag/TDB335.21101)
++ WIN: php.exe needs to be added to the `PATH` system variable, if it isn't already. 
 + Tools require cmake: Please refer to the individual repositories for detailed information
-  + [MPQExtractor](https://github.com/Sarjuuk/MPQExtractor) / [FFmpeg](https://ffmpeg.org/download.html) / [BLPConverter](https://github.com/Sarjuuk/BLPConverter) (optional)
+  + [MPQExtractor](https://github.com/Sarjuuk/MPQExtractor) / [FFmpeg](https://ffmpeg.org/download.html) / (optional: [BLPConverter](https://github.com/Sarjuuk/BLPConverter))
   + WIN users may find it easier to use these alternatives
-     + [MPQEditor](http://www.zezula.net/en/mpq/download.html) / [FFmpeg](http://ffmpeg.zeranoe.com/builds/) / [BLPConverter](https://github.com/PatrickCyr/BLPConverter) (optional)
+     + [MPQEditor](http://www.zezula.net/en/mpq/download.html) / [FFmpeg](http://ffmpeg.zeranoe.com/builds/) / (optional: [BLPConverter](https://github.com/PatrickCyr/BLPConverter))
 
 audio processing may require [lame](https://sourceforge.net/projects/lame/files/lame/3.99/) or [vorbis-tools](https://www.xiph.org/downloads/) (which may require libvorbis (which may require libogg))
 
-On Linux (debian-based) you can install the requirements with the following command:
-```
-sudo apt install php-gd php-xml php-mbstring
-```
-
 
 #### Highly Recommended
-+ setting the following configuration values on your TrintyCore server will greatly increase the accuracy of spawn points
++ setting the following configuration values on your TrinityCore server will greatly increase the accuracy of spawn points
   > Calculate.Creature.Zone.Area.Data = 1  
   > Calculate.Gameoject.Zone.Area.Data = 1
 
@@ -46,14 +45,12 @@ sudo apt install php-gd php-xml php-mbstring
 ## Install
 
 #### 1. Acquire the required repositories
-`git clone https://github.com/azerothcore/aowow.git aowow`  
-`git clone https://github.com/Sarjuuk/MPQExtractor.git MPQExtractor`  
+`git clone git@github.com:Sarjuuk/aowow.git aowow`  
+`git clone git@github.com:Sarjuuk/MPQExtractor.git MPQExtractor`  
 
 #### 2. Prepare the database  
 Ensure that the account you are going to use has **full** access on the database AoWoW is going to occupy and ideally only **read** access on the world database you are going to reference.  
 Import `setup/db_structure.sql` into the AoWoW database `mysql -p {your-db-here} < setup/db_structure.sql`  
-
-Import to your AzerothCore database the table `spell_learn_spell`, import it from `www-aowow/setup/spell_learn_spell.sql`.
 
 #### 3. Server created files
 See to it, that the web server is able to write the following directories and their children. If they are missing, the setup will create them with appropriate permissions
@@ -89,66 +86,52 @@ Extract the following directories from the client archives into `setup/mpqdata/`
    .. optionaly (not used in AoWoW):
    > \<localeCode>/Interface/GLUES/LOADINGSCREENS/  
 
-**PAY ATTENTION:** you have to create a directory in `setup/mpqdata/` like `enus` (LOWERCASE) containing the data listed above.  
-For example, you can just copy `Interface` and `DBFilesClient` directory into `setup/mpqdata/enus/` and move `Sound` into `setup/mpqdata/enus`.
-
-You can use MPQExtractor to extract the data, once you installed it succesfully you can use this bash script to make extract the data in the right order.
-- [extract.sh](https://gist.github.com/Helias/d9bd7708e28e9e8dcd5274bd2f3b68bc)
-
 #### 5. Reencode the audio files
 WAV-files need to be reencoded as `ogg/vorbis` and some MP3s may identify themselves as `application/octet-stream` instead of `audio/mpeg`.  
  * [example for WIN](https://gist.github.com/Sarjuuk/d77b203f7b71d191509afddabad5fc9f)  
  * [example for \*nix](https://gist.github.com/Sarjuuk/1f05ef2affe49a7e7ca0fad7b01c081d)
-  
-Note: it will take a long time.
 
 #### 6. Run the initial setup from the CLI
-  
-`php aowow --firstrun`.  
-  
+`php aowow --setup`.  
 This should guide you through with minimal input required from your end, but will take some time though, especially compiling the zone-images. Use it to familiarize yourself with the other functions this setup has. Yes, I'm dead serious: *Go read the code!* It will help you understand how to configure AoWoW and keep it in sync with your world database.  
 When you've created your admin account you are done.
 
 
 ## Troubleshooting
 
-**Q: The Page appears white, without any styles.**  
+Q: The Page appears white, without any styles.  
 A: The static content is not being displayed. You are either using SSL and AoWoW is unable to detect it or STATIC_HOST is not defined poperly. Either way this can be fixed via config `php aowow --siteconfig`
-Probably you need to modify [10] and [15].
-For example, if your project is in `/var/www/html/aowow`, hence you visit it with `http://localhost/aowow/`, you should put:
-- [10] localhost/aowow
-- [15] localhost/aowow/static
 
-**Q: Fatal error: Can't inherit abstract function \<functionName> (previously declared abstract in \<className>) in \<path>**  
+Q: Fatal error: Can't inherit abstract function \<functionName> (previously declared abstract in \<className>) in \<path>  
 A: You are using cache optimization modules for php, that are in confict with each other. (Zend OPcache, XCache, ..) Disable all but one.
 
-**Q: Some generated images appear distorted or have alpha-channel issues.**  
+Q: Some generated images appear distorted or have alpha-channel issues.  
 A: Image compression is beyond my understanding, so i am unable to fix these issues within the blpReader.
  BUT you can convert the affected blp file into a png file in the same directory, using the provided BLPConverter.
  AoWoW will priorize png files over blp files.
 
-**Q: How can i get the modelviewer to work?**  
+Q: How can i get the modelviewer to work?  
 A: You can't anymore. Wowhead switched from Flash to WebGL (as they should) and moved or deleted the old files in the process.
 
-**Q: I'm getting random javascript errors!**  
+Q: I'm getting random javascript errors!  
 A: Some server configurations or external services (like Cloudflare) come with modules, that automaticly minify js and css files. Sometimes they break in the process. Disable the module in this case.
 
-**Q: Some search results within the profiler act rather strange. How does it work?**  
+Q: Some search results within the profiler act rather strange. How does it work?  
 A: Whenever you try to view a new character, AoWoW needs to fetch it first. Since the data is structured for the needs of TrinityCore and not for easy viewing, AoWoW needs to save and restructure it locally. To this end, every char request is placed in a queue. While the queue is not empty, a single instance of `prQueue` is run in the background as not to overwhelm the characters database with requests. This also means, some more exotic search queries can't be run agains the characters database and have to use the incomplete/outdated cached profiles of AoWoW.
 
-**Q: Failed to connect to database.**  
-A: check your file config in `www-aowow/config/config.php`, if everything is correct, check if your password has **"#"** character contained in the password and replace it with the *encoded (URL) character* correspondent **"%23"**, do the same for special characters if you still get this error.  
-If you do not resolve, try to don't use **"#"** in your password.
+Q: Screenshot upload fails, because the file size is too large and/or the subdirectories are visible from the web!  
+A: That's a web server configuration issue. If you are using Apache you may need to [enable the use of .htaccess](http://httpd.apache.org/docs/2.4/de/mod/core.html#allowoverride). Other servers require individual configuration.  
 
-**Q: no gameobjects, aowow_objects table empty**  
-A: enable the full gorup mode running `SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));` and exrtact again the gameobjects with `php aowow --sql=objects`
+Q: An Item, Quest or NPC i added or edited can't be searched. Why?  
+A: A search is only conducted against the currently used locale. You may have only edited the name field in the base table instead of adding multiple strings into the appropriate \*_locale tables. In this case searches in a non-english locale are run against an empty name field.  
 
 ## Thanks
 
-- @mix: for providing the php-script to parse .blp and .dbc into usable images and tables
-- @LordJZ: the wrapper-class for DBSimple; the basic idea for the user-class
-- @kliver: basic implementation of screenshot uploads
-- @Sarjuuk: mantaining this project
+@mix: for providing the php-script to parse .blp and .dbc into usable images and tables  
+@LordJZ: the wrapper-class for DBSimple; the basic idea for the user-class  
+@kliver: basic implementation of screenshot uploads  
+@Sarjuuk: maintainer of the project  
+
 
 ## Special Thanks
 Said website with the red smiling rocket, for providing this beautifull website!

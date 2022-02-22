@@ -1016,14 +1016,7 @@ class SpellList extends BaseType
         $formula = preg_replace('/(\+|-|\*|\/)(\+|-|\*|\/)/i', '\1 \2', $formula);
 
         // there should not be any letters without a leading $
-        try {
-            $res = eval('return '.$formula.';');
-        } catch (Throwable $t) {
-            echo "- WARNING - problem during parsing the spell formula";
-            $res = 0;
-        }
-
-        return $res;
+        return eval('return '.$formula.';');
     }
 
     // description-, buff-parsing component
@@ -1447,7 +1440,7 @@ class SpellList extends BaseType
         // step 3: try to evaluate result
         $evaled = $this->resolveEvaluation($str);
 
-        $return = is_numeric($evaled) ? Lang::nf($evaled, $precision, true) : $evaled;
+        $return = is_numeric($evaled) ? round($evaled, $precision) : $evaled;
 
         return [$return, $fSuffix, $fRating];
     }
@@ -2652,9 +2645,9 @@ class SpellListFilter extends Filter
         if (is_int($_))                         // specific
             return ['src.src'.$_, null, '!'];
         else if ($_)                            // any
-            return ['OR', ['src.src1', null, '!'], ['src.src2', null, '!'], ['src.src4', null, '!'], ['src.src5', null, '!'], ['src.src6', null, '!'], ['src.src7', null, '!'], ['src.src9', null, '!'], ['src.src10', null, '!']];
+            return ['OR', ['src.src1', null, '!'], ['src.src2', null, '!'], ['src.src4', null, '!'], ['src.src5', null, '!'], ['src.src6', null, '!'], ['src.src7', null, '!'], ['src.src9', null, '!']];
         else if (!$_)                           // none
-            return ['AND', ['src.src1', null], ['src.src2', null], ['src.src4', null], ['src.src5', null], ['src.src6', null], ['src.src7', null], ['src.src9', null], ['src.src10', null]];
+            return ['AND', ['src.src1', null], ['src.src2', null], ['src.src4', null], ['src.src5', null], ['src.src6', null], ['src.src7', null], ['src.src9', null]];
 
         return false;
     }

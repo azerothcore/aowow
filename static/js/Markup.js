@@ -453,7 +453,6 @@ var Markup = {
                 domain:  { req: false, valid: MarkupDomainRegexMap.lang },
                 site:    { req: false, valid: MarkupDomainRegexMap.lang }
             },
-            allowedClass: MARKUP_CLASS_STAFF,
             validate: function(attr)
             {
                 if((attr.domain || attr.site) && Markup.dbpage)
@@ -694,7 +693,6 @@ var Markup = {
                 domain:  { req: false, valid: MarkupDomainRegexMap.lang },
                 site:    { req: false, valid: MarkupDomainRegexMap.lang }
             },
-            allowedClass: MARKUP_CLASS_STAFF,
             validate: function(attr)
             {
                 if((attr.domain || attr.site) && Markup.dbpage)
@@ -2800,7 +2798,7 @@ var Markup = {
                 border:      { req: false, valid: /^[0-9]+$/ },
                 cellspacing: { req: false, valid: /^[0-9]+$/ },
                 cellpadding: { req: false, valid: /^[0-9]+$/ },
-                width:       { req: false, valid: /^[0-9]+(px|em|\%)$/ }
+                width:       { req: false, valid: /^([0-9]+(px|em|\%)|auto)$/ }
             },
             toHtml: function(attr)
             {

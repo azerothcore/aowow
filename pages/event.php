@@ -105,7 +105,7 @@ class EventPage extends GenericPage
         $hasFilter = in_array($this->hId, [372, 283, 285, 353, 420, 400, 284, 201, 374, 409, 141, 324, 321, 424, 335, 327, 341, 181, 404, 398, 301]);
 
         // tab: npcs
-        if ($npcIds = DB::World()->selectCol('SELECT id AS ARRAY_KEY, IF(ec.eventEntry > 0, 1, 0) AS added FROM creature c, game_event_creature ec WHERE ec.guid = c.guid AND ABS(ec.eventEntry) = ?d', $this->eId))
+        if ($npcIds = DB::World()->selectCol('SELECT id1 AS ARRAY_KEY, IF(ec.eventEntry > 0, 1, 0) AS added FROM creature c, game_event_creature ec WHERE ec.guid = c.guid AND ABS(ec.eventEntry) = ?d', $this->eId))
         {
             $creatures = new CreatureList(array(['id', array_keys($npcIds)]));
             if (!$creatures->error)
@@ -201,7 +201,7 @@ class EventPage extends GenericPage
         {
             // vendor
             $cIds = $creatures->getFoundIDs();
-            if ($sells = DB::World()->selectCol('SELECT item FROM npc_vendor nv WHERE entry IN (?a) UNION SELECT item FROM game_event_npc_vendor genv JOIN creature c ON genv.guid = c.guid WHERE c.id IN (?a)', $cIds, $cIds))
+            if ($sells = DB::World()->selectCol('SELECT item FROM npc_vendor nv WHERE entry IN (?a) UNION SELECT item FROM game_event_npc_vendor genv JOIN creature c ON genv.guid = c.guid WHERE c.id1 IN (?a)', $cIds, $cIds))
                 $itemCnd[] = ['id', $sells];
         }
 

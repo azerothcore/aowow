@@ -56,7 +56,7 @@ class SqlGen
 
                 if ($depsOK)
                 {
-                    if (isset(self::$tables[$ssRef->getName()]))
+                    if (isset(self::$tables[$ts->getName()]))
                     {
                         CLI::write('a SetupScript named '.CLI::bold($ts->getName()).' was already registered. Skipping...', CLI::LOG_WARN);
                         unset(self::$tmpStore[$idx]);
@@ -160,7 +160,7 @@ class SqlGen
             $doTbls = array_unique($doTbls);
             return true;
         }
-        else if ($_ = CLISetup::getOpt('sql'))
+        else if (is_array($_ = CLISetup::getOpt('sql')))
         {
             $doTbls = $_;
             return true;

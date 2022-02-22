@@ -86,7 +86,7 @@ ShowOnMap.prototype.construct = function() {
                     if (pin.list.length == 1) {
                         url = (g_types[pin.list[0].type] && pin.list[0].id ? '?' + g_types[pin.list[0].type] + '=' + pin.list[0].id : '');
                     }
-                    if (i == 'rare' || i == 'herb' || i == 'vein') {
+                    if (i == 'rare' || i == 'herb' || i == 'vein' || i == 'pool') {
                         tooltip[1] = submenu.length + 1;
                     }
                     if (coords[pin.level] == undefined) {
@@ -107,8 +107,10 @@ ShowOnMap.prototype.construct = function() {
                 }
                 if (nCoords > 0) {
                     var url = (g_types[group[p][0].type] && group[p][0].id ? '?' + g_types[group[p][0].type] + '=' + group[p][0].id : '');
-                    legend[submenu.length+1] = [p, url];
-                    entry.push(p + $WH.sprintf(LANG.qty, nPins));
+                    // legend[submenu.length+1] = [p, url]; aowow - switch to numeric groupIdx to support mail
+                    // entry.push(p + $WH.sprintf(LANG.qty, nPins));
+                    legend[submenu.length+1] = [group[p][0].name, url];
+                    entry.push(group[p][0].name + $WH.sprintf(LANG.qty, nPins));
                     entry.push(this.showStuff.bind(this, coords, [i, i2], legend));
                     submenu.push(entry);
                     for (var l in coords) {
@@ -119,7 +121,7 @@ ShowOnMap.prototype.construct = function() {
                             allCoords[l] = coords[l];
                         }
                     }
-                    allLegend[submenu.length] = [p, url];
+                    allLegend[submenu.length] = [group[p][0].name, url];
                 }
             }
             if (submenu.length > 0) {
@@ -480,7 +482,7 @@ ShowOnMap.prototype.checkMenu = function(path) {
 
     var maxLabel = label.length - 1;
     var str = '';
-    var singlePinOptions = { 'rare': true, 'herb': true, 'vein': true };
+    var singlePinOptions = { 'rare': true, 'herb': true, 'vein': true, 'pool': true };
     for (var i = 0; i < label.length; ++i) {
         if (i > 0 && singlePinOptions[label[0][0]]) {
             var span = $('span', this._legendContents);

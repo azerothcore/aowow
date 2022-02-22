@@ -290,7 +290,7 @@ var mn_objects = [
     [9,"Libros"],
     [3,"Contenedores"],
     [-5,"Cofres"],
-    [25,"[Fishing Pools]"],
+    [25,"Bancos de peces"],
     [-3,"Hierbas"],
     [-4,"Venas de minerales"],
     [-2,"Misión"],
@@ -2431,7 +2431,7 @@ var g_conditions = {
     35: 'El objetivo esta$: no; $2 $1yarda cerca',
     36: 'El objetivo esta$: no; vivo',
     37: 'La salud del objetivo/s esta$: no; $2 $1',
-    37: 'La salud del objetivo/s esta$: no; $2 $1%'
+    38: 'La salud del objetivo/s esta$: no; $2 $1%'
 };
 /* end aowow custom */
 
@@ -2992,6 +2992,7 @@ var LANG = {
     tooltip_reqlockpicking:            "Nivel de forzar cerradura requerido",
     tooltip_smartloot:                 "Sólo disponible para jugadores que<br/>tienen la profesión y aun no<br/>tienen la receta.",
     tooltip_deprecated:                "No se puede usar o equipar",
+    tooltip_noequipcooldown:           "El objeto estará disponible inmediatamente al ser equipado,<br />sin el tiempo de reutilización normal de 30 segundos.",
     tooltip_realduration:              "La duración de este objeto es tiempo real, no tiempo jugado.<br />Seguirá reduciéndose aunque estés desconectado.",
     tooltip_cannotrollneed:            "No se puede hacer una tirada de Necesidad en este objeto.",
     tooltip_spellnotfound:             "No se encontró ese hechizo :(",
@@ -3243,7 +3244,9 @@ var LANG = {
         vein:           "Venas de minerales",
         spirithealer:   "Espíritus sanadores",
         boss:           "Jefes",
-        areatrigger:    "Areatrigger"                       // aowow - custom
+        areatrigger:    "Areatrigger",                      // aowow - custom
+        mail:           "Buzón",
+        pool:           "Bancos de peces"
     },
 
     markup_b:       "Negrita",

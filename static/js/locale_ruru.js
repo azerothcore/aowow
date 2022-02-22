@@ -2430,7 +2430,7 @@ var g_conditions = {
     35: 'The target is$: not; $2 $1yd away',
     36: 'The target is$: not; alive',
     37: 'The target\'s health is$: not; $2 $1',
-    37: 'The target\'s health is$: not; $2 $1%'
+    38: 'The target\'s health is$: not; $2 $1%'
 };
 /* end aowow custom */
 
@@ -2454,7 +2454,7 @@ var LANG = {
 
     date:        "По дате",
     date_colon:  "Дата: ",
-    date_on:     "на",
+    date_on:     "на ",
     date_ago:    "$1 назад",
     date_at:     " в ",
     date_to:     " в ",
@@ -2992,6 +2992,7 @@ var LANG = {
     tooltip_reqlockpicking:            "Требуемый уровень навыка взлома замков",
     tooltip_smartloot:                 "Доступно только игрокам, изучившим<br />\nсоответствующую профессию, и не имеющим<br />\nэтот рецепт.",
     tooltip_deprecated:                "Невозможно использовать или экипировать",
+    tooltip_noequipcooldown:           "Этот предмет будет готов к использованию сразу<br />\nпосле экипирования, без 30-секундного отката.",
     tooltip_realduration:              "Длительность этого предмета считается в реальном времени.<br />\nЭто означает, что при выходе из игры время исчезновения<br />\nпредмета будет тикать.",
     tooltip_cannotrollneed:            'Нельзя говорить "Мне это нужно" при разыгрывании этого предмета.',
     tooltip_spellnotfound:             "Заклинание не найдено :(",
@@ -3243,7 +3244,9 @@ var LANG = {
         vein:           "Полезные ископаемые",
         spirithealer:   "Целители душ",
         boss:           "Боссы",
-        areatrigger:    "Areatrigger"                       // aowow - custom
+        areatrigger:    "Areatrigger",                      // aowow - custom
+        mail:           "Почтовый ящик",
+        pool:           "Рыболовные лунки",
     },
 
     markup_b:       "Жирный",

@@ -218,7 +218,7 @@ var mn_items = [
         [1,"Reagents"],
         [5,"Mounts"],
         [-7,"Flying Mounts"],
-        [2,"Small Pets"],
+        [2,"Companions"],
         [4,"Other"]
     ]],
     [10,"Currency"],
@@ -2477,7 +2477,7 @@ var g_conditions = {
     35: 'The target is$: not; $2 $1yd away',
     36: 'The target is$: not; alive',
     37: 'The target\'s health is$: not; $2 $1',
-    37: 'The target\'s health is$: not; $2 $1%'
+    38: 'The target\'s health is$: not; $2 $1%'
 };
 /* end aowow custom */
 
@@ -3039,6 +3039,7 @@ var LANG = {
     tooltip_reqlockpicking:            "Required Lockpicking skill",
     tooltip_smartloot:                 "Only available to players who have<br />the profession and don't already<br />have the recipe.",
     tooltip_deprecated:                "Cannot be used or equipped",
+    tooltip_noequipcooldown:           "The item will be ready immediately when equipped,<br />without the normal 30-second cooldown.",
     tooltip_realduration:              "The item's duration is real time, not play time.<br />It will keep ticking while logged off.",
     tooltip_cannotrollneed:            "You cannot roll Need on this item.",
     tooltip_spellnotfound:             "Spell not found :(",
@@ -3290,7 +3291,9 @@ var LANG = {
         vein:           "Mineral Veins",
         spirithealer:   "Spirit Healers",
         boss:           "Bosses",
-        areatrigger:    "Areatrigger"                       // aowow - custom
+        areatrigger:    "Areatrigger",                      // aowow - custom
+        mail:           "Mailbox",
+        pool:           "Fishing Pools"
     },
 
     markup_b:       "Bold",
