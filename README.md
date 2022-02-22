@@ -45,12 +45,14 @@ audio processing may require [lame](https://sourceforge.net/projects/lame/files/
 ## Install
 
 #### 1. Acquire the required repositories
-`git clone git@github.com:Sarjuuk/aowow.git aowow`  
-`git clone git@github.com:Sarjuuk/MPQExtractor.git MPQExtractor`  
+`git clone https://github.com/azerothcore/aowow.git aowow`  
+`git clone https://github.com/Sarjuuk/MPQExtractor.git MPQExtractor`  
 
 #### 2. Prepare the database  
 Ensure that the account you are going to use has **full** access on the database AoWoW is going to occupy and ideally only **read** access on the world database you are going to reference.  
 Import `setup/db_structure.sql` into the AoWoW database `mysql -p {your-db-here} < setup/db_structure.sql`  
+
+Import to your AzerothCore database the table `spell_learn_spell`, import it from `www-aowow/setup/spell_learn_spell.sql`.
 
 #### 3. Server created files
 See to it, that the web server is able to write the following directories and their children. If they are missing, the setup will create them with appropriate permissions
@@ -86,10 +88,18 @@ Extract the following directories from the client archives into `setup/mpqdata/`
    .. optionaly (not used in AoWoW):
    > \<localeCode>/Interface/GLUES/LOADINGSCREENS/  
 
+**PAY ATTENTION:** you have to create a directory in `setup/mpqdata/` like `enus` (LOWERCASE) containing the data listed above.  
+For example, you can just copy `Interface` and `DBFilesClient` directory into `setup/mpqdata/enus/` and move `Sound` into `setup/mpqdata/enus`.
+
+You can use MPQExtractor to extract the data, once you installed it succesfully you can use this bash script to make extract the data in the right order.
+- [extract.sh](https://gist.github.com/Helias/d9bd7708e28e9e8dcd5274bd2f3b68bc)
+
 #### 5. Reencode the audio files
 WAV-files need to be reencoded as `ogg/vorbis` and some MP3s may identify themselves as `application/octet-stream` instead of `audio/mpeg`.  
  * [example for WIN](https://gist.github.com/Sarjuuk/d77b203f7b71d191509afddabad5fc9f)  
  * [example for \*nix](https://gist.github.com/Sarjuuk/1f05ef2affe49a7e7ca0fad7b01c081d)
+
+Note: it will take a long time.
 
 #### 6. Run the initial setup from the CLI
 `php aowow --setup`.  
