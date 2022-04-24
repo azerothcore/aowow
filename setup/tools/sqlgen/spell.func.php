@@ -351,7 +351,60 @@ SqlGen::register(new class extends SetupScript
         }
 
         // fill learnedAt, trainingCost from trainer
-        if ($trainer = DB::World()->select('SELECT SpellID AS ARRAY_KEY, MIN(ReqSkillRank) AS reqSkill, MIN(MoneyCost) AS cost, ReqAbility1 AS reqSpellId, COUNT(*) AS count FROM trainer_spell GROUP BY SpellID'))
+        // if ($trainer = DB::World()->select('SELECT SpellID AS ARRAY_KEY, MIN(ReqSkillRank) AS reqSkill, MIN(MoneyCost) AS cost, ReqAbility1 AS reqSpellId, COUNT(*) AS count FROM trainer_spell GROUP BY SpellID'))
+        // {
+        //     $spells = DB::Aowow()->select('SELECT id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE id IN (?a)', array_keys($trainer));
+        //     $links  = [];
+
+        //     // todo (med): this skips some spells (e.g. riding)
+        //     foreach ($trainer as $spell => $tData)
+        //     {
+        //         if (!isset($spells[$spell]))
+        //             continue;
+
+        //         $triggered = false;
+        //         $effects   = $spells[$spell];
+
+        //         for ($i = 1; $i <= 3; $i++)
+        //         {
+        //             if ($effects['effect'.$i.'Id'] != 36)   // effect: learnSpell
+        //                 continue;
+
+        //             $triggered = true;
+
+        //             $l = &$links[$effects['effect'.$i.'TriggerSpell']];
+
+        //             if (!isset($l))
+        //                 $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
+
+        //             if ($tData['reqSkill'] < $l[0])
+        //                 $l[0] = $tData['reqSkill'];
+
+        //             if ($tData['cost'] < $l[1])
+        //                 $l[1] = $tData['cost'];
+        //         }
+
+        //         if (!$triggered)
+        //         {
+        //             $l = &$links[$spell];
+
+        //             if (!isset($l))
+        //                 $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
+
+        //             if ($tData['reqSkill'] < $l[0])
+        //                 $l[0] = $tData['reqSkill'];
+
+        //             if ($tData['cost'] < $l[1])
+        //                 $l[1] = $tData['cost'];
+        //         }
+        //     }
+
+        //     foreach ($links as $spell => $link)
+        //         DB::Aowow()->query("UPDATE ?_spell s SET s.learnedAt = ?d, s.trainingCost = ?d WHERE s.id = ?d", $link[0], $link[1], $spell);
+        // }
+
+        // fill learnedAt, trainingCost from trainer
+        if ($trainer = DB::World()->select('SELECT SpellID AS ARRAY_KEY, MIN(ReqSkillRank) AS reqSkill, MIN(MoneyCost) AS cost, COUNT(*) AS count FROM npc_trainer GROUP BY SpellID'))
         {
             $spells = DB::Aowow()->select('SELECT id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE id IN (?a)', array_keys($trainer));
             $links  = [];
@@ -367,7 +420,7 @@ SqlGen::register(new class extends SetupScript
 
                 for ($i = 1; $i <= 3; $i++)
                 {
-                    if ($effects['effect'.$i.'Id'] != 36)   // effect: learnSpell
+                    if ($effects['effect'.$i.'Id'] != 36)       // effect: learnSpell
                         continue;
 
                     $triggered = true;
@@ -375,7 +428,7 @@ SqlGen::register(new class extends SetupScript
                     $l = &$links[$effects['effect'.$i.'TriggerSpell']];
 
                     if (!isset($l))
-                        $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
+                        $l = [$tData['reqSkill'], $tData['cost']];
 
                     if ($tData['reqSkill'] < $l[0])
                         $l[0] = $tData['reqSkill'];
@@ -389,7 +442,7 @@ SqlGen::register(new class extends SetupScript
                     $l = &$links[$spell];
 
                     if (!isset($l))
-                        $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
+                        $l = [$tData['reqSkill'], $tData['cost']];
 
                     if ($tData['reqSkill'] < $l[0])
                         $l[0] = $tData['reqSkill'];

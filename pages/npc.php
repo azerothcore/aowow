@@ -370,7 +370,7 @@ class NpcPage extends GenericPage
             if (!$sai->prepare())                           // no smartAI found .. check per guid
             {
                 // at least one of many
-                $guids = DB::World()->selectCol('SELECT guid FROM creature WHERE id = ?d', $this->typeId);
+                $guids = DB::World()->selectCol('SELECT guid FROM creature WHERE id1 = ?d', $this->typeId);
                 while ($_ = array_pop($guids))
                 {
                     $sai = new SmartAI(SAI_SRC_TYPE_CREATURE, -$_, ['baseEntry' => $this->typeId, 'name' => $this->subject->getField('name', true), 'title' => ' [small](for GUID: '.$_.')[/small]']);
@@ -614,7 +614,7 @@ class NpcPage extends GenericPage
         }
 
         // tab: sells
-        if ($sells = DB::World()->selectCol('SELECT item FROM npc_vendor nv WHERE entry = ?d UNION SELECT item FROM game_event_npc_vendor genv JOIN creature c ON genv.guid = c.guid WHERE c.id = ?d', $this->typeId, $this->typeId))
+        if ($sells = DB::World()->selectCol('SELECT item FROM npc_vendor nv WHERE entry = ?d UNION SELECT item FROM game_event_npc_vendor genv JOIN creature c ON genv.guid = c.guid WHERE c.id1 = ?d', $this->typeId, $this->typeId))
         {
             $soldItems = new ItemList(array(['id', $sells]));
             if (!$soldItems->error)

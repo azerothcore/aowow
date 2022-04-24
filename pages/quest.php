@@ -608,7 +608,7 @@ class QuestPage extends GenericPage
             // so yeah .. no recursion checking
             $vendors = DB::World()->selectCol('
                 SELECT nv.entry FROM npc_vendor nv WHERE nv.item = ?d UNION
-                SELECT c.id FROM game_event_npc_vendor genv JOIN creature c ON c.guid = genv.guid WHERE genv.item = ?d',
+                SELECT c.id1 FROM game_event_npc_vendor genv JOIN creature c ON c.guid = genv.guid WHERE genv.item = ?d',
                 $itemId, $itemId
             );
             foreach ($vendors as $v)

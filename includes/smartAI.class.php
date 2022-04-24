@@ -518,7 +518,7 @@ class SmartAI
         switch ($this->itr['target']['type'])
         {
             case SAI_TARGET_CREATURE_GUID:
-                if ($id = DB::World()->selectCell('SELECT id FROM creature WHERE guid = ?d', $this->itr['target']['param'][0]))
+                if ($id = DB::World()->selectCell('SELECT id1 FROM creature WHERE guid = ?d', $this->itr['target']['param'][0]))
                     return $id;
 
                 break;
@@ -726,7 +726,7 @@ class SmartAI
                 $t['param'][10] = $getDist($t['param'][1], $t['param'][2]);
                 break;
             case SAI_TARGET_CREATURE_GUID:                  // 10
-                if ($t['param'][10] = DB::World()->selectCell('SELECT id FROM creature WHERE guid = ?d', $t['param'][0]))
+                if ($t['param'][10] = DB::World()->selectCell('SELECT id1 FROM creature WHERE guid = ?d', $t['param'][0]))
                     $this->jsGlobals[TYPE_NPC][] = $t['param'][10];
                 else
                     trigger_error('SmartAI::resloveTarget - creature with guid '.$t['param'][0].' not in DB');
@@ -935,7 +935,7 @@ class SmartAI
                 break;
             case SAI_EVENT_DISTANCE_CREATURE:               // 75  -  On creature guid OR any instance of creature entry is within distance.
                 if ($e['param'][0])
-                    $e['param'][10] = DB::World()->selectCell('SELECT id FROM creature WHERE guid = ?d', $e['param'][0]);
+                    $e['param'][10] = DB::World()->selectCell('SELECT id1 FROM creature WHERE guid = ?d', $e['param'][0]);
                 // do not break;
             case SAI_EVENT_DISTANCE_GAMEOBJECT:             // 76  -  On gameobject guid OR any instance of gameobject entry is within distance.
                 if ($e['param'][0] && !$e['param'][10])

@@ -17,7 +17,7 @@ SqlGen::register(new class extends SetupScript
     protected $dbcSourceFiles  = ['worldmaparea', 'map', 'dungeonmap', 'taxipathnode', 'soundemitters', 'areatrigger', 'areatable'];
 
     private $querys = array(
-        1 => ['SELECT c.guid, 1 AS "type", c.id AS typeId, c.spawntimesecs AS respawn, c.phaseMask, c.zoneId AS areaId, c.map, IFNULL(ca.path_id, 0) AS pathId, c.position_y AS `posX`, c.position_x AS `posY` ' .
+        1 => ['SELECT c.guid, 1 AS "type", c.id1 AS typeId, c.spawntimesecs AS respawn, c.phaseMask, c.zoneId AS areaId, c.map, IFNULL(ca.path_id, 0) AS pathId, c.position_y AS `posX`, c.position_x AS `posY` ' .
               'FROM creature c LEFT JOIN creature_addon ca ON ca.guid = c.guid',
               ' - assembling creature spawns', TYPE_NPC],
 
@@ -34,11 +34,11 @@ SqlGen::register(new class extends SetupScript
               ' - assembling areatrigger spawns', TYPE_AREATRIGGER],
 
         5 => ['SELECT c.guid, w.entry AS "npcOrPath", w.pointId AS "point", c.zoneId AS areaId, c.map, w.waittime AS "wait", w.location_y AS `posX`, w.location_x AS `posY` ' .
-              'FROM creature c JOIN script_waypoint w ON c.id = w.entry',
+              'FROM creature c JOIN script_waypoint w ON c.id1 = w.entry',
               ' - assembling waypoints from table script_waypoint', TYPE_NPC],
 
         6 => ['SELECT c.guid, w.entry AS "npcOrPath", w.pointId AS "point", c.zoneId AS areaId, c.map, 0 AS "wait", w.position_y AS `posX`, w.position_x AS `posY` ' .
-              'FROM creature c JOIN waypoints w ON c.id = w.entry',
+              'FROM creature c JOIN waypoints w ON c.id1 = w.entry',
               ' - assembling waypoints from table waypoints', TYPE_NPC],
 
         7 => ['SELECT c.guid, -w.id AS "npcOrPath", w.point, c.zoneId AS areaId, c.map, w.delay AS "wait", w.position_y AS `posX`, w.position_x AS `posY` ' .
@@ -251,7 +251,7 @@ SqlGen::register(new class extends SetupScript
 
         // get vehicle template accessories
         $accessories = DB::World()->select('
-            SELECT vta.accessory_entry AS typeId,  c.guid,  vta.entry, count(1) AS nSeats FROM vehicle_template_accessory vta LEFT JOIN creature c ON c.id = vta.entry GROUP BY accessory_entry,  c.guid UNION
+            SELECT vta.accessory_entry AS typeId,  c.guid,  vta.entry, count(1) AS nSeats FROM vehicle_template_accessory vta LEFT JOIN creature c ON c.id1 = vta.entry GROUP BY accessory_entry,  c.guid UNION
             SELECT  va.accessory_entry AS typeId, va.guid, 0 AS entry, count(1) AS nSeats FROM vehicle_accessory           va                                          GROUP BY accessory_entry, va.guid');
 
         // accessories may also be vehicles (e.g. "Kor'kron Infiltrator" is seated on "Kor'kron Suppression Turret" is seated on "Kor'kron Troop Transport")

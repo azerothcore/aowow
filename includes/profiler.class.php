@@ -502,7 +502,7 @@ class Profiler
             $pets = DB::Characters($realmId)->select('SELECT id AS ARRAY_KEY, id, entry, modelId, name FROM character_pet WHERE owner = ?d', $charGuid);
             foreach ($pets as $petGuid => $petData)
             {
-                $morePet   = DB::Aowow()->selectRow('SELECT p.`type`, c.family FROM ?_pet p JOIN ?_creature c ON c.family = p.id WHERE c.id = ?d', $petData['entry']);
+                $morePet   = DB::Aowow()->selectRow('SELECT p.`type`, c.family FROM ?_pet p JOIN ?_creature c ON c.family = p.id WHERE c.id1 = ?d', $petData['entry']);
                 $petSpells = DB::Characters($realmId)->selectCol('SELECT spell FROM pet_spell WHERE guid = ?d', $petGuid);
 
                 $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell IN (?a), `rank`, 0)) FROM ?_talents WHERE class = 0 AND petTypeMask = ?d GROUP BY id ORDER BY row, col ASC', $petSpells ?: [0], 1 << $morePet['type']);

@@ -51,7 +51,7 @@ SqlGen::register(new class extends SetupScript
             FROM
                 creature_template ct
             JOIN
-                creature c ON ct.entry = c.id
+                creature c ON ct.entry = c.id1
             WHERE
                 ct.type_flags & 0x1
             GROUP BY

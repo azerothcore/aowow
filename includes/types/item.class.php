@@ -2354,7 +2354,7 @@ class ItemListFilter extends Filter
         if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
             return false;
 
-        if ($iIds = DB::World()->selectCol('SELECT item FROM npc_vendor WHERE entry = ?d UNION SELECT item FROM game_event_npc_vendor v JOIN creature c ON c.guid = v.guid WHERE c.id = ?d', $cr[2], $cr[2]))
+        if ($iIds = DB::World()->selectCol('SELECT item FROM npc_vendor WHERE entry = ?d UNION SELECT item FROM game_event_npc_vendor v JOIN creature c ON c.guid = v.guid WHERE c.id1 = ?d', $cr[2], $cr[2]))
             return ['i.id', $iIds];
         else
             return [0];
