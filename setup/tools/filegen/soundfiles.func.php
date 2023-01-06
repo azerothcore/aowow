@@ -27,18 +27,19 @@ if (!CLI)
             }
 
             // expect converted files as file.wav_ or file.mp3_
-            $filePath .= '_';
+            // $filePath .= '_';
 
             // just use the first locale available .. there is no support for multiple audio files anyway
             foreach (CLISetup::$expectedPaths as $locStr => $__)
             {
                 // get your paths straight!
                 $p = CLI::nicePath($filePath, CLISetup::$srcDir, $locStr);
-
-                if (CLISetup::fileExists($p))
+                $lower_p = CLI::nicePath(strtolower($filePath), CLISetup::$srcDir, $locStr);
+    
+                if (CLISetup::fileExists($p) or CLISetup::fileExists($lower_p))
                 {
                     // copy over to static/wowsounds/
-                    if (!copy($p, 'static/wowsounds/'.$fileId))
+                    if (!copy($p, 'static/wowsounds/'.$fileId) or !copy($lower_p, 'static/wowsounds/'.$fileId))
                     {
                         $ok = false;
                         CLI::write(' - could not copy '.CLI::bold($p).' into '.CLI::bold('static/wowsounds/'.$fileId), CLI::LOG_ERROR);

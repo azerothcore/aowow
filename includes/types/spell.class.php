@@ -1016,10 +1016,10 @@ class SpellList extends BaseType
         $formula = preg_replace('/(\+|-|\*|\/)(\+|-|\*|\/)/i', '\1 \2', $formula);
 
         // remove first or last character if it is not a number
-        if (!is_numeric(substr($formula, -1))) {
+        if (!is_numeric(substr($formula, -1)) && substr($formula, -1) !== ')') {
             $formula = substr($formula, 0, -1);
         }
-        if (!is_numeric(substr($formula, 0, 1))) {
+        if (!is_numeric(substr($formula, 0, 1)) && substr($formula, -1) !== ')') {
             $formula = substr($formula, 1);
         }
 
