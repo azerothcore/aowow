@@ -146,6 +146,8 @@ A: A search is only conducted against the currently used locale. You may have on
 A: check your file config in `aowow/config/config.php`, if everything is correct, check if your password has **"#"** character contained in the password and replace it with the *encoded (URL) character* correspondent **"%23"**, do the same for special characters if you still get this error.  
 If you do not resolve, try to don't use **"#"** in your password.
 
+**Q: I cannot see the Quick Facts, Console error "Markup.js" not found**  
+A: unfortunately sometimes the setup can fail into copy `tools/filegen/templates/Markup.js.in` into `static/js/Markup.js` for permissions reason, as this also other js files can miss, check the permissions issue or copy them manually.  
 
 ## Thanks
 
