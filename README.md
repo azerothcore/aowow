@@ -38,7 +38,7 @@ sudo apt install php-gd php-xml php-mbstring
 
 
 #### Highly Recommended
-+ setting the following configuration values on your TrintyCore server will greatly increase the accuracy of spawn points
++ setting the following configuration values on your AzerothCore server will greatly increase the accuracy of spawn points
   > Calculate.Creature.Zone.Area.Data = 1  
   > Calculate.Gameoject.Zone.Area.Data = 1
 
