@@ -1,10 +1,5 @@
 ![logo](static/images/logos/home.png)
 
-
-## Build Status
-![fuck it ship it](http://forthebadge.com/images/badges/fuck-it-ship-it.svg)
-
-
 ## Introduction
 
 AoWoW is a Database tool for World of Warcraft v3.3.5 (build 12340)
