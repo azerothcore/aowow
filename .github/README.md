@@ -1,6 +1,6 @@
 ![logo](static/images/logos/home.png)
 
-[English](README.md) | [Spanish](README_ES.md)
+[🇬🇧 English](README.md) | [ 🇪🇸 Spanish](README_ES.md)
 
 ## Introduction
 
