@@ -1,5 +1,7 @@
 ![logo](static/images/logos/home.png)
 
+[English](README.md) | [Spanish](README_ES.md)
+
 ## Introduction
 
 AoWoW is a Database tool for World of Warcraft v3.3.5 (build 12340)

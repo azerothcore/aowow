@@ -1,0 +1,69 @@
+name: Bug report
+description: Create a bug report to help us improve.
+title: "[ Bug ]: "
+body:
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Behaviour
+      description: |
+        Description of the problem or issue here.
+        Additionally paste relevant lines from db table  `aowow_errors`
+    validations:
+      required: true
+  - type: dropdown
+    id: ac
+    attributes:
+      label: Use AzerothCore?
+      options:
+      - "Yes"
+      - "No"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce the problem
+      description: |
+        What does someone else need to do to encounter the same bug?
+      placeholder: |
+        1. Step 1
+        2. Step 2
+        3. Step 3
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra Notes
+      description: |
+        Do you have any extra notes that can help solve the issue that does not fit any other field?
+      placeholder: |
+        None
+    validations:
+      required: false
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: |
+        The Operating System the Server is running on.
+        i.e. Windows 11 x64, Debian 10 x64, macOS 12, Ubuntu 20.04
+    validations:
+      required: true
+  - type: input
+    id: php
+    attributes:
+      label: PHP version
+      description: |
+        What version are you using? 7.x / 8.x / e.t.c
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: |
+        Google Chromie / Mozilla Firefox / Safari / Edge / Brave / Tor
+    validations:
+      required: true
