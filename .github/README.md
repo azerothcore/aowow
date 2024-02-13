@@ -1,4 +1,4 @@
-![logo](static/images/logos/home.png)
+![logo](../static/images/logos/home.png)
 
 [🇬🇧 English](README.md) | [ 🇪🇸 Spanish](README_ES.md)
 
