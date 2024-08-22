@@ -129,7 +129,7 @@ When you've created your admin account you are done.
 **Q: The Page appears white, without any styles.**
 
 - A: The static content is not being displayed. You are either using SSL and AoWoW is unable to detect it or STATIC_HOST is not defined poperly. Either way this can be fixed via config `php aowow --siteconfig`
-- Probably you need to modify [13] and [18].
+- Probably you need to modify [10] and [15].
 - For example, if your project is in `htdocs/aowow/` (or `/var/www/html/aowow`), hence you visit it with `http://localhost/aowow/`, you should put:
 
 - [10] localhost/aowow

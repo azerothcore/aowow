@@ -22,7 +22,7 @@ SqlGen::register(new class extends SetupScript
                 IF(ie.entry IS NULL, 0, ?d) AS cuFlags,          -- cuFlags
                 difficulty_entry_1, difficulty_entry_2, difficulty_entry_3,
                 KillCredit1, KillCredit2,
-                modelid1, modelid2, modelid3, modelid4,
+                0 AS modelid1, 0 AS modelid2, 0 AS modelid3, 0 AS modelid4,
                 "" AS textureString,                            -- textureString
                 0 AS modelId,                                   -- modelId
                 0 AS humanoid,                                  -- uses creaturedisplayinfoextra

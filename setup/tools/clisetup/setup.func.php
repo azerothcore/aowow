@@ -169,7 +169,7 @@ function setup() : void
         $res   = DB::Aowow()->selectCol('SELECT `key` AS ARRAY_KEY, value FROM ?_config WHERE `key` IN ("site_host", "static_host", "force_ssl")');
         $prot  = $res['force_ssl'] ? 'https://' : 'http://';
         $cases = array(
-            'site_host'   => [$prot, $res['site_host'],   '/README.md'],
+            'site_host'   => [$prot, $res['site_host'],   '/.github/README.md'],
             'static_host' => [$prot, $res['static_host'], '/css/aowow.css']
         );
 
