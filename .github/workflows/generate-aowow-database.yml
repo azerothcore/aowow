@@ -16,12 +16,12 @@ jobs:
         run: |
           git clone https://github.com/azerothcore/acore-docker
           cd acore-docker
-          docker compose up -d
+
           cd ../setup/
 
           bash generate-db.sh
 
-          sleep 1
+          cd ..
 
           release_name=$(date '+%Y-%m-%d_%H-%M-%S')
           gh release create $release_name
