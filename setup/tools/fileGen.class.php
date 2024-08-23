@@ -31,7 +31,7 @@ class FileGen
     );
     public static $datasets   = array(                      // name => [AowowDeps, TCDeps, info]
         'realms'        => [null, ['realmlist'],                                                                  'datasets/realms'],
-        'statistics'    => [null, ['player_levelstats', 'player_classlevelstats'],                                'datasets/statistics'],
+        'statistics'    => [null, ['player_class_stats'],                                                         'datasets/statistics'],
         'simpleImg'     => [null, null,                                                                           'static/images/wow/[icons, Interface, ]/*'],
         'complexImg'    => [null, null,                                                                           'static/images/wow/[maps, talents/backgrounds, ]/*'],
         'talentCalc'    => [null, null,                                                                           'datasets/<locale>/talents-*'],

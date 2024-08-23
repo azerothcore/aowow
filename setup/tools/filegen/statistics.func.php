@@ -8,8 +8,7 @@ if (!CLI)
 
 
     /* deps:
-     * player_classlevelstats
-     * player_levelstats
+     * player_class_stats
     */
 
     // Create 'statistics'-file in datasets
@@ -133,17 +132,20 @@ if (!CLI)
 
                 $rows = DB::World()->select('
                     SELECT
-                        pls.level AS ARRAY_KEY,
-                        pls.str - ?d, pls.agi - ?d, pls.sta - ?d, pls.inte - ?d, pls.spi - ?d,
-                        pcls.basehp, IF(pcls.basemana <> 0, pcls.basemana, 100)
+                        pcs.Level AS ARRAY_KEY,
+                        0 as Strength, pcs.Agility - ?d, pcs.Stamina - ?d, pcs.Intellect - ?d, pcs.Spirit - ?d,
+                        pcs.BaseHP, IF(pcs.BaseMana <> 0, pcs.BaseMana, 100)
                     FROM
-                        player_levelstats pls
-                    JOIN
-                        player_classlevelstats pcls ON pls.level = pcls.level AND pls.class = pcls.class
+                        player_class_stats pcs
                     WHERE
-                        pls.race = ?d AND pls.class = ?d ORDER BY pls.level ASC',
-                    $offset[0], $offset[1], $offset[2], $offset[3], $offset[4],
-                    in_array($class, [3, 7, 11]) ? 6 : 1,
+                        pcs.Class = ?d ORDER BY pcs.Level ASC',
+
+                    // IF(pcs.Strength - ?d <= 0, 0, pcs.Strength - ?d),
+
+                    // WHERE pls.race = ?d AND 
+
+                    $offset[0], /* $offset[0], */ $offset[1], $offset[2], $offset[3], $offset[4],
+                    // in_array($class, [3, 7, 11]) ? 6 : 1,
                     $class
                 );
 
