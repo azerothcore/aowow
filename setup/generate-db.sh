@@ -49,11 +49,11 @@ cd ..
 
 mkdir -p setup/mpqdata/enus/DBFilesClient/
 
-# wget https://github.com/wowgaming/client-data/releases/download/v16/data.zip
-# unzip data.zip "dbc/*" -d ./
-# mv dbc/* "setup/mpqdata/enus/DBFilesClient/"
+wget https://github.com/wowgaming/client-data/releases/download/v16/data.zip
+unzip data.zip "dbc/*" -d ./
+mv dbc/* "setup/mpqdata/enus/DBFilesClient/"
 
-# php aowow --sql
+php aowow --sql
 
 mysqldump -u root -ppassword -h 127.0.0.1 -P 63306 tmp_aowow --ignore-table=tmp_aowow.aowow_config > aowow_update.sql
 mysqldump -u root -ppassword -h 127.0.0.1 -P 63306 acore_world > acore_world.sql
