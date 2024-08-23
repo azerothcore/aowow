@@ -8,14 +8,10 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-
-      - name: "clone acore-docker"
-        uses: actions/checkout@v4
-        with:
-          repository: 'azerothcore/acore-docker'
       
       - name: "run acore-docker"
         run: |
+          git clone https://github.com/azerothcore/acore-docker
           cd acore-docker
           docker compose up -d
 
