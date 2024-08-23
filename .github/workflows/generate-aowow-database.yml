@@ -15,4 +15,7 @@ jobs:
           repository: 'azerothcore/acore-docker'
       
       - name: "run acore-docker"
-        run: 'docker-compose up -d'
+        run: |
+          cd acore-docker
+          docker compose up -d
+
