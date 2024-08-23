@@ -10,6 +10,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "clone acore-docker"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'azerothcore/acore-docker'
+      
+      - name: "run acore-docker"
+        run: 'docker-compose up -d'
