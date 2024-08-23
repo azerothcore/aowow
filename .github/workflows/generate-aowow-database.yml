@@ -4,16 +4,18 @@ on:
 
 jobs:
   generate-aowow-db:
+    permissions: write-all
     runs-on: ubuntu-24.04
     steps:
       - name: checkout
         uses: actions/checkout@v4
       
-      - name: "run acore-docker"
+      - name: "run scripts"
         run: |
           git clone https://github.com/azerothcore/acore-docker
           cd acore-docker
           docker compose up -d
           cd ../setup/
-          bash generate-db.sh
-  
+          echo "test" >> test.txt
+          gh release upload ${{ github.ref_name }} "test.txt"
+        # bash generate-db.sh
