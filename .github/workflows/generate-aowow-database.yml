@@ -1,0 +1,15 @@
+name: generate-aowow-database
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-aowow-db:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: "clone acore-docker"
+        uses: actions/checkout@v3
+        with:
+          repository: 'azerothcore/acore-docker'
