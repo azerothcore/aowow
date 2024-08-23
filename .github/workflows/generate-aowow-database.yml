@@ -21,6 +21,8 @@ jobs:
 
           bash generate-db.sh
 
+          sleep 1
+
           release_name=$(date '+%Y-%m-%d_%H-%M-%S')
           gh release create $release_name
           gh release upload $release_name "aowow_db.sql.zip"
