@@ -16,7 +16,7 @@ jobs:
         run: |
           git clone https://github.com/azerothcore/acore-docker
           cd acore-docker
-
+          docker compose up -d
           cd ../setup/
 
           bash generate-db.sh
