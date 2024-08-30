@@ -109,7 +109,14 @@ class ItemStatSetup extends ItemList
                 if (!in_array($k, $this->statCols) || !$v || $k == 'id')
                     continue;
 
-                $updateFields[$k] = number_format($v, 2, '.', '');
+                if (version_compare(PHP_VERSION, '8.0.0', '<'))
+                {
+                    $updateFields[$k] = number_format($v, 2, '.', '');
+                }
+                else
+                {
+                    $updateFields[$k] = number_format((float)$v, 2, '.', '');
+                }
             }
 
             if (isset($this->itemMods[$this->id]))
