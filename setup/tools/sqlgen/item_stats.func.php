@@ -99,6 +99,8 @@ class ItemStatSetup extends ItemList
             }
         }
 
+        $isPhp8OrHigher = version_compare(PHP_VERSION, '8.0.0', '>=');
+
         // collect data and write to DB
         foreach ($this->iterate() as $__)
         {
@@ -109,13 +111,13 @@ class ItemStatSetup extends ItemList
                 if (!in_array($k, $this->statCols) || !$v || $k == 'id')
                     continue;
 
-                if (version_compare(PHP_VERSION, '8.0.0', '<'))
+                if ($isPhp8OrHigher)
                 {
-                    $updateFields[$k] = number_format($v, 2, '.', '');
+                    $updateFields[$k] = number_format((float)$v, 2, '.', '');
                 }
                 else
                 {
-                    $updateFields[$k] = number_format((float)$v, 2, '.', '');
+                    $updateFields[$k] = number_format($v, 2, '.', '');
                 }
             }
 
@@ -125,8 +127,18 @@ class ItemStatSetup extends ItemList
                 {
                     if (!$v)
                         continue;
+
                     if ($str = Game::$itemMods[$k])
-                        $updateFields[$str] = number_format($v, 2, '.', '');
+                    {
+                        if ($isPhp8OrHigher)
+                        {
+                            $updateFields[$str] = number_format((float)$v, 2, '.', '');
+                        }
+                        else
+                        {
+                            $updateFields[$str] = number_format($v, 2, '.', '');
+                        }
+                    }
                 }
             }
 
