@@ -15,13 +15,13 @@ class EnchantmentsPage extends GenericPage
     protected $path          = [0, 101];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'filters.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/filters.js']];
 
     protected $_get          = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
         $this->filterObj = new EnchantmentListFilter(false, ['parentCats' => $this->category]);
 
         parent::__construct($pageCall, $pageParam);
@@ -45,7 +45,7 @@ class EnchantmentsPage extends GenericPage
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
-        $ench = new EnchantmentList($conditions);
+        $ench = new EnchantmentList($conditions, ['calcTotal' => true]);
 
         $tabData['data'] = array_values($ench->getListviewData());
         $this->extendGlobalData($ench->getJSGlobals());
@@ -59,8 +59,8 @@ class EnchantmentsPage extends GenericPage
             $this->filter['initData']['sc'] = $x;
 
         $xCols = $this->filterObj->getExtraCols();
-        foreach (Util::$itemFilter as $fiId => $str)
-            if (array_column($tabData['data'], $str))
+        foreach (Stat::getFilterCriteriumIdFor() as $idx => $fiId)
+            if (array_column($tabData['data'], Stat::getJsonString($idx)))
                 $xCols[] = $fiId;
 
         if (array_column($tabData['data'], 'dmg'))
@@ -72,22 +72,22 @@ class EnchantmentsPage extends GenericPage
         if ($xCols)
             $tabData['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
 
-        if ($ench->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+        if ($ench->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
         {
-            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_enchantmentsfound', $ench->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_enchantmentsfound', $ench->getMatches(), Cfg::get('SQL_LIMIT_DEFAULT'));
             $tabData['_truncated'] = 1;
         }
 
         if (array_filter(array_column($tabData['data'], 'spells')))
             $tabData['visibleCols'] = ['trigger'];
 
-        if (!$ench->hasSetFields(['skillLine']))
+        if (!$ench->hasSetFields('skillLine'))
             $tabData['hiddenCols'] = ['skill'];
 
         if ($this->filterObj->error)
             $tabData['_errors'] = '$1';
 
-        $this->lvTabs[] = ['enchantment', $tabData, 'enchantment'];
+        $this->lvTabs[] = [EnchantmentList::$brickFile, $tabData, 'enchantment'];
     }
 
     protected function generateTitle()

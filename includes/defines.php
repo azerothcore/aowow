@@ -7,24 +7,23 @@ if (!defined('AOWOW_REVISION'))
  * Page
  */
 
-define('E_AOWOW',                 E_ALL & ~(E_DEPRECATED | E_USER_DEPRECATED | E_STRICT));
 define('JSON_AOWOW_POWER',        JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 define('FILTER_FLAG_STRIP_AOWOW', FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH | FILTER_FLAG_STRIP_BACKTICK);
 
-define('MIME_TYPE_TEXT',   'Content-Type: text/plain; charset=utf-8');
-define('MIME_TYPE_XML',    'Content-Type: text/xml; charset=utf-8');
-define('MIME_TYPE_JSON',   'Content-Type: application/x-javascript; charset=utf-8');
-define('MIME_TYPE_RSS',    'Content-Type: application/rss+xml; charset=utf-8');
-define('MIME_TYPE_JPEG',   'Content-Type: image/jpeg');
-define('MIME_TYPE_PNG',    'Content-Type: image/png');
+define('TDB_WORLD_MINIMUM_VER',  21101);
+define('TDB_WORLD_EXPECTED_VER', 24041);
 
-// shared setup strings
-define('ERR_CREATE_FILE',  'could not create file at destination %s');
-define('ERR_WRITE_FILE',   'could not write to file at destination %s');
-define('ERR_READ_FILE',    'file %s could not be read');
-define('ERR_MISSING_FILE', 'file %s not found');
-define('ERR_NONE',         'created file %s');
-define('ERR_MISSING_INCL', 'required function %s() could not be found at %s');
+// as of 01.01.2024     https://www.wowhead.com/wotlk/de/spell=40120/{seo}
+//                      https://www.wowhead.com/wotlk/es/search=vuelo
+define('WOWHEAD_LINK', 'https://www.wowhead.com/wotlk/%s/%s=%s');
+
+define('MIME_TYPE_TEXT',       'Content-Type: text/plain; charset=utf-8');
+define('MIME_TYPE_XML',        'Content-Type: text/xml; charset=utf-8');
+define('MIME_TYPE_JSON',       'Content-Type: application/x-javascript; charset=utf-8');
+define('MIME_TYPE_OPENSEARCH', 'Content-Type: application/x-suggestions+json; charset=utf-8');
+define('MIME_TYPE_RSS',        'Content-Type: application/rss+xml; charset=utf-8');
+define('MIME_TYPE_JPEG',       'Content-Type: image/jpeg');
+define('MIME_TYPE_PNG',        'Content-Type: image/png');
 
 define('CACHE_TYPE_NONE',                   0);             // page will not be cached
 define('CACHE_TYPE_PAGE',                   1);
@@ -35,10 +34,15 @@ define('CACHE_TYPE_XML',                    4);             // only used by item
 define('CACHE_MODE_FILECACHE',              0x1);
 define('CACHE_MODE_MEMCACHED',              0x2);
 
-define ('CSS_FILE',                         1);
-define ('CSS_STRING',                       2);
-define ('JS_FILE',                          3);
-define ('JS_STRING',                        4);
+define ('SC_CSS_FILE',                      1);
+define ('SC_CSS_STRING',                    2);
+define ('SC_JS_FILE',                       3);
+define ('SC_JS_STRING',                     4);
+define ('SC_FLAG_PREFIX',                   0x01);
+define ('SC_FLAG_NO_TIMESTAMP',             0x02);
+define ('SC_FLAG_APPEND_LOCALE',            0x04);
+define ('SC_FLAG_LOCALIZED',                0x08);
+
 
 define('SEARCH_TYPE_REGULAR',               0x10000000);
 define('SEARCH_TYPE_OPEN',                  0x20000000);
@@ -87,16 +91,6 @@ define('SITEREP_ACTION_BAD_REPORT',         10);            // Report declined
 define('SITEREP_ACTION_ARTICLE',            16);            // Guide approved (article approved)
 define('SITEREP_ACTION_USER_WARNED',        17);            // Moderator Warning
 define('SITEREP_ACTION_USER_SUSPENDED',     18);            // Moderator Suspension
-
-// config flags
-define('CON_FLAG_TYPE_INT',                 0x01);          // validate with intVal()
-define('CON_FLAG_TYPE_FLOAT',               0x02);          // validate with floatVal()
-define('CON_FLAG_TYPE_BOOL',                0x04);          // 0 || 1
-define('CON_FLAG_TYPE_STRING',              0x08);          //
-define('CON_FLAG_OPT_LIST',                 0x10);          // single option
-define('CON_FLAG_BITMASK',                  0x20);          // multiple options
-define('CON_FLAG_PHP',                      0x40);          // applied with ini_set() [restrictions apply!]
-define('CON_FLAG_PERSISTENT',               0x80);          // can not be deleted
 
 // Auth Result
 define('AUTH_OK',                           0);
@@ -147,12 +141,19 @@ define('U_GROUP_COMMENTS_MODERATOR',        (U_GROUP_MODERATOR|U_GROUP_LOCALIZER
 define('U_GROUP_PREMIUM_PERMISSIONS',       (U_GROUP_PREMIUM|U_GROUP_STAFF|U_GROUP_VIP));
 
 // Locales
-define('LOCALE_EN',                         0);
-define('LOCALE_FR',                         2);
-define('LOCALE_DE',                         3);
-define('LOCALE_CN',                         4);
-define('LOCALE_ES',                         6);
-define('LOCALE_RU',                         8);
+define('LOCALE_EN',                         0);             // enGB, enUS
+define('LOCALE_KR',                         1);             // koKR         [aowwo unused]
+define('LOCALE_FR',                         2);             // frFR
+define('LOCALE_DE',                         3);             // deDE
+define('LOCALE_CN',                         4);             // zhCN, enCN
+define('LOCALE_TW',                         5);             // zhTW, enTW   [aowow unused]
+define('LOCALE_ES',                         6);             // esES
+define('LOCALE_MX',                         7);             // esMX         [aowow unused]
+define('LOCALE_RU',                         8);             // ruRU
+define('LOCALE_JP',                         9);             // jaJP         [aowow & 335 unused]
+define('LOCALE_PT',                        10);             // ptPT, ptBR   [aowow unused]
+define('LOCALE_IT',                        11);             // itIT         [aowow & 335 unused]
+define('LOCALE_MASK_ALL',      0b000101011101);
 
 // red buttons on the top of the page
 define('BUTTON_WOWHEAD',                    0);
@@ -255,6 +256,15 @@ define('GUIDE_STATUS_APPROVED',             3);
 define('GUIDE_STATUS_REJECTED',             4);
 define('GUIDE_STATUS_ARCHIVED',             5);
 
+define('DEFAULT_ICON',                      'inv_misc_questionmark');
+
+define('MENU_IDX_ID',   0);                                 //      ID: A number or string; null makes the menu item a separator
+define('MENU_IDX_NAME', 1);                                 //    Name: A string
+define('MENU_IDX_URL',  2);                                 //     URL: A string for the URL, or a function to call when the menu item is clicked
+define('MENU_IDX_SUB',  3);                                 // Submenu: Child menu
+define('MENU_IDX_OPT',  4);                                 // Options: JSON array with additional options
+
+
 /*
  * Game
  */
@@ -299,6 +309,8 @@ define('NPC_CU_DIFFICULTY_DUMMY',           0x02);
 define('ITEM_CU_OT_ITEMLOOT',               0x01);          // there are no sourceTypes for these two cases
 define('ITEM_CU_OT_OBJECTLOOT',             0x02);
 
+define('EMOTE_CU_MISSING_CMD',              0x01);          // no alias in Globalstrings.lua and thus unusable
+
 // as seen in wFlags
 define('QUEST_CU_REPEATABLE',               0x01);
 define('QUEST_CU_DAILY',                    0x02);
@@ -340,6 +352,11 @@ define('LOOT_REFERENCE',        'reference_loot_template');
 define('SIDE_ALLIANCE',                     1);
 define('SIDE_HORDE',                        2);
 define('SIDE_BOTH',                         3);
+
+// Expansion
+define('EXP_CLASSIC',                       0);
+define('EXP_BC',                            1);
+define('EXP_WOTLK',                         2);
 
 // ClassMask
 define('CLASS_WARRIOR',                     0x001);
@@ -408,6 +425,80 @@ define('STAT_STAMINA',                      2);
 define('STAT_INTELLECT',                    3);
 define('STAT_SPIRIT',                       4);
 
+// ItemMods
+define('ITEM_MOD_MANA',                     0);
+define('ITEM_MOD_HEALTH',                   1);
+define('ITEM_MOD_AGILITY',                  3);
+define('ITEM_MOD_STRENGTH',                 4);
+define('ITEM_MOD_INTELLECT',                5);
+define('ITEM_MOD_SPIRIT',                   6);
+define('ITEM_MOD_STAMINA',                  7);
+define('ITEM_MOD_DEFENSE_SKILL_RATING',     12);
+define('ITEM_MOD_DODGE_RATING',             13);
+define('ITEM_MOD_PARRY_RATING',             14);
+define('ITEM_MOD_BLOCK_RATING',             15);
+define('ITEM_MOD_HIT_MELEE_RATING',         16);
+define('ITEM_MOD_HIT_RANGED_RATING',        17);
+define('ITEM_MOD_HIT_SPELL_RATING',         18);
+define('ITEM_MOD_CRIT_MELEE_RATING',        19);
+define('ITEM_MOD_CRIT_RANGED_RATING',       20);
+define('ITEM_MOD_CRIT_SPELL_RATING',        21);
+define('ITEM_MOD_HIT_TAKEN_MELEE_RATING',   22);
+define('ITEM_MOD_HIT_TAKEN_RANGED_RATING',  23);
+define('ITEM_MOD_HIT_TAKEN_SPELL_RATING',   24);
+define('ITEM_MOD_CRIT_TAKEN_MELEE_RATING',  25);
+define('ITEM_MOD_CRIT_TAKEN_RANGED_RATING', 26);
+define('ITEM_MOD_CRIT_TAKEN_SPELL_RATING',  27);
+define('ITEM_MOD_HASTE_MELEE_RATING',       28);
+define('ITEM_MOD_HASTE_RANGED_RATING',      29);
+define('ITEM_MOD_HASTE_SPELL_RATING',       30);
+define('ITEM_MOD_HIT_RATING',               31);
+define('ITEM_MOD_CRIT_RATING',              32);
+define('ITEM_MOD_HIT_TAKEN_RATING',         33);
+define('ITEM_MOD_CRIT_TAKEN_RATING',        34);
+define('ITEM_MOD_RESILIENCE_RATING',        35);
+define('ITEM_MOD_HASTE_RATING',             36);
+define('ITEM_MOD_EXPERTISE_RATING',         37);
+define('ITEM_MOD_ATTACK_POWER',             38);
+define('ITEM_MOD_RANGED_ATTACK_POWER',      39);
+define('ITEM_MOD_FERAL_ATTACK_POWER',       40);
+define('ITEM_MOD_SPELL_HEALING_DONE',       41);
+define('ITEM_MOD_SPELL_DAMAGE_DONE',        42);
+define('ITEM_MOD_MANA_REGENERATION',        43);
+define('ITEM_MOD_ARMOR_PENETRATION_RATING', 44);
+define('ITEM_MOD_SPELL_POWER',              45);
+define('ITEM_MOD_HEALTH_REGEN',             46);
+define('ITEM_MOD_SPELL_PENETRATION',        47);
+define('ITEM_MOD_BLOCK_VALUE',              48);
+
+// Combat Ratings
+define('CR_WEAPON_SKILL',          0);
+define('CR_DEFENSE_SKILL',         1);
+define('CR_DODGE',                 2);
+define('CR_PARRY',                 3);
+define('CR_BLOCK',                 4);
+define('CR_HIT_MELEE',             5);
+define('CR_HIT_RANGED',            6);
+define('CR_HIT_SPELL',             7);
+define('CR_CRIT_MELEE',            8);
+define('CR_CRIT_RANGED',           9);
+define('CR_CRIT_SPELL',            10);
+define('CR_HIT_TAKEN_MELEE',       11);
+define('CR_HIT_TAKEN_RANGED',      12);
+define('CR_HIT_TAKEN_SPELL',       13);
+define('CR_CRIT_TAKEN_MELEE',      14);
+define('CR_CRIT_TAKEN_RANGED',     15);
+define('CR_CRIT_TAKEN_SPELL',      16);
+define('CR_HASTE_MELEE',           17);
+define('CR_HASTE_RANGED',          18);
+define('CR_HASTE_SPELL',           19);
+define('CR_WEAPON_SKILL_MAINHAND', 20);
+define('CR_WEAPON_SKILL_OFFHAND',  21);
+define('CR_WEAPON_SKILL_RANGED',   22);
+define('CR_EXPERTISE',             23);
+define('CR_ARMOR_PENETRATION',     24);
+// define('CR_MASTERY',               25);                  // not in 335a
+
 // Powers
 define('POWER_MANA',                        0);
 define('POWER_RAGE',                        1);
@@ -428,6 +519,12 @@ define('SPELL_SCHOOL_SHADOW',               5);
 define('SPELL_SCHOOL_ARCANE',               6);
 define('SPELL_MAGIC_SCHOOLS',               0x7E);
 define('SPELL_ALL_SCHOOLS',                 0x7F);
+
+// DamageClass
+define('SPELL_DAMAGE_CLASS_NONE',           0);
+define('SPELL_DAMAGE_CLASS_MAGIC',          1);
+define('SPELL_DAMAGE_CLASS_MELEE',          2);
+define('SPELL_DAMAGE_CLASS_RANGED',         3);
 
 // CharacterSlot
 define('SLOT_HEAD',                         0);
@@ -489,7 +586,7 @@ define('LOCK_PROPERTY_MINING',              3);
 define('NPC_TYPEFLAG_HERBLOOT',             0x0100);
 define('NPC_TYPEFLAG_MININGLOOT',           0x0200);
 define('NPC_TYPEFLAG_ENGINEERLOOT',         0x8000);
-define('NPC_TYPEFLAG_SPECIALLOOT',          0x8300);
+define('NPC_TYPEFLAG_SPECIALLOOT',          NPC_TYPEFLAG_ENGINEERLOOT | NPC_TYPEFLAG_MININGLOOT | NPC_TYPEFLAG_HERBLOOT);
 
 define('NPC_RANK_NORMAL',                   0);
 define('NPC_RANK_ELITE',                    1);
@@ -763,70 +860,513 @@ define('ITEM_FLAG_SMARTLOOT',               0x02000000);
 define('ITEM_FLAG_ACCOUNTBOUND',            0x08000000);
 define('ITEM_FLAG_MILLABLE',                0x20000000);
 
-// ItemMod  (differ slightly from client, see g_statToJson)
-define('ITEM_MOD_WEAPON_DMG',               0);             // < custom
-define('ITEM_MOD_MANA',                     1);
-define('ITEM_MOD_HEALTH',                   2);
-define('ITEM_MOD_AGILITY',                  3);             // stats v
-define('ITEM_MOD_STRENGTH',                 4);
-define('ITEM_MOD_INTELLECT',                5);
-define('ITEM_MOD_SPIRIT',                   6);
-define('ITEM_MOD_STAMINA',                  7);
-define('ITEM_MOD_ENERGY',                   8);             // powers v
-define('ITEM_MOD_RAGE',                     9);
-define('ITEM_MOD_FOCUS',                    10);
-define('ITEM_MOD_RUNIC_POWER',              11);
-define('ITEM_MOD_DEFENSE_SKILL_RATING',     12);            // ratings v
-define('ITEM_MOD_DODGE_RATING',             13);
-define('ITEM_MOD_PARRY_RATING',             14);
-define('ITEM_MOD_BLOCK_RATING',             15);
-define('ITEM_MOD_HIT_MELEE_RATING',         16);
-define('ITEM_MOD_HIT_RANGED_RATING',        17);
-define('ITEM_MOD_HIT_SPELL_RATING',         18);
-define('ITEM_MOD_CRIT_MELEE_RATING',        19);
-define('ITEM_MOD_CRIT_RANGED_RATING',       20);
-define('ITEM_MOD_CRIT_SPELL_RATING',        21);
-define('ITEM_MOD_HIT_TAKEN_MELEE_RATING',   22);
-define('ITEM_MOD_HIT_TAKEN_RANGED_RATING',  23);
-define('ITEM_MOD_HIT_TAKEN_SPELL_RATING',   24);
-define('ITEM_MOD_CRIT_TAKEN_MELEE_RATING',  25);
-define('ITEM_MOD_CRIT_TAKEN_RANGED_RATING', 26);
-define('ITEM_MOD_CRIT_TAKEN_SPELL_RATING',  27);
-define('ITEM_MOD_HASTE_MELEE_RATING',       28);
-define('ITEM_MOD_HASTE_RANGED_RATING',      29);
-define('ITEM_MOD_HASTE_SPELL_RATING',       30);
-define('ITEM_MOD_HIT_RATING',               31);
-define('ITEM_MOD_CRIT_RATING',              32);
-define('ITEM_MOD_HIT_TAKEN_RATING',         33);
-define('ITEM_MOD_CRIT_TAKEN_RATING',        34);
-define('ITEM_MOD_RESILIENCE_RATING',        35);
-define('ITEM_MOD_HASTE_RATING',             36);
-define('ITEM_MOD_EXPERTISE_RATING',         37);
-define('ITEM_MOD_ATTACK_POWER',             38);
-define('ITEM_MOD_RANGED_ATTACK_POWER',      39);
-define('ITEM_MOD_FERAL_ATTACK_POWER',       40);
-define('ITEM_MOD_SPELL_HEALING_DONE',       41);            // deprecated
-define('ITEM_MOD_SPELL_DAMAGE_DONE',        42);            // deprecated
-define('ITEM_MOD_MANA_REGENERATION',        43);
-define('ITEM_MOD_ARMOR_PENETRATION_RATING', 44);
-define('ITEM_MOD_SPELL_POWER',              45);
-define('ITEM_MOD_HEALTH_REGEN',             46);
-define('ITEM_MOD_SPELL_PENETRATION',        47);
-define('ITEM_MOD_BLOCK_VALUE',              48);
-// define('ITEM_MOD_MASTERY_RATING',        49);
-define('ITEM_MOD_ARMOR',                    50);            // resistances v
-define('ITEM_MOD_FIRE_RESISTANCE',          51);
-define('ITEM_MOD_FROST_RESISTANCE',         52);
-define('ITEM_MOD_HOLY_RESISTANCE',          53);
-define('ITEM_MOD_SHADOW_RESISTANCE',        54);
-define('ITEM_MOD_NATURE_RESISTANCE',        55);
-define('ITEM_MOD_ARCANE_RESISTANCE',        56);            // custom v
-define('ITEM_MOD_FIRE_POWER',               57);
-define('ITEM_MOD_FROST_POWER',              58);
-define('ITEM_MOD_HOLY_POWER',               59);
-define('ITEM_MOD_SHADOW_POWER',             60);
-define('ITEM_MOD_NATURE_POWER',             61);
-define('ITEM_MOD_ARCANE_POWER',             62);
+// ItemEnchantment types
+define('ENCHANTMENT_TYPE_NONE',             0);
+define('ENCHANTMENT_TYPE_COMBAT_SPELL',     1);
+define('ENCHANTMENT_TYPE_DAMAGE',           2);
+define('ENCHANTMENT_TYPE_EQUIP_SPELL',      3);
+define('ENCHANTMENT_TYPE_RESISTANCE',       4);
+define('ENCHANTMENT_TYPE_STAT',             5);
+define('ENCHANTMENT_TYPE_TOTEM',            6);
+define('ENCHANTMENT_TYPE_USE_SPELL',        7);
+define('ENCHANTMENT_TYPE_PRISMATIC_SOCKET', 8);
+
+// Spell Effects and Auras
+define('SPELL_EFFECT_NONE',                             0);
+define('SPELL_EFFECT_INSTAKILL',                        1);
+define('SPELL_EFFECT_SCHOOL_DAMAGE',                    2);
+define('SPELL_EFFECT_DUMMY',                            3);
+define('SPELL_EFFECT_PORTAL_TELEPORT',                  4);
+define('SPELL_EFFECT_TELEPORT_UNITS',                   5);
+define('SPELL_EFFECT_APPLY_AURA',                       6);
+define('SPELL_EFFECT_ENVIRONMENTAL_DAMAGE',             7);
+define('SPELL_EFFECT_POWER_DRAIN',                      8);
+define('SPELL_EFFECT_HEALTH_LEECH',                     9);
+define('SPELL_EFFECT_HEAL',                             10);
+define('SPELL_EFFECT_BIND',                             11);
+define('SPELL_EFFECT_PORTAL',                           12);
+define('SPELL_EFFECT_RITUAL_BASE',                      13);
+define('SPELL_EFFECT_RITUAL_SPECIALIZE',                14);
+define('SPELL_EFFECT_RITUAL_ACTIVATE_PORTAL',           15);
+define('SPELL_EFFECT_QUEST_COMPLETE',                   16);
+define('SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL',           17);
+define('SPELL_EFFECT_RESURRECT',                        18);
+define('SPELL_EFFECT_ADD_EXTRA_ATTACKS',                19);
+define('SPELL_EFFECT_DODGE',                            20);
+define('SPELL_EFFECT_EVADE',                            21);
+define('SPELL_EFFECT_PARRY',                            22);
+define('SPELL_EFFECT_BLOCK',                            23);
+define('SPELL_EFFECT_CREATE_ITEM',                      24);
+define('SPELL_EFFECT_WEAPON',                           25);
+define('SPELL_EFFECT_DEFENSE',                          26);
+define('SPELL_EFFECT_PERSISTENT_AREA_AURA',             27);
+define('SPELL_EFFECT_SUMMON',                           28);
+define('SPELL_EFFECT_LEAP',                             29);
+define('SPELL_EFFECT_ENERGIZE',                         30);
+define('SPELL_EFFECT_WEAPON_PERCENT_DAMAGE',            31);
+define('SPELL_EFFECT_TRIGGER_MISSILE',                  32);
+define('SPELL_EFFECT_OPEN_LOCK',                        33);
+define('SPELL_EFFECT_SUMMON_CHANGE_ITEM',               34);
+define('SPELL_EFFECT_APPLY_AREA_AURA_PARTY',            35);
+define('SPELL_EFFECT_LEARN_SPELL',                      36);
+define('SPELL_EFFECT_SPELL_DEFENSE',                    37);
+define('SPELL_EFFECT_DISPEL',                           38);
+define('SPELL_EFFECT_LANGUAGE',                         39);
+define('SPELL_EFFECT_DUAL_WIELD',                       40);
+define('SPELL_EFFECT_JUMP',                             41);
+define('SPELL_EFFECT_JUMP_DEST',                        42);
+define('SPELL_EFFECT_TELEPORT_UNITS_FACE_CASTER',       43);
+define('SPELL_EFFECT_SKILL_STEP',                       44);
+define('SPELL_EFFECT_ADD_HONOR',                        45);
+define('SPELL_EFFECT_SPAWN',                            46);
+define('SPELL_EFFECT_TRADE_SKILL',                      47);
+define('SPELL_EFFECT_STEALTH',                          48);
+define('SPELL_EFFECT_DETECT',                           49);
+define('SPELL_EFFECT_TRANS_DOOR',                       50);
+define('SPELL_EFFECT_FORCE_CRITICAL_HIT',               51);
+define('SPELL_EFFECT_GUARANTEE_HIT',                    52);
+define('SPELL_EFFECT_ENCHANT_ITEM',                     53);
+define('SPELL_EFFECT_ENCHANT_ITEM_TEMPORARY',           54);
+define('SPELL_EFFECT_TAMECREATURE',                     55);
+define('SPELL_EFFECT_SUMMON_PET',                       56);
+define('SPELL_EFFECT_LEARN_PET_SPELL',                  57);
+define('SPELL_EFFECT_WEAPON_DAMAGE',                    58);
+define('SPELL_EFFECT_CREATE_RANDOM_ITEM',               59);
+define('SPELL_EFFECT_PROFICIENCY',                      60);
+define('SPELL_EFFECT_SEND_EVENT',                       61);
+define('SPELL_EFFECT_POWER_BURN',                       62);
+define('SPELL_EFFECT_THREAT',                           63);
+define('SPELL_EFFECT_TRIGGER_SPELL',                    64);
+define('SPELL_EFFECT_APPLY_AREA_AURA_RAID',             65);
+define('SPELL_EFFECT_CREATE_MANA_GEM',                  66);
+define('SPELL_EFFECT_HEAL_MAX_HEALTH',                  67);
+define('SPELL_EFFECT_INTERRUPT_CAST',                   68);
+define('SPELL_EFFECT_DISTRACT',                         69);
+define('SPELL_EFFECT_PULL',                             70);
+define('SPELL_EFFECT_PICKPOCKET',                       71);
+define('SPELL_EFFECT_ADD_FARSIGHT',                     72);
+define('SPELL_EFFECT_UNTRAIN_TALENTS',                  73);
+define('SPELL_EFFECT_APPLY_GLYPH',                      74);
+define('SPELL_EFFECT_HEAL_MECHANICAL',                  75);
+define('SPELL_EFFECT_SUMMON_OBJECT_WILD',               76);
+define('SPELL_EFFECT_SCRIPT_EFFECT',                    77);
+define('SPELL_EFFECT_ATTACK',                           78);
+define('SPELL_EFFECT_SANCTUARY',                        79);
+define('SPELL_EFFECT_ADD_COMBO_POINTS',                 80);
+define('SPELL_EFFECT_CREATE_HOUSE',                     81);
+define('SPELL_EFFECT_BIND_SIGHT',                       82);
+define('SPELL_EFFECT_DUEL',                             83);
+define('SPELL_EFFECT_STUCK',                            84);
+define('SPELL_EFFECT_SUMMON_PLAYER',                    85);
+define('SPELL_EFFECT_ACTIVATE_OBJECT',                  86);
+define('SPELL_EFFECT_GAMEOBJECT_DAMAGE',                87);
+define('SPELL_EFFECT_GAMEOBJECT_REPAIR',                88);
+define('SPELL_EFFECT_GAMEOBJECT_SET_DESTRUCTION_STATE', 89);
+define('SPELL_EFFECT_KILL_CREDIT',                      90);
+define('SPELL_EFFECT_THREAT_ALL',                       91);
+define('SPELL_EFFECT_ENCHANT_HELD_ITEM',                92);
+define('SPELL_EFFECT_FORCE_DESELECT',                   93);
+define('SPELL_EFFECT_SELF_RESURRECT',                   94);
+define('SPELL_EFFECT_SKINNING',                         95);
+define('SPELL_EFFECT_CHARGE',                           96);
+define('SPELL_EFFECT_CAST_BUTTON',                      97);
+define('SPELL_EFFECT_KNOCK_BACK',                       98);
+define('SPELL_EFFECT_DISENCHANT',                       99);
+define('SPELL_EFFECT_INEBRIATE',                        100);
+define('SPELL_EFFECT_FEED_PET',                         101);
+define('SPELL_EFFECT_DISMISS_PET',                      102);
+define('SPELL_EFFECT_REPUTATION',                       103);
+define('SPELL_EFFECT_SUMMON_OBJECT_SLOT1',              104);
+define('SPELL_EFFECT_SUMMON_OBJECT_SLOT2',              105);
+define('SPELL_EFFECT_SUMMON_OBJECT_SLOT3',              106);
+define('SPELL_EFFECT_SUMMON_OBJECT_SLOT4',              107);
+define('SPELL_EFFECT_DISPEL_MECHANIC',                  108);
+define('SPELL_EFFECT_RESURRECT_PET',                    109);
+define('SPELL_EFFECT_DESTROY_ALL_TOTEMS',               110);
+define('SPELL_EFFECT_DURABILITY_DAMAGE',                111);
+define('SPELL_EFFECT_SUMMON_DEMON',                     112);
+define('SPELL_EFFECT_RESURRECT_NEW',                    113);
+define('SPELL_EFFECT_ATTACK_ME',                        114);
+define('SPELL_EFFECT_DURABILITY_DAMAGE_PCT',            115);
+define('SPELL_EFFECT_SKIN_PLAYER_CORPSE',               116);
+define('SPELL_EFFECT_SPIRIT_HEAL',                      117);
+define('SPELL_EFFECT_SKILL',                            118);
+define('SPELL_EFFECT_APPLY_AREA_AURA_PET',              119);
+define('SPELL_EFFECT_TELEPORT_GRAVEYARD',               120);
+define('SPELL_EFFECT_NORMALIZED_WEAPON_DMG',            121);
+define('SPELL_EFFECT_122',                              122);
+define('SPELL_EFFECT_SEND_TAXI',                        123);
+define('SPELL_EFFECT_PULL_TOWARDS',                     124);
+define('SPELL_EFFECT_MODIFY_THREAT_PERCENT',            125);
+define('SPELL_EFFECT_STEAL_BENEFICIAL_BUFF',            126);
+define('SPELL_EFFECT_PROSPECTING',                      127);
+define('SPELL_EFFECT_APPLY_AREA_AURA_FRIEND',           128);
+define('SPELL_EFFECT_APPLY_AREA_AURA_ENEMY',            129);
+define('SPELL_EFFECT_REDIRECT_THREAT',                  130);
+define('SPELL_EFFECT_PLAY_SOUND',                       131);
+define('SPELL_EFFECT_PLAY_MUSIC',                       132);
+define('SPELL_EFFECT_UNLEARN_SPECIALIZATION',           133);
+define('SPELL_EFFECT_KILL_CREDIT2',                     134);
+define('SPELL_EFFECT_CALL_PET',                         135);
+define('SPELL_EFFECT_HEAL_PCT',                         136);
+define('SPELL_EFFECT_ENERGIZE_PCT',                     137);
+define('SPELL_EFFECT_LEAP_BACK',                        138);
+define('SPELL_EFFECT_CLEAR_QUEST',                      139);
+define('SPELL_EFFECT_FORCE_CAST',                       140);
+define('SPELL_EFFECT_FORCE_CAST_WITH_VALUE',            141);
+define('SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE',         142);
+define('SPELL_EFFECT_APPLY_AREA_AURA_OWNER',            143);
+define('SPELL_EFFECT_KNOCK_BACK_DEST',                  144);
+define('SPELL_EFFECT_PULL_TOWARDS_DEST',                145);
+define('SPELL_EFFECT_ACTIVATE_RUNE',                    146);
+define('SPELL_EFFECT_QUEST_FAIL',                       147);
+define('SPELL_EFFECT_TRIGGER_MISSILE_SPELL_WITH_VALUE', 148);
+define('SPELL_EFFECT_CHARGE_DEST',                      149);
+define('SPELL_EFFECT_QUEST_START',                      150);
+define('SPELL_EFFECT_TRIGGER_SPELL_2',                  151);
+define('SPELL_EFFECT_SUMMON_RAF_FRIEND',                152);
+define('SPELL_EFFECT_CREATE_TAMED_PET',                 153);
+define('SPELL_EFFECT_DISCOVER_TAXI',                    154);
+define('SPELL_EFFECT_TITAN_GRIP',                       155);
+define('SPELL_EFFECT_ENCHANT_ITEM_PRISMATIC',           156);
+define('SPELL_EFFECT_CREATE_ITEM_2',                    157);
+define('SPELL_EFFECT_MILLING',                          158);
+define('SPELL_EFFECT_ALLOW_RENAME_PET',                 159);
+define('SPELL_EFFECT_FORCE_CAST_2',                     160);
+define('SPELL_EFFECT_TALENT_SPEC_COUNT',                161);
+define('SPELL_EFFECT_TALENT_SPEC_SELECT',               162);
+define('SPELL_EFFECT_163',                              163);
+define('SPELL_EFFECT_REMOVE_AURA',                      164);
+
+define('SPELL_AURA_NONE',                                      0);
+define('SPELL_AURA_BIND_SIGHT',                                1);
+define('SPELL_AURA_MOD_POSSESS',                               2);
+define('SPELL_AURA_PERIODIC_DAMAGE',                           3);
+define('SPELL_AURA_DUMMY',                                     4);
+define('SPELL_AURA_MOD_CONFUSE',                               5);
+define('SPELL_AURA_MOD_CHARM',                                 6);
+define('SPELL_AURA_MOD_FEAR',                                  7);
+define('SPELL_AURA_PERIODIC_HEAL',                             8);
+define('SPELL_AURA_MOD_ATTACKSPEED',                           9);
+define('SPELL_AURA_MOD_THREAT',                                10);
+define('SPELL_AURA_MOD_TAUNT',                                 11);
+define('SPELL_AURA_MOD_STUN',                                  12);
+define('SPELL_AURA_MOD_DAMAGE_DONE',                           13);
+define('SPELL_AURA_MOD_DAMAGE_TAKEN',                          14);
+define('SPELL_AURA_DAMAGE_SHIELD',                             15);
+define('SPELL_AURA_MOD_STEALTH',                               16);
+define('SPELL_AURA_MOD_STEALTH_DETECT',                        17);
+define('SPELL_AURA_MOD_INVISIBILITY',                          18);
+define('SPELL_AURA_MOD_INVISIBILITY_DETECT',                   19);
+define('SPELL_AURA_OBS_MOD_HEALTH',                            20);
+define('SPELL_AURA_OBS_MOD_POWER',                             21);
+define('SPELL_AURA_MOD_RESISTANCE',                            22);
+define('SPELL_AURA_PERIODIC_TRIGGER_SPELL',                    23);
+define('SPELL_AURA_PERIODIC_ENERGIZE',                         24);
+define('SPELL_AURA_MOD_PACIFY',                                25);
+define('SPELL_AURA_MOD_ROOT',                                  26);
+define('SPELL_AURA_MOD_SILENCE',                               27);
+define('SPELL_AURA_REFLECT_SPELLS',                            28);
+define('SPELL_AURA_MOD_STAT',                                  29);
+define('SPELL_AURA_MOD_SKILL',                                 30);
+define('SPELL_AURA_MOD_INCREASE_SPEED',                        31);
+define('SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED',                32);
+define('SPELL_AURA_MOD_DECREASE_SPEED',                        33);
+define('SPELL_AURA_MOD_INCREASE_HEALTH',                       34);
+define('SPELL_AURA_MOD_INCREASE_ENERGY',                       35);
+define('SPELL_AURA_MOD_SHAPESHIFT',                            36);
+define('SPELL_AURA_EFFECT_IMMUNITY',                           37);
+define('SPELL_AURA_STATE_IMMUNITY',                            38);
+define('SPELL_AURA_SCHOOL_IMMUNITY',                           39);
+define('SPELL_AURA_DAMAGE_IMMUNITY',                           40);
+define('SPELL_AURA_DISPEL_IMMUNITY',                           41);
+define('SPELL_AURA_PROC_TRIGGER_SPELL',                        42);
+define('SPELL_AURA_PROC_TRIGGER_DAMAGE',                       43);
+define('SPELL_AURA_TRACK_CREATURES',                           44);
+define('SPELL_AURA_TRACK_RESOURCES',                           45);
+define('SPELL_AURA_46',                                        46);
+define('SPELL_AURA_MOD_PARRY_PERCENT',                         47);
+define('SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT',        48);
+define('SPELL_AURA_MOD_DODGE_PERCENT',                         49);
+define('SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT',               50);
+define('SPELL_AURA_MOD_BLOCK_PERCENT',                         51);
+define('SPELL_AURA_MOD_WEAPON_CRIT_PERCENT',                   52);
+define('SPELL_AURA_PERIODIC_LEECH',                            53);
+define('SPELL_AURA_MOD_HIT_CHANCE',                            54);
+define('SPELL_AURA_MOD_SPELL_HIT_CHANCE',                      55);
+define('SPELL_AURA_TRANSFORM',                                 56);
+define('SPELL_AURA_MOD_SPELL_CRIT_CHANCE',                     57);
+define('SPELL_AURA_MOD_INCREASE_SWIM_SPEED',                   58);
+define('SPELL_AURA_MOD_DAMAGE_DONE_CREATURE',                  59);
+define('SPELL_AURA_MOD_PACIFY_SILENCE',                        60);
+define('SPELL_AURA_MOD_SCALE',                                 61);
+define('SPELL_AURA_PERIODIC_HEALTH_FUNNEL',                    62);
+define('SPELL_AURA_63',                                        63);
+define('SPELL_AURA_PERIODIC_MANA_LEECH',                       64);
+define('SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK',               65);
+define('SPELL_AURA_FEIGN_DEATH',                               66);
+define('SPELL_AURA_MOD_DISARM',                                67);
+define('SPELL_AURA_MOD_STALKED',                               68);
+define('SPELL_AURA_SCHOOL_ABSORB',                             69);
+define('SPELL_AURA_EXTRA_ATTACKS',                             70);
+define('SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL',              71);
+define('SPELL_AURA_MOD_POWER_COST_SCHOOL_PCT',                 72);
+define('SPELL_AURA_MOD_POWER_COST_SCHOOL',                     73);
+define('SPELL_AURA_REFLECT_SPELLS_SCHOOL',                     74);
+define('SPELL_AURA_MOD_LANGUAGE',                              75);
+define('SPELL_AURA_FAR_SIGHT',                                 76);
+define('SPELL_AURA_MECHANIC_IMMUNITY',                         77);
+define('SPELL_AURA_MOUNTED',                                   78);
+define('SPELL_AURA_MOD_DAMAGE_PERCENT_DONE',                   79);
+define('SPELL_AURA_MOD_PERCENT_STAT',                          80);
+define('SPELL_AURA_SPLIT_DAMAGE_PCT',                          81);
+define('SPELL_AURA_WATER_BREATHING',                           82);
+define('SPELL_AURA_MOD_BASE_RESISTANCE',                       83);
+define('SPELL_AURA_MOD_REGEN',                                 84);
+define('SPELL_AURA_MOD_POWER_REGEN',                           85);
+define('SPELL_AURA_CHANNEL_DEATH_ITEM',                        86);
+define('SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN',                  87);
+define('SPELL_AURA_MOD_HEALTH_REGEN_PERCENT',                  88);
+define('SPELL_AURA_PERIODIC_DAMAGE_PERCENT',                   89);
+define('SPELL_AURA_90',                                        90);
+define('SPELL_AURA_MOD_DETECT_RANGE',                          91);
+define('SPELL_AURA_PREVENTS_FLEEING',                          92);
+define('SPELL_AURA_MOD_UNATTACKABLE',                          93);
+define('SPELL_AURA_INTERRUPT_REGEN',                           94);
+define('SPELL_AURA_GHOST',                                     95);
+define('SPELL_AURA_SPELL_MAGNET',                              96);
+define('SPELL_AURA_MANA_SHIELD',                               97);
+define('SPELL_AURA_MOD_SKILL_TALENT',                          98);
+define('SPELL_AURA_MOD_ATTACK_POWER',                          99);
+define('SPELL_AURA_AURAS_VISIBLE',                             100);
+define('SPELL_AURA_MOD_RESISTANCE_PCT',                        101);
+define('SPELL_AURA_MOD_MELEE_ATTACK_POWER_VERSUS',             102);
+define('SPELL_AURA_MOD_TOTAL_THREAT',                          103);
+define('SPELL_AURA_WATER_WALK',                                104);
+define('SPELL_AURA_FEATHER_FALL',                              105);
+define('SPELL_AURA_HOVER',                                     106);
+define('SPELL_AURA_ADD_FLAT_MODIFIER',                         107);
+define('SPELL_AURA_ADD_PCT_MODIFIER',                          108);
+define('SPELL_AURA_ADD_TARGET_TRIGGER',                        109);
+define('SPELL_AURA_MOD_POWER_REGEN_PERCENT',                   110);
+define('SPELL_AURA_ADD_CASTER_HIT_TRIGGER',                    111);
+define('SPELL_AURA_OVERRIDE_CLASS_SCRIPTS',                    112);
+define('SPELL_AURA_MOD_RANGED_DAMAGE_TAKEN',                   113);
+define('SPELL_AURA_MOD_RANGED_DAMAGE_TAKEN_PCT',               114);
+define('SPELL_AURA_MOD_HEALING',                               115);
+define('SPELL_AURA_MOD_REGEN_DURING_COMBAT',                   116);
+define('SPELL_AURA_MOD_MECHANIC_RESISTANCE',                   117);
+define('SPELL_AURA_MOD_HEALING_PCT',                           118);
+define('SPELL_AURA_119',                                       119);
+define('SPELL_AURA_UNTRACKABLE',                               120);
+define('SPELL_AURA_EMPATHY',                                   121);
+define('SPELL_AURA_MOD_OFFHAND_DAMAGE_PCT',                    122);
+define('SPELL_AURA_MOD_TARGET_RESISTANCE',                     123);
+define('SPELL_AURA_MOD_RANGED_ATTACK_POWER',                   124);
+define('SPELL_AURA_MOD_MELEE_DAMAGE_TAKEN',                    125);
+define('SPELL_AURA_MOD_MELEE_DAMAGE_TAKEN_PCT',                126);
+define('SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS',        127);
+define('SPELL_AURA_MOD_POSSESS_PET',                           128);
+define('SPELL_AURA_MOD_SPEED_ALWAYS',                          129);
+define('SPELL_AURA_MOD_MOUNTED_SPEED_ALWAYS',                  130);
+define('SPELL_AURA_MOD_RANGED_ATTACK_POWER_VERSUS',            131);
+define('SPELL_AURA_MOD_INCREASE_ENERGY_PERCENT',               132);
+define('SPELL_AURA_MOD_INCREASE_HEALTH_PERCENT',               133);
+define('SPELL_AURA_MOD_MANA_REGEN_INTERRUPT',                  134);
+define('SPELL_AURA_MOD_HEALING_DONE',                          135);
+define('SPELL_AURA_MOD_HEALING_DONE_PERCENT',                  136);
+define('SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE',                 137);
+define('SPELL_AURA_MOD_MELEE_HASTE',                           138);
+define('SPELL_AURA_FORCE_REACTION',                            139);
+define('SPELL_AURA_MOD_RANGED_HASTE',                          140);
+define('SPELL_AURA_MOD_RANGED_AMMO_HASTE',                     141);
+define('SPELL_AURA_MOD_BASE_RESISTANCE_PCT',                   142);
+define('SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE',                  143);
+define('SPELL_AURA_SAFE_FALL',                                 144);
+define('SPELL_AURA_MOD_PET_TALENT_POINTS',                     145);
+define('SPELL_AURA_ALLOW_TAME_PET_TYPE',                       146);
+define('SPELL_AURA_MECHANIC_IMMUNITY_MASK',                    147);
+define('SPELL_AURA_RETAIN_COMBO_POINTS',                       148);
+define('SPELL_AURA_REDUCE_PUSHBACK',                           149);
+define('SPELL_AURA_MOD_SHIELD_BLOCKVALUE_PCT',                 150);
+define('SPELL_AURA_TRACK_STEALTHED',                           151);
+define('SPELL_AURA_MOD_DETECTED_RANGE',                        152);
+define('SPELL_AURA_SPLIT_DAMAGE_FLAT',                         153);
+define('SPELL_AURA_MOD_STEALTH_LEVEL',                         154);
+define('SPELL_AURA_MOD_WATER_BREATHING',                       155);
+define('SPELL_AURA_MOD_REPUTATION_GAIN',                       156);
+define('SPELL_AURA_PET_DAMAGE_MULTI',                          157);
+define('SPELL_AURA_MOD_SHIELD_BLOCKVALUE',                     158);
+define('SPELL_AURA_NO_PVP_CREDIT',                             159);
+define('SPELL_AURA_MOD_AOE_AVOIDANCE',                         160);
+define('SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT',                161);
+define('SPELL_AURA_POWER_BURN',                                162);
+define('SPELL_AURA_MOD_CRIT_DAMAGE_BONUS',                     163);
+define('SPELL_AURA_164',                                       164);
+define('SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS',         165);
+define('SPELL_AURA_MOD_ATTACK_POWER_PCT',                      166);
+define('SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT',               167);
+define('SPELL_AURA_MOD_DAMAGE_DONE_VERSUS',                    168);
+define('SPELL_AURA_MOD_CRIT_PERCENT_VERSUS',                   169);
+define('SPELL_AURA_DETECT_AMORE',                              170);
+define('SPELL_AURA_MOD_SPEED_NOT_STACK',                       171);
+define('SPELL_AURA_MOD_MOUNTED_SPEED_NOT_STACK',               172);
+define('SPELL_AURA_173',                                       173);
+define('SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT',          174);
+define('SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT',         175);
+define('SPELL_AURA_SPIRIT_OF_REDEMPTION',                      176);
+define('SPELL_AURA_AOE_CHARM',                                 177);
+define('SPELL_AURA_MOD_DEBUFF_RESISTANCE',                     178);
+define('SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE',            179);
+define('SPELL_AURA_MOD_FLAT_SPELL_DAMAGE_VERSUS',              180);
+define('SPELL_AURA_181',                                       181);
+define('SPELL_AURA_MOD_RESISTANCE_OF_STAT_PERCENT',            182);
+define('SPELL_AURA_MOD_CRITICAL_THREAT',                       183);
+define('SPELL_AURA_MOD_ATTACKER_MELEE_HIT_CHANCE',             184);
+define('SPELL_AURA_MOD_ATTACKER_RANGED_HIT_CHANCE',            185);
+define('SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE',             186);
+define('SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_CHANCE',            187);
+define('SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_CHANCE',           188);
+define('SPELL_AURA_MOD_RATING',                                189);
+define('SPELL_AURA_MOD_FACTION_REPUTATION_GAIN',               190);
+define('SPELL_AURA_USE_NORMAL_MOVEMENT_SPEED',                 191);
+define('SPELL_AURA_MOD_MELEE_RANGED_HASTE',                    192);
+define('SPELL_AURA_MELEE_SLOW',                                193);
+define('SPELL_AURA_MOD_TARGET_ABSORB_SCHOOL',                  194);
+define('SPELL_AURA_MOD_TARGET_ABILITY_ABSORB_SCHOOL',          195);
+define('SPELL_AURA_MOD_COOLDOWN',                              196);
+define('SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE', 197);
+define('SPELL_AURA_198',                                       198);
+define('SPELL_AURA_MOD_INCREASES_SPELL_PCT_TO_HIT',            199);
+define('SPELL_AURA_MOD_XP_PCT',                                200);
+define('SPELL_AURA_FLY',                                       201);
+define('SPELL_AURA_IGNORE_COMBAT_RESULT',                      202);
+define('SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_DAMAGE',            203);
+define('SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_DAMAGE',           204);
+define('SPELL_AURA_MOD_SCHOOL_CRIT_DMG_TAKEN',                 205);
+define('SPELL_AURA_MOD_INCREASE_VEHICLE_FLIGHT_SPEED',         206);
+define('SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED',         207);
+define('SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED',                 208);
+define('SPELL_AURA_MOD_MOUNTED_FLIGHT_SPEED_ALWAYS',           209);
+define('SPELL_AURA_MOD_VEHICLE_SPEED_ALWAYS',                  210);
+define('SPELL_AURA_MOD_FLIGHT_SPEED_NOT_STACK',                211);
+define('SPELL_AURA_MOD_RANGED_ATTACK_POWER_OF_STAT_PERCENT',   212);
+define('SPELL_AURA_MOD_RAGE_FROM_DAMAGE_DEALT',                213);
+define('SPELL_AURA_214',                                       214);
+define('SPELL_AURA_ARENA_PREPARATION',                         215);
+define('SPELL_AURA_HASTE_SPELLS',                              216);
+define('SPELL_AURA_MOD_MELEE_HASTE_2',                         217);
+define('SPELL_AURA_HASTE_RANGED',                              218);
+define('SPELL_AURA_MOD_MANA_REGEN_FROM_STAT',                  219);
+define('SPELL_AURA_MOD_RATING_FROM_STAT',                      220);
+define('SPELL_AURA_MOD_DETAUNT',                               221);
+define('SPELL_AURA_222',                                       222);
+define('SPELL_AURA_RAID_PROC_FROM_CHARGE',                     223);
+define('SPELL_AURA_224',                                       224);
+define('SPELL_AURA_RAID_PROC_FROM_CHARGE_WITH_VALUE',          225);
+define('SPELL_AURA_PERIODIC_DUMMY',                            226);
+define('SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE',         227);
+define('SPELL_AURA_DETECT_STEALTH',                            228);
+define('SPELL_AURA_MOD_AOE_DAMAGE_AVOIDANCE',                  229);
+define('SPELL_AURA_MOD_INCREASE_HEALTH_NONSTACK',              230);
+define('SPELL_AURA_PROC_TRIGGER_SPELL_WITH_VALUE',             231);
+define('SPELL_AURA_MECHANIC_DURATION_MOD',                     232);
+define('SPELL_AURA_CHANGE_MODEL_FOR_ALL_HUMANOIDS',            233);
+define('SPELL_AURA_MECHANIC_DURATION_MOD_NOT_STACK',           234);
+define('SPELL_AURA_MOD_DISPEL_RESIST',                         235);
+define('SPELL_AURA_CONTROL_VEHICLE',                           236);
+define('SPELL_AURA_MOD_SPELL_DAMAGE_OF_ATTACK_POWER',          237);
+define('SPELL_AURA_MOD_SPELL_HEALING_OF_ATTACK_POWER',         238);
+define('SPELL_AURA_MOD_SCALE_2',                               239);
+define('SPELL_AURA_MOD_EXPERTISE',                             240);
+define('SPELL_AURA_FORCE_MOVE_FORWARD',                        241);
+define('SPELL_AURA_MOD_SPELL_DAMAGE_FROM_HEALING',             242);
+define('SPELL_AURA_MOD_FACTION',                               243);
+define('SPELL_AURA_COMPREHEND_LANGUAGE',                       244);
+define('SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL',               245);
+define('SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL_NOT_STACK',     246);
+define('SPELL_AURA_CLONE_CASTER',                              247);
+define('SPELL_AURA_MOD_COMBAT_RESULT_CHANCE',                  248);
+define('SPELL_AURA_CONVERT_RUNE',                              249);
+define('SPELL_AURA_MOD_INCREASE_HEALTH_2',                     250);
+define('SPELL_AURA_MOD_ENEMY_DODGE',                           251);
+define('SPELL_AURA_MOD_SPEED_SLOW_ALL',                        252);
+define('SPELL_AURA_MOD_BLOCK_CRIT_CHANCE',                     253);
+define('SPELL_AURA_MOD_DISARM_OFFHAND',                        254);
+define('SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT',         255);
+define('SPELL_AURA_NO_REAGENT_USE',                            256);
+define('SPELL_AURA_MOD_TARGET_RESIST_BY_SPELL_CLASS',          257);
+define('SPELL_AURA_258',                                       258);
+define('SPELL_AURA_MOD_HOT_PCT',                               259);
+define('SPELL_AURA_SCREEN_EFFECT',                             260);
+define('SPELL_AURA_PHASE',                                     261);
+define('SPELL_AURA_ABILITY_IGNORE_AURASTATE',                  262);
+define('SPELL_AURA_ALLOW_ONLY_ABILITY',                        263);
+define('SPELL_AURA_264',                                       264);
+define('SPELL_AURA_265',                                       265);
+define('SPELL_AURA_266',                                       266);
+define('SPELL_AURA_MOD_IMMUNE_AURA_APPLY_SCHOOL',              267);
+define('SPELL_AURA_MOD_ATTACK_POWER_OF_STAT_PERCENT',          268);
+define('SPELL_AURA_MOD_IGNORE_TARGET_RESIST',                  269);
+define('SPELL_AURA_MOD_ABILITY_IGNORE_TARGET_RESIST',          270);
+define('SPELL_AURA_MOD_DAMAGE_FROM_CASTER',                    271);
+define('SPELL_AURA_IGNORE_MELEE_RESET',                        272);
+define('SPELL_AURA_X_RAY',                                     273);
+define('SPELL_AURA_ABILITY_CONSUME_NO_AMMO',                   274);
+define('SPELL_AURA_MOD_IGNORE_SHAPESHIFT',                     275);
+define('SPELL_AURA_MOD_DAMAGE_DONE_FOR_MECHANIC',              276);
+define('SPELL_AURA_MOD_MAX_AFFECTED_TARGETS',                  277);
+define('SPELL_AURA_MOD_DISARM_RANGED',                         278);
+define('SPELL_AURA_INITIALIZE_IMAGES',                         279);
+define('SPELL_AURA_MOD_ARMOR_PENETRATION_PCT',                 280);
+define('SPELL_AURA_MOD_HONOR_GAIN_PCT',                        281);
+define('SPELL_AURA_MOD_BASE_HEALTH_PCT',                       282);
+define('SPELL_AURA_MOD_HEALING_RECEIVED',                      283);
+define('SPELL_AURA_LINKED',                                    284);
+define('SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR',                 285);
+define('SPELL_AURA_ABILITY_PERIODIC_CRIT',                     286);
+define('SPELL_AURA_DEFLECT_SPELLS',                            287);
+define('SPELL_AURA_IGNORE_HIT_DIRECTION',                      288);
+define('SPELL_AURA_PREVENT_DURABILITY_LOSS',                   289);
+define('SPELL_AURA_MOD_CRIT_PCT',                              290);
+define('SPELL_AURA_MOD_XP_QUEST_PCT',                          291);
+define('SPELL_AURA_OPEN_STABLE',                               292);
+define('SPELL_AURA_OVERRIDE_SPELLS',                           293);
+define('SPELL_AURA_PREVENT_REGENERATE_POWER',                  294);
+define('SPELL_AURA_295',                                       295);
+define('SPELL_AURA_SET_VEHICLE_ID',                            296);
+define('SPELL_AURA_BLOCK_SPELL_FAMILY',                        297);
+define('SPELL_AURA_STRANGULATE',                               298);
+define('SPELL_AURA_299',                                       299);
+define('SPELL_AURA_SHARE_DAMAGE_PCT',                          300);
+define('SPELL_AURA_SCHOOL_HEAL_ABSORB',                        301);
+define('SPELL_AURA_302',                                       302);
+define('SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE',          303);
+define('SPELL_AURA_MOD_FAKE_INEBRIATE',                        304);
+define('SPELL_AURA_MOD_MINIMUM_SPEED',                         305);
+define('SPELL_AURA_306',                                       306);
+define('SPELL_AURA_HEAL_ABSORB_TEST',                          307);
+define('SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER',                308);
+define('SPELL_AURA_309',                                       309);
+define('SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE',         310);
+define('SPELL_AURA_311',                                       311);
+define('SPELL_AURA_312',                                       312);
+define('SPELL_AURA_313',                                       313);
+define('SPELL_AURA_PREVENT_RESURRECTION',                      314);
+define('SPELL_AURA_UNDERWATER_WALKING',                        315);
+define('SPELL_AURA_PERIODIC_HASTE',                            316);
+
+
+// item trigger and recipe handling
+define('SPELL_TRIGGER_USE',         0);
+define('SPELL_TRIGGER_EQUIP',       1);
+define('SPELL_TRIGGER_HIT',         2);
+define('SPELL_TRIGGER_SOULSTONE',   4);
+define('SPELL_TRIGGER_USE_NODELAY', 5);
+define('SPELL_TRIGGER_LEARN',       6);
+
+// learn trigger spells on items - 483: learn recipe; 55884: learn mount/pet
+define('LEARN_SPELLS', [483, 55884]);
 
 // Spell Attributes definitions
 define('SPELL_ATTR0_CU_ENCHANT_PROC',                  0x00000001); //
@@ -1120,18 +1660,25 @@ define('SPELL_ATTR7_CLIENT_INDICATOR',                 0x80000000); // Client in
 
 
 // (some) Skill ids
+define('SKILL_FIRST_AID',      129);
 define('SKILL_BLACKSMITHING',  164);
 define('SKILL_LEATHERWORKING', 165);
 define('SKILL_ALCHEMY',        171);
 define('SKILL_HERBALISM',      182);
+define('SKILL_COOKING',        185);
 define('SKILL_MINING',         186);
 define('SKILL_TAILORING',      197);
 define('SKILL_ENGINEERING',    202);
 define('SKILL_ENCHANTING',     333);
+define('SKILL_FISHING',        356);
 define('SKILL_SKINNING',       393);
-define('SKILL_JEWELCRAFTING',  755);
-define('SKILL_INSCRIPTION',    773);
 define('SKILL_LOCKPICKING',    633);
+define('SKILL_JEWELCRAFTING',  755);
+define('SKILL_RIDING',         762);
+define('SKILL_INSCRIPTION',    773);
+
+define('SKILLS_TRADE_PRIMARY',   [SKILL_BLACKSMITHING, SKILL_LEATHERWORKING, SKILL_ALCHEMY, SKILL_HERBALISM, SKILL_MINING, SKILL_TAILORING, SKILL_ENGINEERING, SKILL_ENCHANTING, SKILL_SKINNING, SKILL_JEWELCRAFTING, SKILL_INSCRIPTION]);
+define('SKILLS_TRADE_SECONDARY', [SKILL_FIRST_AID, SKILL_COOKING, SKILL_FISHING, SKILL_RIDING]);
 
 
 // AchievementCriteriaCondition
@@ -1143,11 +1690,13 @@ define('ACHIEVEMENT_CRITERIA_CONDITION_NOT_IN_GROUP',                   10);    
 define('ACHIEVEMENT_FLAG_COUNTER',                                      0x0001);    // Just count statistic (never stop and complete)
 define('ACHIEVEMENT_FLAG_HIDDEN',                                       0x0002);    // Not sent to client - internal use only
 define('ACHIEVEMENT_FLAG_STORE_MAX_VALUE',                              0x0004);    // Store only max value? used only in "Reach level xx"
-define('ACHIEVEMENT_FLAG_SUMM',                                         0x0008);    // Use summ criteria value from all reqirements (and calculate max value)
+define('ACHIEVEMENT_FLAG_SUM',                                          0x0008);    // Use sum criteria value from all reqirements (and calculate max value)
 define('ACHIEVEMENT_FLAG_MAX_USED',                                     0x0010);    // Show max criteria (and calculate max value ??)
 define('ACHIEVEMENT_FLAG_REQ_COUNT',                                    0x0020);    // Use not zero req count (and calculate max value)
 define('ACHIEVEMENT_FLAG_AVERAGE',                                      0x0040);    // Show as average value (value / time_in_days) depend from other flag (by def use last criteria value)
-define('ACHIEVEMENT_FLAG_BAR',                                          0x0080);    // Show as progress bar (value / max vale) depend from other flag (by def use last criteria value)
+define('ACHIEVEMENT_FLAG_PROGRESS_BAR',                                 0x0080);    // Show as progress bar (value / max vale) depend from other flag (by def use last criteria value)
+define('ACHIEVEMENT_FLAG_REALM_FIRST',                                  0x0100);    // first max race/class/profession
+define('ACHIEVEMENT_FLAG_REALM_FIRST_KILL',                             0x0200);    // first boss kill
 
 // AchievementCriteriaFlags
 define('ACHIEVEMENT_CRITERIA_FLAG_SHOW_PROGRESS_BAR',                   0x0001);    // Show progress as bar
@@ -1256,71 +1805,6 @@ define('ACHIEVEMENT_CRITERIA_TYPE_LEARN_SKILL_LINE',                    112);
 // define('ACHIEVEMENT_CRITERIA_TYPE_ACCEPTED_SUMMONINGS',              114);
 // define('ACHIEVEMENT_CRITERIA_TYPE_DISENCHANT_ROLLS',                 117);
 // define('ACHIEVEMENT_CRITERIA_TYPE_USE_LFD_TO_GROUP_WITH_PLAYERS',    119);
-
-// TrinityCore - Condition System
-define('CND_SRC_CREATURE_LOOT_TEMPLATE',      1);
-define('CND_SRC_DISENCHANT_LOOT_TEMPLATE',    2);
-define('CND_SRC_FISHING_LOOT_TEMPLATE',       3);
-define('CND_SRC_GAMEOBJECT_LOOT_TEMPLATE',    4);
-define('CND_SRC_ITEM_LOOT_TEMPLATE',          5);
-define('CND_SRC_MAIL_LOOT_TEMPLATE',          6);
-define('CND_SRC_MILLING_LOOT_TEMPLATE',       7);
-define('CND_SRC_PICKPOCKETING_LOOT_TEMPLATE', 8);
-define('CND_SRC_PROSPECTING_LOOT_TEMPLATE',   9);
-define('CND_SRC_REFERENCE_LOOT_TEMPLATE',     10);
-define('CND_SRC_SKINNING_LOOT_TEMPLATE',      11);
-define('CND_SRC_SPELL_LOOT_TEMPLATE',         12);
-define('CND_SRC_SPELL_IMPLICIT_TARGET',       13);
-define('CND_SRC_GOSSIP_MENU',                 14);
-define('CND_SRC_GOSSIP_MENU_OPTION',          15);
-define('CND_SRC_CREATURE_TEMPLATE_VEHICLE',   16);
-define('CND_SRC_SPELL',                       17);
-define('CND_SRC_SPELL_CLICK_EVENT',           18);
-define('CND_SRC_QUEST_ACCEPT',                19);
-define('CND_SRC_QUEST_SHOW_MARK',             20);
-define('CND_SRC_VEHICLE_SPELL',               21);
-define('CND_SRC_SMART_EVENT',                 22);
-define('CND_SRC_NPC_VENDOR',                  23);
-define('CND_SRC_SPELL_PROC',                  24);
-
-define('CND_AURA',            1);                           // aura is applied:         spellId,        UNUSED,     NULL
-define('CND_ITEM',            2);                           // owns item:               itemId,         count,      UNUSED
-define('CND_ITEM_EQUIPPED',   3);                           // has item equipped:       itemId,         NULL,       NULL
-define('CND_ZONEID',          4);                           // is in zone:              areaId,         NULL,       NULL
-define('CND_REPUTATION_RANK', 5);                           // reputation status:       factionId,      rankMask,   NULL
-define('CND_TEAM',            6);                           // is on team:              teamId,         NULL,       NULL
-define('CND_SKILL',           7);                           // has skill:               skillId,        value,      NULL
-define('CND_QUESTREWARDED',   8);                           // has finished quest:      questId,        NULL,       NULL
-define('CND_QUESTTAKEN',      9);                           // has accepted quest:      questId,        NULL,       NULL
-define('CND_DRUNKENSTATE',    10);                          // has drunken status:      stateId,        NULL,       NULL
-define('CND_WORLD_STATE',     11);
-define('CND_ACTIVE_EVENT',    12);                          // world event is active:   eventId,        NULL,       NULL
-define('CND_INSTANCE_INFO',   13);
-define('CND_QUEST_NONE',      14);                          // never seen quest:        questId,        NULL,       NULL
-define('CND_CLASS',           15);                          // belongs to classes:      classMask,      NULL,       NULL
-define('CND_RACE',            16);                          // belongs to races:        raceMask,       NULL,       NULL
-define('CND_ACHIEVEMENT',     17);                          // obtained achievement:    achievementId,  NULL,       NULL
-define('CND_TITLE',           18);                          // obtained title:          titleId,        NULL,       NULL
-define('CND_SPAWNMASK',       19);
-define('CND_GENDER',          20);                          // has gender:              genderId,       NULL,       NULL
-define('CND_UNIT_STATE',      21);
-define('CND_MAPID',           22);                          // is on map:               mapId,          NULL,       NULL
-define('CND_AREAID',          23);                          // is in area:              areaId,         NULL,       NULL
-define('CND_UNUSED_24',       24);
-define('CND_SPELL',           25);                          // knows spell:             spellId,        NULL,       NULL
-define('CND_PHASEMASK',       26);                          // is in phase:             phaseMask,      NULL,       NULL
-define('CND_LEVEL',           27);                          // player level is..:       level,          operator,   NULL
-define('CND_QUEST_COMPLETE',  28);                          // has completed quest:     questId,        NULL,       NULL
-define('CND_NEAR_CREATURE',   29);                          // is near creature:        creatureId,     dist,       NULL
-define('CND_NEAR_GAMEOBJECT', 30);                          // is near gameObject:      gameObjectId,   dist,       NULL
-define('CND_OBJECT_ENTRY',    31);                          // target is ???:           objectType,     id,         NULL
-define('CND_TYPE_MASK',       32);                          // target is type:          typeMask,       NULL,       NULL
-define('CND_RELATION_TO',     33);
-define('CND_REACTION_TO',     34);
-define('CND_DISTANCE_TO',     35);                          // distance to target       targetType,     dist,       operator
-define('CND_ALIVE',           36);                          // target is alive:         NULL,           NULL,       NULL
-define('CND_HP_VAL',          37);                          // targets absolute health: amount,         operator,   NULL
-define('CND_HP_PCT',          38);                          // targets relative health: amount,         operator,   NULL
 
 // TrinityCore - SmartAI
 define('SAI_SRC_TYPE_CREATURE',    0);
@@ -1626,9 +2110,16 @@ define('SAI_TEMPLATE_CAGED_GO_PART',  4);                   //
 define('SAI_TEMPLATE_CAGED_NPC_PART', 5);                   //
 
 define('SAI_SPAWN_FLAG_NONE',           0x00);
-define('SAI_SPAWN_FLAG_IGNORE_RESPAWN', 0x01);               // onSpawnIn - ignore & reset respawn timer
-define('SAI_SPAWN_FLAG_FORCE_SPAWN',    0x02);               // onSpawnIn - force additional spawn if already in world
-define('SAI_SPAWN_FLAG_NOSAVE_RESPAWN', 0x04);               // onDespawn - remove respawn time
+define('SAI_SPAWN_FLAG_IGNORE_RESPAWN', 0x01);              // onSpawnIn - ignore & reset respawn timer
+define('SAI_SPAWN_FLAG_FORCE_SPAWN',    0x02);              // onSpawnIn - force additional spawn if already in world
+define('SAI_SPAWN_FLAG_NOSAVE_RESPAWN', 0x04);              // onDespawn - remove respawn time
+
+// TrinityCore - Account Security
+define('SEC_PLAYER',        0);
+define('SEC_MODERATOR',     1);
+define('SEC_GAMEMASTER',    2);
+define('SEC_ADMINISTRATOR', 3);
+define('SEC_CONSOLE',       4);                             // console only - should not be encountered
 
 // profiler queue interactions
 define('PR_QUEUE_STATUS_ENDED',   0);
@@ -1663,5 +2154,68 @@ define('AT_TYPE_TELEPORT',  2);
 define('AT_TYPE_OBJECTIVE', 3);
 define('AT_TYPE_SMART',     4);
 define('AT_TYPE_SCRIPT',    5);
+
+// Drop Sources
+define('SRC_CRAFTED',         1);
+define('SRC_DROP',            2);
+define('SRC_PVP',             3);
+define('SRC_QUEST',           4);
+define('SRC_VENDOR',          5);
+define('SRC_TRAINER',         6);
+define('SRC_DISCOVERY',       7);
+define('SRC_REDEMPTION',      8);                           // unused
+define('SRC_TALENT',          9);
+define('SRC_STARTER',        10);
+define('SRC_EVENT',          11);                           // unused
+define('SRC_ACHIEVEMENT',    12);
+define('SRC_CUSTOM_STRING',  13);
+// define('SRC_BLACK_MARKET',   14);                        // not in 3.3.5
+define('SRC_DISENCHANTMENT', 15);
+define('SRC_FISHING',        16);
+define('SRC_GATHERING',      17);
+define('SRC_MILLING',        18);
+define('SRC_MINING',         19);
+define('SRC_PROSPECTING',    20);
+define('SRC_PICKPOCKETING',  21);
+define('SRC_SALVAGING',      22);
+define('SRC_SKINNING',       23);
+// define('SRC_INGAME_STORE',   24);                        // not in 3.3.5
+
+define('SRC_SUB_PVP_ARENA', 1);
+define('SRC_SUB_PVP_BG',    2);
+define('SRC_SUB_PVP_WORLD', 4);
+
+define('SRC_FLAG_BOSSDROP',     0x01);
+define('SRC_FLAG_COMMON',       0x02);
+define('SRC_FLAG_DUNGEON_DROP', 0x10);
+define('SRC_FLAG_RAID_DROP',    0x20);
+
+// Map Types
+define('MAP_TYPE_ZONE',          0);
+define('MAP_TYPE_TRANSIT',       1);
+define('MAP_TYPE_DUNGEON',       2);
+define('MAP_TYPE_RAID',          3);
+define('MAP_TYPE_BATTLEGROUND',  4);
+define('MAP_TYPE_DUNGEON_HC',    5);
+define('MAP_TYPE_ARENA',         6);
+define('MAP_TYPE_MMODE_RAID',    7);
+define('MAP_TYPE_MMODE_RAID_HC', 8);
+
+define('EMOTE_FLAG_ONLY_STANDING',       0x0001);           // Only while standig
+define('EMOTE_FLAG_USE_MOUNT',           0x0002);           // Emote applies to mount
+define('EMOTE_FLAG_NOT_CHANNELING',      0x0004);           // Not while channeling
+define('EMOTE_FLAG_ANIM_TALK',           0x0008);           // Talk anim - talk
+define('EMOTE_FLAG_ANIM_QUESTION',       0x0010);           // Talk anim - question
+define('EMOTE_FLAG_ANIM_EXCLAIM',        0x0020);           // Talk anim - exclamation
+define('EMOTE_FLAG_ANIM_SHOUT',          0x0040);           // Talk anim - shout
+define('EMOTE_FLAG_NOT_SWIMMING',        0x0080);           // Not while swimming
+define('EMOTE_FLAG_ANIM_LAUGH',          0x0100);           // Talk anim - laugh
+define('EMOTE_FLAG_CAN_LIE_ON_GROUND',   0x0200);           // Ok while sleeping or dead
+define('EMOTE_FLAG_NOT_FROM_CLIENT',     0x0400);           // Disallow from client
+define('EMOTE_FLAG_NOT_CASTING',         0x0800);           // Not while casting
+define('EMOTE_FLAG_END_MOVEMENT',        0x1000);           // Movement ends
+define('EMOTE_FLAG_INTERRUPT_ON_ATTACK', 0x2000);           // Interrupt on attack
+define('EMOTE_FLAG_ONLY_STILL',          0x4000);           // Only while still
+define('EMOTE_FLAG_NOT_FLYING',          0x8000);           // Not while flying
 
 ?>

@@ -6,13 +6,13 @@ if (!defined('AOWOW_REVISION'))
 class AjaxContactus extends AjaxHandler
 {
     protected $_post = array(
-        'mode'       => ['filter' => FILTER_CALLBACK,      'options' => 'AjaxHandler::checkInt'],
-        'reason'     => ['filter' => FILTER_CALLBACK,      'options' => 'AjaxHandler::checkInt'],
-        'ua'         => ['filter' => FILTER_UNSAFE_RAW,      'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'appname'    => ['filter' => FILTER_UNSAFE_RAW,      'flags' => FILTER_FLAG_STRIP_AOWOW],
+        'mode'       => ['filter' => FILTER_SANITIZE_NUMBER_INT                                ],
+        'reason'     => ['filter' => FILTER_SANITIZE_NUMBER_INT                                ],
+        'ua'         => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkTextLine'],
+        'appname'    => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkTextLine'],
         'page'       => ['filter' => FILTER_SANITIZE_URL                                       ],
-        'desc'       => ['filter' => FILTER_UNSAFE_RAW,      'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'id'         => ['filter' => FILTER_CALLBACK,      'options' => 'AjaxHandler::checkInt'],
+        'desc'       => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkTextBlob'],
+        'id'         => ['filter' => FILTER_SANITIZE_NUMBER_INT                                ],
         'relatedurl' => ['filter' => FILTER_SANITIZE_URL                                       ],
         'email'      => ['filter' => FILTER_SANITIZE_EMAIL                                     ]
     );
@@ -38,8 +38,8 @@ class AjaxContactus extends AjaxHandler
         $report = new Report($this->_post['mode'], $this->_post['reason'], $this->_post['id']);
         if ($report->create($this->_post['desc'], $this->_post['ua'], $this->_post['appname'], $this->_post['page'], $this->_post['relatedurl'], $this->_post['email']))
             return 0;
-        else if ($report->errorCode > 0)
-            return $report->errorCode;
+        else if (($e = $report->getError()) > 0)
+            return $e;
         else
             return Lang::main('intError');
     }

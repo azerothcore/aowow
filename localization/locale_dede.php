@@ -6,7 +6,6 @@ if (!defined('AOWOW_REVISION'))
 /*
     some translations have yet to be taken from or improved by the use of:
     <path>\World of Warcraft\Data\deDE\patch-deDE-3.MPQ\Interface\FrameXML\GlobalStrings.lua
-    like: ITEM_MOD_*, POWER_TYPE_*, ITEM_BIND_*, PVP_RANK_*
 */
 
 $lang = array(
@@ -16,6 +15,7 @@ $lang = array(
         'pl'            => ["Jahre", "Monate", "Wochen", "Tage",  "Stunden", "Minuten", "Sekunden", "Millisekunden"],
         'ab'            => ["J.",    "M.",     "W.",     "Tag",   "Std.",    "Min.",    "Sek.",     "Ms."]
     ),
+    'lang' => ['Englisch', null, 'Französisch', 'Deutsch', 'Chinesisch', null, 'Spanisch', null, 'Russisch'],
     'main' => array(
         'name'          => "Name",
         'link'          => "Link",
@@ -52,11 +52,13 @@ $lang = array(
         'or'            => " oder ",
         'back'          => "Zurück",
         'reputationTip' => "Rufpunkte",
-        'byUser'        => 'Von <a href="'.HOST_URL.'/?user=%1$s"%2$s>%1$s</a> ',
+        'byUser'        => 'Von <a href="HOST_URL/?user=%1$s"%2$s>%1$s</a> ',
         'help'          => "Hilfe",
         'status'        => "Status",
         'yes'           => "Ja",
         'no'            => "Nein",
+        'any'           => "Beliebig",
+        'all'           => "Alle",
 
         // filter
         'extSearch'     => "Erweiterte Suche",
@@ -99,7 +101,7 @@ $lang = array(
         ),
 
         // article & infobox
-        'englishOnly'   => "Diese Seite ist nur in <b>Englisch</b> verfügbar.",
+        'langOnly'   => "Diese Seite ist nur in <b>%s</b> verfügbar.",
 
         // calculators
         'preset'        => "Vorlage",
@@ -129,6 +131,7 @@ $lang = array(
         'dateFmtShort'  => "d.m.Y",
         'dateFmtLong'   => "d.m.Y \u\m H:i",
         'timeAgo'       => 'vor %s',
+        'nfSeparators'  => ['.', ','],
 
         // error
         'intError'      => "Ein interner Fehler ist aufgetreten.",
@@ -242,7 +245,8 @@ $lang = array(
             'eu' => "Europa",
             'kr' => "Korea",
             'tw' => "Taiwan",
-            'cn' => "China"
+            'cn' => "China",
+            'dev' => "Entwicklung"
         ),
         'encounterNames'=> array(
             243 => "Die Sieben",
@@ -267,7 +271,7 @@ $lang = array(
         ),
         'error'         => array(
             'unkFormat'   => "Unbekanntes Bildformat.",
-            'tooSmall'    => "Euer Screenshot ist viel zu klein. (&lt; ".CFG_SCREENSHOT_MIN_SIZE."x".CFG_SCREENSHOT_MIN_SIZE.").",
+            'tooSmall'    => "Euer Screenshot ist viel zu klein. (&lt; CFG_SCREENSHOT_MIN_SIZE x CFG_SCREENSHOT_MIN_SIZE).",
             'selectSS'    => "Wählt bitte den Screenshot aus, den Ihr hochladen möchtet.",
             'notAllowed'  => "Es ist euch nicht erlaubt einen Screenshot hochzuladen!",
         )
@@ -296,7 +300,7 @@ $lang = array(
         'achievements'  => "Erfolge",
         'title'         => "Titel",                         // 11
         'titles'        => "Titel",
-        'event'         => "Weltereigniss",                 // 12
+        'event'         => "Weltereignis",                  // 12
         'events'        => "Weltereignisse",
         'class'         => "Klasse",                        // 13
         'classes'       => "Klassen",
@@ -358,6 +362,13 @@ $lang = array(
         'modes'         => [-1 => "Beliebig", "Normal / Normal 10", "Heroisch / Normal 25", "Heroisch 10", "Heroisch 25"],
         'expansions'    => ["Classic", "The Burning Crusade", "Wrath of the Lich King"],
         'stats'         => ["Stärke", "Beweglichkeit", "Ausdauer", "Intelligenz", "Willenskraft"],
+        'timeAbbrev'    => array(
+            '',
+            "%d |4Sek.:Sek.;",
+            "%d |4Min.:Min.;",
+            "%d |4Std.:Std.;",
+            "%d |4Tag:Tage;"
+        ),
         'sources'       => array(
             "Unbekannt",                    "Hergestellt",                  "Drop",                         "PvP",                          "Quest",                        "Händler",
             "Lehrer",                       "Entdeckung",                   "Einlösung",                    "Talent",                       "Startausrüstung",              "Ereignis",
@@ -366,8 +377,8 @@ $lang = array(
             "In-Game-Store"
         ),
         'pvpSources'    => array(
-            null,                           "Arenasaison 1",                "Arenasaison 2",                "Arenasaison 3",                "Arenasaison 4",
-            "Arenasaison 5",                "Arenasaison 6",                "Arenasaison 7",                "Arenasaison 8",                "2009 Arena-Turnier"
+             42 => "Arenasaison 1",          52 => "Arenasaison 2",          71 => "Arenasaison 3",          80 => "Arenasaison 4",         157 => "Arenasaison 5",
+            163 => "Arenasaison 6",         167 => "Arenasaison 7",         169 => "Arenasaison 8",         177 => "2009 Arena-Turnier"
         ),
         'languages'     => array(
              1 => "Orcisch",                 2 => "Darnassisch",             3 => "Taurisch",                6 => "Zwergisch",               7 => "Gemeinsprache",           8 => "Dämonisch",
@@ -378,7 +389,7 @@ $lang = array(
         'si'            => [1 => "Allianz", -1 => "Nur für Allianz", 2 => "Horde", -2 => "Nur für Horde", 3 => "Beide"],
         'resistances'   => [null, 'Heiligwiderstand', 'Feuerwiderstand', 'Naturwiderstand', 'Frostwiderstand', 'Schattenwiderstand', 'Arkanwiderstand'],
         'sc'            => ["Körperlich", "Heilig", "Feuer", "Natur", "Frost", "Schatten", "Arkan"],
-        'dt'            => [null, "Magie", "Fluch", "Krankheit", "Gift", "Verstohlenheit", "Unsichtbarkeit", null, null, "Wut"],
+        'dt'            => [null, "Magie", "Fluch", "Krankheit", "Gift", "Verstohlenheit", "Unsichtbarkeit", "Magie, Fluch, Krankheit, Gift", "Zauber (NSC)", "Wut"],
         'cl'            => [null, "Krieger", "Paladin", "Jäger", "Schurke", "Priester", "Todesritter", "Schamane", "Magier", "Hexenmeister", null, "Druide"],
         'ra'            => [-2 => "Horde", -1 => "Allianz", null, "Mensch", "Orc", "Zwerg", "Nachtelf", "Untoter", "Tauren", "Gnom", "Troll", null, "Blutelf", "Draenei"],
         'rep'           => ["Hasserfüllt", "Feindselig", "Unfreundlich", "Neutral", "Freundlich", "Wohlwollend", "Respektvoll", "Ehrfürchtig"],
@@ -425,12 +436,12 @@ $lang = array(
              9 => ['Gebrechen',      'Dämonologie',     'Zerstörung'       ],
              1 => ['Waffen',         'Furor',           'Schutz'           ]
         ),
-        'pvpRank'       => array(
-            null,                                                           "Gefreiter / Späher",                                           "Fußknecht / Grunzer",
-            "Landsknecht / Waffenträger",                                   "Feldwebel / Schlachtrufer",                                    "Fähnrich / Rottenmeister",
-            "Leutnant / Steingardist",                                      "Hauptmann / Blutgardist",                                      "Kürassier / Zornbringer",
-            "Ritter der Allianz / Klinge der Horde",                        "Feldkomandant / Feldherr",                                     "Rittmeister / Sturmreiter",
-            "Marschall / Kriegsherr",                                       "Feldmarschall / Kriegsfürst",                                  "Großmarschall / Oberster Kriegsfürst"
+        'pvpRank'       => array(                           // PVP_RANK_*
+            null,                                                           ["Späher", "Gefreiter"],                                        ["Grunzer", "Fußknecht"],
+            ["Waffenträger", "Landsknecht"],                                ["Schlachtrufer", "Feldwebel"],                                 ["Rottenmeister", "Fähnrich"],
+            ["Steingardist", "Leutnant"],                                   ["Blutgardist", "Hauptmann"],                                   ["Zornbringer", "Kürassier"],
+            ["Klinge der Horde", "Ritter der Allianz"],                     ["Feldherr", "Feldkommandant"],                                 ["Sturmreiter", "Rittmeister"],
+            ["Kriegsherr", "Marschall"],                                    ["Kriegsfürst", "Feldmarschall"],                               ["Oberster Kriegsfürst", "Großmarschall"]
         ),
         'orientation'   => ['Nord', 'Nordost', 'Ost', 'Südost', 'Süd', 'Südwest', 'West', 'Nordwest']
     ),
@@ -618,7 +629,7 @@ $lang = array(
             SAI_ACTION_SET_FACTION                        => ['Setze Fraktion von #target# (%1$d)?auf [faction=%7$d]:zurück;.', null],
             SAI_ACTION_MORPH_TO_ENTRY_OR_MODEL            => ['(%7$d)?Setze Aussehen zurück.:Nimm folgendes Erscheinungsbild an:;(%1$d)? [npc=%1$d]:;(%2$d)?[model npc=%2$d border=1 float=right][/model]:;', null],
             SAI_ACTION_SOUND                              => ['Spiele Audio(%2$d)? für auslösenden Spieler:;:[div float=right width=270px][sound=%1$d][/div]', 'Abgespielt durch Welt.'],
-            SAI_ACTION_PLAY_EMOTE                         => ['Emote [emote=%1$d] zu #target#.', null],
+            SAI_ACTION_PLAY_EMOTE                         => ['(%1$d)?Emote [emote=%1$d] zu #target#.:Beende Emote;', null],
             SAI_ACTION_FAIL_QUEST                         => ['[quest=%1$d] von #target# schlägt fehl.', null],
             SAI_ACTION_OFFER_QUEST                        => ['(%2$d)?Füge [quest=%1$d] dem Log von #target# hinzu:Biete [quest=%1$d] #target# an;.', null],
             SAI_ACTION_SET_REACT_STATE                    => ['#target# wird %7$s.', null],
@@ -629,7 +640,7 @@ $lang = array(
             SAI_ACTION_THREAT_SINGLE_PCT                  => ['Ändere Bedrohung von #target# um %7$d%%.', null],
             SAI_ACTION_THREAT_ALL_PCT                     => ['Ändere Bedrohung aller Ziele um %7$d%%.', null],
             SAI_ACTION_CALL_AREAEXPLOREDOREVENTHAPPENS    => ['Erfülle Entdeckungsereignis von [quest=%1$d] für #target#.', null],
-            SAI_ACTION_SET_EMOTE_STATE                    => ['Emote [emote=%1$d] kontinuierlich zu #target#.', null],
+            SAI_ACTION_SET_EMOTE_STATE                    => ['(%1$d)?Emote [emote=%1$d] kontinuierlich zu #target#:Beende Emote.;', null],
             SAI_ACTION_SET_UNIT_FLAG                      => ['Setze (%2$d)?UnitFlags2:UnitFlags; %7$s.', null],
             SAI_ACTION_REMOVE_UNIT_FLAG                   => ['Setze (%2$d)?UnitFlags2:UnitFlags; %7$s zurück.', null],
 /* 20*/     SAI_ACTION_AUTO_ATTACK                        => ['(%1$d)?Beginne:Beende; automatische Angriffe gegen #target#.', null],
@@ -641,7 +652,7 @@ $lang = array(
             SAI_ACTION_CALL_GROUPEVENTHAPPENS             => ['Erfülle Ziel von [quest=%1$d] für #target#.', null],
             SAI_ACTION_COMBAT_STOP                        => ['Beende aktuellen Kampf.', null],
             SAI_ACTION_REMOVEAURASFROMSPELL               => ['Entferne (%1$d)?alle Auren:Aura [spell=%1$d]; von #target#.', 'Nur eigene Auren'],
-            SAI_ACTION_FOLLOW                             => ['Folge #target#(%1$d)? mit %1$dm Abstand:;(%3$d)? bis zum Erreichen von [npc=%3$d]:;.', '(%7$d)?Winkel: %7$.2f°:;(%8$d)? Eine Form von Questziel wird erfüllt:;'],
+            SAI_ACTION_FOLLOW                             => ['Folge #target#(%1$d)? mit %1$dm Abstand:;(%3$d)? bis zum Erreichen von [npc=%3$d]:;.', '(%7$d)?Winkel\u003A %7$.2f°:;(%8$d)? Eine Form von Questziel wird erfüllt:;'],
 /* 30*/     SAI_ACTION_RANDOM_PHASE                       => ['Wähle zufällige Ereignisphase aus %7$s.', null],
             SAI_ACTION_RANDOM_PHASE_RANGE                 => ['Wähle zufällige Ereignisphase zwischen %1$d und %2$d.', null],
             SAI_ACTION_RESET_GOBJECT                      => ['Setze #target# zurück.', null],
@@ -867,7 +878,7 @@ $lang = array(
 
         // form-text
         'emailInvalid'  => "Diese E-Mail-Adresse ist ungültig.", // message_emailnotvalid
-        'emailNotFound' => "Die E-Mail-Adresse, die Ihr eingegeben habt, ist mit keinem Konto verbunden.<br><br>Falls Ihr die E-Mail-Adresse vergessen habt, mit der Ihr Euer Konto erstellt habt, kontaktiert Ihr bitte ".CFG_CONTACT_EMAIL." für Hilfestellung.",
+        'emailNotFound' => "Die E-Mail-Adresse, die Ihr eingegeben habt, ist mit keinem Konto verbunden.<br><br>Falls Ihr die E-Mail-Adresse vergessen habt, mit der Ihr Euer Konto erstellt habt, kontaktiert Ihr bitte CFG_CONTACT_EMAIL für Hilfestellung.",
         'createAccSent' => "Eine Nachricht wurde soeben an <b>%s</b> versandt. Folgt den Anweisungen um euer Konto zu erstellen.",
         'recovUserSent' => "Eine Nachricht wurde soeben an <b>%s</b> versandt. Folgt den Anweisungen um euren Benutzernamen zu erhalten.",
         'recovPassSent' => "Eine Nachricht wurde soeben an <b>%s</b> versandt. Folgt den Anweisungen um euer Kennwort zurückzusetzen.",
@@ -904,18 +915,41 @@ $lang = array(
         'posts'         => "Forenbeiträge",
         // user mail
         'tokenExpires'  => "Das Token wird in %s verfallen.",
-        'accConfirm'    => ["Kontobestätigung",     "Willkommen bei ".CFG_NAME_SHORT."!\r\n\r\nKlicke auf den Link um euren Account zu aktivieren.\r\n\r\n".HOST_URL."?account=signup&token=%s\r\n\r\nFalls Ihr diese Mail nicht angefordert habt kann sie einfach ignoriert werden."],
-        'recoverUser'   => ["Benutzernamenanfrage", "Folgt diesem Link um euch anzumelden.\r\n\r\n".HOST_URL."?account=signin&token=%s\r\n\r\nFalls Ihr diese Mail nicht angefordert habt kann sie einfach ignoriert werden."],
-        'resetPass'     => ["Kennwortreset",        "Folgt diesem Link um euer Kennwort zurückzusetzen.\r\n\r\n".HOST_URL."?account=forgotpassword&token=%s\r\n\r\nFalls Ihr diese Mail nicht angefordert habt kann sie einfach ignoriert werden."]
+        'accConfirm'    => ["Kontobestätigung",     "Willkommen bei CFG_NAME_SHORT!\r\n\r\nKlicke auf den Link um euren Account zu aktivieren.\r\n\r\nHOST_URL?account=signup&token=%s\r\n\r\nFalls Ihr diese Mail nicht angefordert habt kann sie einfach ignoriert werden."],
+        'recoverUser'   => ["Benutzernamenanfrage", "Folgt diesem Link um euch anzumelden.\r\n\r\nHOST_URL?account=signin&token=%s\r\n\r\nFalls Ihr diese Mail nicht angefordert habt kann sie einfach ignoriert werden."],
+        'resetPass'     => ["Kennwortreset",        "Folgt diesem Link um euer Kennwort zurückzusetzen.\r\n\r\nHOST_URL?account=forgotpassword&token=%s\r\n\r\nFalls Ihr diese Mail nicht angefordert habt kann sie einfach ignoriert werden."]
     ),
     'emote' => array(
         'notFound'      => "Dieses Emote existiert nicht.",
-        'self'          => "An Euch selbst",
-        'target'        => "An Andere mit Ziel",
-        'noTarget'      => "An Andere ohne Ziel",
+//      'self'          => "An Euch selbst",
+//      'target'        => "An Andere mit Ziel",
+//      'noTarget'      => "An Andere ohne Ziel",
+        'targeted'      => "Benutzt mit Ziel",
+        'untargeted'    => "Benutzt ohne Ziel",
         'isAnimated'    => "Besitzt eine Animation",
+        'eventSound'    => "Ereignis-Klang",
         'aliases'       => "Aliasse",
         'noText'        => "Dieses Emote besitzt keinen Text.",
+        'noCommand'     => "Dieses Emote besitzt keinen /-Befehl. Es kann nicht benutzt werden.",
+        'flags'         => array(
+            EMOTE_FLAG_ONLY_STANDING       => "Nur im stehen",
+            EMOTE_FLAG_USE_MOUNT           => "Emote benutzt das Reittier",
+            EMOTE_FLAG_NOT_CHANNELING      => "Nicht beim kanalisieren",
+            EMOTE_FLAG_ANIM_TALK           => "Talk anim - Reden",
+            EMOTE_FLAG_ANIM_QUESTION       => "Talk anim - Fragen",
+            EMOTE_FLAG_ANIM_EXCLAIM        => "Talk anim - Ausrufen",
+            EMOTE_FLAG_ANIM_SHOUT          => "Talk anim - Schreien",
+            EMOTE_FLAG_NOT_SWIMMING        => "Nicht beim schwimmen",
+            EMOTE_FLAG_ANIM_LAUGH          => "Talk anim - Lachen",
+            EMOTE_FLAG_CAN_LIE_ON_GROUND   => "Nutzbar im Schlaf/Tot",
+            EMOTE_FLAG_NOT_FROM_CLIENT     => "Nur für Kreaturen",
+            EMOTE_FLAG_NOT_CASTING         => "Nicht beim Zaubern",
+            EMOTE_FLAG_END_MOVEMENT        => "Emote endet Bewegung",
+            EMOTE_FLAG_INTERRUPT_ON_ATTACK => "Unerbrochen durch Kampf",
+            EMOTE_FLAG_ONLY_STILL          => "Nur in Ruhe",
+            EMOTE_FLAG_NOT_FLYING          => "Nicht im Flug"
+        ),
+        'state'         => ['Einmalig', 'Stetiger Zustand', 'Stetiges Emote']
     ),
     'enchantment' => array(
         'details'       => "Details",
@@ -933,8 +967,8 @@ $lang = array(
     ),
     'gameObject' => array(
         'notFound'      => "Dieses Objekt existiert nicht.",
-        'cat'           => [0 => "Anderes", 9 => "Bücher", 3 => "Behälter", -5 => "Truhen", 25 => "Fischschwärme", -3 => "Kräuter", -4 => "Erzadern",     -2 => "Quest", -6 => "Werkzeuge"],
-        'type'          => [                9 => "Buch",   3 => "Behälter", -5 => "Truhe",  25 => "",              -3 => "Kraut",   -4 => "Erzvorkommen", -2 => "Quest", -6 => ""],
+        'cat'           => [0 => "Anderes", 3 => "Behälter", 6 => "Fallen", 9 => "Bücher", 25 => "Fischschwärme", -5 => "Truhen", -3 => "Kräuter", -4 => "Erzadern",     -2 => "Quest", -6 => "Werkzeuge"],
+        'type'          => [                3 => "Behälter", 6 => "",       9 => "Buch",   25 => "",              -5 => "Truhe",  -3 => "Kraut",   -4 => "Erzvorkommen", -2 => "Quest", -6 => ""],
         'unkPosition'   => "Der Standort dieses Objekts ist nicht bekannt.",
         'npcLootPH'     => 'Der Behälter <b>%s</b> beinhaltet die Beute vom Kampf gegen <a href="?npc=%d">%s</a>. Er erscheint nach seinem Tod.',
         'key'           => "Schlüssel",
@@ -986,9 +1020,11 @@ $lang = array(
         'resistances'   => "Widerstände",
         'foundIn'       => "Dieser NPC befindet sich in",
         'tameable'      => "Zähmbar (%s)",
+        'spirit'        => "[tooltip name=spirit]Nur für tote Spieler sichtbar[/tooltip][span class=tip tooltip=spirit]Geist[/span]",
         'waypoint'      => "Wegpunkt",
         'wait'          => "Wartezeit",
-        'respawnIn'     => "Wiedereinstieg in",
+        'respawnIn'     => "Respawn in: %s",
+        'despawnAfter'  => "Gespawnt durch Script<br>Despawn nach: %s",
         'rank'          => [0 => "Normal", 1 => "Elite", 4 => "Rar", 2 => "Rar Elite", 3 => "Boss"],
         'textRanges'    => [null, "an das Gebiet gesendet", "an die Zone gesendet", "an die Map gesendet", "an die Welt gesendet"],
         'textTypes'     => [null, "schreit", "sagt", "flüstert"],
@@ -1047,7 +1083,7 @@ $lang = array(
         'slain'         => "getötet",
         'reqNumCrt'     => "Benötigt",
         'rfAvailable'   => "Verfügbar auf Realm: ",
-        '_transfer'     => 'Dieser Erfolg wird mit <a href="?achievement=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a> vertauscht, wenn Ihr zur <span class="icon-%s">%s</span> wechselt.',
+        '_transfer'     => 'Dieser Erfolg wird mit <a href="?achievement=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a> vertauscht, wenn Ihr zur <span class="icon-%s">%s</span> wechselt.',
         'cat'           => array(
                 1 => "Statistiken",                                                  21 => "Spieler gegen Spieler",
                81 => "Heldentaten",                                                  92 => "Allgemein",
@@ -1118,6 +1154,7 @@ $lang = array(
         'Miscellaneous' => "Diverse",
         'Azeroth'       => "Azeroth",
         'CosmicMap'     => "Kosmische Karte",
+        'floorN'        => "%d. Stockwerk"
     ),
     'privileges' => array(
         'main'          => "Auf unserer Seite könnt Ihr <a href=\"?reputation\">Ruf</a> erringen. Hauptsächlich erringt man Ruf dadurch, dass Eure Kommentare positiv bewertet werden.<br><br>Das heißt, Euer Ruf hängt in gewissem Maße davon ab, wie sehr Ihr der Community beiträgt.<br><br>Mit dem Sammeln von Ruf verdient Ihr Euch auch das Vertrauen der Gemeinschaft ein, und Ihr erhält Privilegien. Unten könnt Ihr eine vollständige Liste einsehen.",
@@ -1149,49 +1186,12 @@ $lang = array(
         'hcAvailable'   => "Heroischer Modus verfügbar&nbsp;(%d)",
         'numPlayers'    => "Anzahl an Spielern",
         'noMap'         => "Für dieses Gebiet steht keine Karte zur Verfügung.",
+        'fishingSkill'  => "25 &ndash; 100% Chance einen gelisteten Fisch zu fangen.",
         'instanceTypes' => ["Zone",    "Durchgang", "Dungeon",  "Schlachtzug",     "Battleground", "Dungeon", "Arena", "Schlachtzug", "Schlachtzug"],
         'territories'   => ["Allianz", "Horde",     "Umkämpft", "Sicheres Gebiet", "PvP",          "Welt-PvP"],
         'cat'           => array(
             "Östliche Königreiche",     "Kalimdor",                 "Dungeons",                 "Schlachtzüge",             "Unbenutzt",                null,
             "Schlachtfelder",           null,                       "Scherbenwelt",             "Arenen",                   "Nordend"
-        ),
-        'floors'        => array(
-             206 => ["Vorbereitung der Norndir", "Aufstieg der Drachenschinder", "Tyrs Terrasse"],
-             209 => ["Der Hof", "Speisesaal", "Die Verwaiste Höhle", "Das Tiefere Observatorium", "Das Obere Observatorium", "Lord Godfreys Kammer", "Der Wehrgang"],
-             719 => ["Der Teich von Ask'Ar", "Mondschreinsanktum", "Der Vergessene Teich"],
-             721 => ["Die Halle der Zahnräder", "Der Schlafsaal", "Startrampe", "Tüftlerhof"],
-             796 => ["Friedhof", "Bibliothek", "Waffenkammer", "Kathedrale"],
-            1196 => ["Untere Spitze", "Obere Spitze"],
-            1337 => ["Halle der Bewahrer", "Khaz'goroths Sitz"],
-            1581 => ["Die Todesminen", "Eiserne Bucht"],
-            1583 => ["Tazz'Alaor", "Listspinnertunnel", "Hordemar", "Schwarzfausthalle", "Drachenspitzhalle", "Der Krähenhorst", "Schwarzfelsstadion"],
-            1584 => ["Gefängnisblock", "Die Schattenschmiede"],
-            2017 => ["Kreuzzüglerplatz", "Der Spießrutenlauf"],
-            2057 => ["Das Reliquiarium", "Kammer der Beschwörung", "Das Arbeitszimmer des Direktors", "Familiengruft der Barovs"],
-            2100 => ["Höhlen von Maraudon", "Zaetars Grab"],
-            2557 => ["Gordokhallen", "Hauptstadtgärten", "Hof der Hochgeborenen", "Das Gefängnis von Immol'thar", "Wucherborkenviertel", "Der Schrein von Eldretharr"],
-            2677 => ["Garnison des Drachenmals", "Hallen des Zwists", "Die Blutroten Labore", "Nefarians Unterschlupf"],
-            3428 => ["Untergrund des Schwarmbaus", "Die Tempeltore", "Höhle von C'Thun"],
-            3457 => ["Bedienstetenunterkünfte", "Obere Nobelställe", "Der Bankettsaal", "Die Gästezimmer", "Balkon des Opernsaals", "Die Terrasse des Meisters", "Untere Eingestürzte Treppe", "Obere Eingestürzte Treppe", "Die Menagerie", "Bibliothek des Wächters", "Das Warenlager", "Obere Bibliothek", "Die Himmelswacht", "Halle der Spiele", "Medivhs Gemächer", "Die Energiekammer", "Netherraum"],
-            3790 => ["Hallen des Jenseits", "Brücke der Seelen"],
-            3791 => ["Sethekkversteck", "Hallen der Trauer"],
-            3959 => ["Ausbildungsgelände der Illidari", "Kanäle von Karabor", "Zuflucht der Schatten", "Hallen der Pein", "Blutschattens Wacht", "Hof der Irdischen Gelüste", "Kommandoraum", "Tempelspitze"],
-            3456 => ["Das Konstruktviertel", "Das Arachnidenviertel", "Das Militärviertel", "Das Seuchenviertel", "Übersicht", "Frostwyrmhort"],
-            3715 => ["Die Dampfkammer", "Die Kühlteiche"],
-            3848 => ["Stasisblock: Trion", "Stasisblock: Maximus", "Eindämmungskern"],
-            3849 => ["Die Mechanar", "Berechnungskammer"],
-            4075 => ["Sonnenbrunnenplateau", "Schrein der Finsternis"],
-            4100 => ["Außerhalb von Stratholme", "Stratholme"],
-            4131 => ["Zuflucht des Großmagisters", "Beobachtungsplatz"],
-            4196 => ["Die Vorhallen von Drak'Tharon", "Aussichtspunkt von Drak'Tharon"],
-            4228 => ["Band der Varianz", "Band der Akzeleration", "Band der Transmutation", "Band der Angleichung"],
-            4272 => ["Die unnachgiebige Garnison", "Straße der Schöpfer"],
-            4273 => ["Der große Vorstoß", "Die Vorkammer von Ulduar", "Das innere Sanktum von Ulduar", "Das Gefängnis von Yogg-Saron", "Der Funke der Imagination", "Das Gedankenauge"],
-            4277 => ["Die Brutgrube", "Hadronox' Hort", "Das vergoldete Tor"],
-            4395 => ["Dalaran", "Die Schattenseite"],
-            4494 => ["Ahn'kahet", "2. Stockwerk"],
-            4722 => ["Kolosseum der Kreuzfahrer", "Die eisigen Tiefen"],
-            4812 => ["Die untere Zitadelle", "Das Schädelbollwerk", "Dom des Todbringers", "Hort der Frostkönigin", "Der obere Bereich", "Königliche Quartiere", "Der Frostthron", "Frostgram"]
         )
     ),
     'quest' => array(
@@ -1275,7 +1275,7 @@ $lang = array(
             2 => array( "Dungeons",
                   206 => "Burg Utgarde",                   209 => "Burg Schattenfang",              491 => "Kral der Klingenhauer",          717 => "Das Verlies",                    718 => "Die Höhlen des Wehklagens",
                   719 => "Tiefschwarze Grotte",            721 => "Gnomeregan",                     722 => "Hügel der Klingenhauer",         796 => "Das Scharlachrote Kloster",     1176 => "Zul'Farrak",
-                 1196 => "Turm Utgarde",                  1337 => "Uldaman",                       1417 => "Versunkener Tempel",            1581 => "Die Todesminen",                1583 => "Schwarzfelsspitze",
+                 1196 => "Turm Utgarde",                  1337 => "Uldaman",                       1477 => "Versunkener Tempel",            1581 => "Die Todesminen",                1583 => "Schwarzfelsspitze",
                  1584 => "Schwarzfelstiefen",             1941 => "Höhlen der Zeit",               2017 => "Stratholme",                    2057 => "Scholomance",                   2100 => "Maraudon",
                  2366 => "Der schwarze Morast",           2367 => "Vorgebirge des Alten Hügellands",2437 => "Der Flammenschlund",           2557 => "Düsterbruch",                   3535 => "Höllenfeuerzitadelle",
                  3562 => "Höllenfeuerbollwerk",           3688 => "Auchindoun",                    3713 => "Der Blutkessel",                3714 => "Die zerschmetterten Hallen",    3715 => "Die Dampfkammer",
@@ -1442,18 +1442,17 @@ $lang = array(
         '_inSlot'       => "im Platz",
         '_collapseAll'  => "Alle einklappen",
         '_expandAll'    => "Alle ausklappen",
-        '_transfer'     => 'Dieser Zauber wird mit <a href="?spell=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a> vertauscht, wenn Ihr zur <span class="icon-%s">%s</span> wechselt.',
+        '_transfer'     => 'Dieser Zauber wird mit <a href="?spell=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a> vertauscht, wenn Ihr zur <span class="icon-%s">%s</span> wechselt.',
+        '_affected'     => "Betroffene Zauber",
+        '_seeMore'      => "Mehr anzeigen",
+        '_rankRange'    => "Rang:&nbsp;%d&nbsp;-&nbsp;%d",
+        '_showXmore'    => "Zeige %d weitere",
         'currentArea'   => '&lt;Momentanes Gebiet&gt;',
         'discovered'    => "Durch Geistesblitz erlernt",
-        'ppm'           => "%s Auslösungen pro Minute",
+        'ppm'           => "(%s Auslösungen pro Minute)",
         'procChance'    => "Procchance",
         'starter'       => "Basiszauber",
         'trainingCost'  => "Trainingskosten",
-        'remaining'     => "Noch %s",
-        'untilCanceled' => "bis Abbruch",
-        'castIn'        => "Wirken in %s Sek.",
-        'instantPhys'   => "Sofort",
-        'instantMagic'  => "Spontanzauber",
         'channeled'     => "Kanalisiert",
         'range'         => "%s Meter Reichweite",
         'meleeRange'    => "Nahkampfreichweite",
@@ -1464,21 +1463,59 @@ $lang = array(
         'pctCostOf'     => "vom Grund%s",
         'costPerSec'    => ", plus %s pro Sekunde",
         'costPerLevel'  => ", plus %s pro Stufe",
+        'pointsPerCP'   => ", plus %s pro Combopunkt",
         'stackGroup'    => "Stack Gruppierung",
         'linkedWith'    => "Verknüpft mit",
         '_scaling'      => "Skalierung",
-        'scaling'       => array(
-            'directSP' => "+%.2f%% der Zaubermacht zum direkten Effekt",         'directAP' => "+%.2f%% der Angriffskraft zum direkten Effekt",
-            'dotSP'    => "+%.2f%% der Zaubermacht pro Tick",                    'dotAP'    => "+%.2f%% der Angriffskraft pro Tick"
+        'instantPhys'   => "Sofort",
+        'castTime' => array(
+            "Spontanzauber",
+            "Wirken in %.3g Sek.",
+            "Wirken in %.3g Min."
         ),
+        'cooldown' => array(
+            "Keine Abklingzeit",
+            "%.3g Sek. Abklingzeit",
+            "%.3g Min. Abklingzeit",
+         // "%.3g |4Stunde:Stunden; Abklingzeit",
+         // "%.3g |4Tag:Tage; Abklingzeit"
+        ),
+        'duration'      => array(
+            "bis Abbruch",
+            "%.2G Sek.",
+            "%.2G Min.",
+            "%.2G |4Stunde:Stunden;",
+            "%.2G |4Tag:Tage;"
+        ),
+        'timeRemaining' => array(
+            "",
+            "Noch %d |4Sekunde:Sekunden;",
+            "Noch %d |4Minute:Minuten;",
+            "Noch %d |4Stunde:Stunden;",
+            "Noch %d |4Tag:Tage;"
+        ),
+        'powerCost'     => array(
+           -2 => ["%d Gesundheit", '%1$d Gesundheit und %2$d pro Sek.'],
+            0 => ["%d Mana",       '%1$d Mana und %2$d pro Sek.'      ],
+            1 => ["%d Wut",        '%1$d Wut und %2$d pro Sek.'       ],
+            2 => ["%d Fokus",      "%d Fokus und %d pro Sek."         ],
+            3 => ["%d Energie",    "%d Energie und %d pro Sek."       ],
+            6 => ["%d Runenmacht", "%d Runenmacht, plus %d pro Sek."  ],
+        ),
+        'powerDisplayCost' => ["%d %s", "%d %s, plus %d pro Sek"],
+        'powerCostRunes'=> ["%d Blut", "%d Unheilig", "%d Frost"],
         'powerRunes'    => ["Blut", "Unheilig", "Frost", "Tod"],
-        'powerTypes'    => array(
+        'powerTypes'    => array(                           // POWER_TYPE_*
             // conventional
               -2 => "Gesundheit",          0 => "Mana",                1 => "Wut",                 2 => "Fokus",               3 => "Energie",             4 => "Zufriedenheit",
                5 => "Runen",               6 => "Runenmacht",
             // powerDisplay
               -1 => "Munition",          -41 => "Pyrit",             -61 => "Dampfdruck",       -101 => "Hitze",            -121 => "Schlamm",          -141 => "Blutmacht",
             -142 => "Wrath"
+        ),
+        'scaling'       => array(
+            'directSP' => "+%.2f%% der Zaubermacht zum direkten Effekt",         'directAP' => "+%.2f%% der Angriffskraft zum direkten Effekt",
+            'dotSP'    => "+%.2f%% der Zaubermacht pro Tick",                    'dotAP'    => "+%.2f%% der Angriffskraft pro Tick"
         ),
         'relItems'      => array(
             'base'    => "<small>%s im Zusammenhang mit <b>%s</b> anzeigen</small>",
@@ -1543,9 +1580,9 @@ $lang = array(
         ),
         'spellModOp'    => array(
             "Schaden",                              "Dauer",                                "Bedrohung",                            "Effekt 1",                             "Aufladungen",
-            "Reichweite",                           "Radius",                               "kritische Trefferchance",              "Alle Effekte",                         "Zauberzeitverlust",
+            "Reichweite",                           "Radius",                               "Kritische Trefferchance",              "Alle Effekte",                         "Zauberzeitverlust",
             "Zauberzeit",                           "Abklingzeit",                          "Effekt 2",                             "Ignoriere Rüstung",                    "Kosten",
-            "Kritischer Bonusschaden",              "Chance auf Fehlschlag",                "Sprung-Ziele",                         "Chance auf Auslösung",                 "Intervall",
+            "Kritischer Bonusschaden",              "Trefferchance",                        "Sprung-Ziele",                         "Chance auf Auslösung",                 "Intervall",
             "Multiplikator (Schaden)",              "Globale Abklingzeit",                  "Schaden über Zeit",                    "Effekt 3",                             "Multiplikator (Bonus)",
             null,                                   "Auslösungen pro Minute",               "Multiplikator (Betrag)",               "Widerstand gegen Bannung",             "kritischer Bonusschaden2",
             "Kostenrückerstattung bei Fehlschlag"
@@ -1557,6 +1594,9 @@ $lang = array(
             "erhaltene kritische Fernkampftreffer", "erhaltene kritische Zaubertreffer",    "Nahkampftempo",                        "Fernkampftempo",                       "Zaubertempo",
             "Waffenfertigkeit Haupthand",           "Waffenfertigkeit Nebenhand",           "Waffenfertigkeit Fernkampf",           "Waffenkunde",                          "Rüstungsdurchschlag"
         ),
+        'combatRatingMask' => array(
+                0xE0 => "Trefferchance",            0x700 => "Kritische Trefferchance",     0x1C000 => "Abhärtung"
+        ),
         'lockType'      => array(
             null,                                   "Schlossknacken",                       "Kräuterkunde",                         "Bergbau",                              "Falle entschärfen",
             "Öffnen",                               "Schatz (DND)",                         "Verkalkte Elfenedelsteine (DND)",      "Schließen",                            "Falle scharf machen",
@@ -1565,7 +1605,7 @@ $lang = array(
             "Inschriftenkunde",                     "Vom Fahrzeug öffnen"
         ),
         'stealthType'   => ["Allgemein", "Falle"],
-        'invisibilityType' => [null, "Allgemein", null, "Falle", null, null, "Trunkenheit", null, null, null, null, null],
+        'invisibilityType' => ["Allgemein", "UNK-1", "UNK-2", "Falle", "UNK-4", "UNK-5", "Trunkenheit", "UNK-7", "UNK-8", "UNK-9", "UNK-10", "UNK-11"],
         'attributes'    => array(                           // index defined by filters
             69 => "Alle Zaubereffekte sind schädlich",
             57 => "Aura kann nicht entfernt werden",
@@ -1625,7 +1665,9 @@ $lang = array(
             89 => "Verwendbar, während Ihr verängstigt seid",
             65 => "Braucht alle Ressourcen auf"
         ),
-        'unkEffect'     => 'Unknown Effect',
+        'summonControl' => ["Ungesteuert", "Wächter", "Begleiter", "Bezaubert", "Gesteuertes Fahrzeug", "Ungesteuertes Fahrzeug"],
+        'summonSlot'    => ["Begleiter", "Feuertotem", "Erdtotem", "Wassertotem", "Lufttotem", "Haustier", "Quest"],
+        'unkEffect'     => 'Unknown Effect (%1$d)',
         'effects'       => array(
 /*0-5    */ 'None',                     'Instakill',                'School Damage',            'Dummy',                    'Portal Teleport',          'Teleport Units',
 /*6+     */ 'Apply Aura',               'Environmental Damage',     'Drain Power',              'Drain Health',             'Heal',                     'Bind',
@@ -1649,14 +1691,14 @@ $lang = array(
 /*114+   */ 'Taunt',                    'Durability Damage - %',    'Skin Player Corpse (PvP)', 'AoE Resurrect with % Health','Learn Skill',            'Apply Area Aura - Pet',
 /*120+   */ 'Teleport to Graveyard',    'Normalized Weapon Damage', null,                       'Take Flight Path',         'Pull Towards',             'Modify Threat - %',
 /*126+   */ 'Spell Steal ',             'Prospect',                 'Apply Area Aura - Friend', 'Apply Area Aura - Enemy',  'Redirect Done Threat %',   'Play Sound',
-/*132+   */ 'Play Music',               'Unlearn Specialization',   'Kill Credit2',             'Call Pet',                 'Heal for % of Total Health','Give % of Total Power',
+/*132+   */ 'Play Music',               'Unlearn Specialization',   'Kill Credit 2',            'Call Pet',                 'Heal for % of Total Health','Give % of Total Power',
 /*138+   */ 'Leap Back',                'Abandon Quest',            'Force Cast',               'Force Spell Cast with Value','Trigger Spell with Value','Apply Area Aura - Pet Owner',
 /*144+   */ 'Knockback to Dest.',       'Pull Towards Dest.',       'Activate Rune',            'Fail Quest',               null,                       'Charge to Dest',
 /*150+   */ 'Start Quest',              'Trigger Spell 2',          'Summon - Refer-A-Friend',  'Create Tamed Pet',         'Discover Flight Path',     'Dual Wield 2H Weapons',
-/*156+   */ 'Add Socket to Item',       'Create Tradeskill Item',   'Milling',                  'Rename Pet',               null,                       'Change Talent Spec. Count',
+/*156+   */ 'Add Socket to Item',       'Create Tradeskill Item',   'Milling',                  'Rename Pet',               'Force Cast 2',             'Change Talent Spec. Count',
 /*162-167*/ 'Activate Talent Spec.',    null,                       'Remove Aura',              null,                       null,                       'Update Player Phase'
         ),
-        'unkAura'       => 'Unknown Aura',
+        'unkAura'       => 'Unknown Aura (%1$d)',
         'auras'         => array(
 /*0-   */   'None',                                 'Bind Sight',                           'Possess',                              'Periodic Damage - Flat',               'Dummy',
 /*5+   */   'Confuse',                              'Charm',                                'Fear',                                 'Periodic Heal',                        'Mod Attack Speed',
@@ -1730,7 +1772,7 @@ $lang = array(
         'block'         => "%s Blocken",
         'charges'       => "%d |4Aufladung:Aufladungen;",
         'locked'        => "Verschlossen",
-        'ratingString'  => "%s&nbsp;@&nbsp;L%s",
+        'ratingString'  => '<!--rtg%%%1$d-->%2$s&nbsp;@&nbsp;Lvl<!--lvl-->%3$d',
         'heroic'        => "Heroisch",
         'startQuest'    => "Dieser Gegenstand startet eine Quest",
         'bagSlotString' => '%1$d Platz %2$s',
@@ -1767,7 +1809,7 @@ $lang = array(
         'tool'          => "Werkzeug",
         'cost'          => "Preis",
         'content'       => "Inhalt",
-        '_transfer'     => 'Dieser Gegenstand wird mit <a href="?item=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a> vertauscht, wenn Ihr zur <span class="icon-%s">%s</span> wechselt.',
+        '_transfer'     => 'Dieser Gegenstand wird mit <a href="?item=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a> vertauscht, wenn Ihr zur <span class="icon-%s">%s</span> wechselt.',
         '_unavailable'  => "Dieser Gegenstand ist nicht für Spieler verfügbar.",
         '_rndEnchants'  => "Zufällige Verzauberungen",
         '_chance'       => "(Chance von %s%%)",
@@ -1783,6 +1825,20 @@ $lang = array(
         'uniqueEquipped'=> ["Einzigartig anlegbar", null,             "Einzigartig angelegt: %s (%d)"],
         'speed'         => "Tempo",
         'dps'           => "(%.1f Schaden pro Sekunde)",
+        'duration'      => array(                           // ITEM_DURATION_*
+            '',
+            "Dauer: %d Sek.",
+            "Dauer: %d Min.",
+            "Dauer: %d |4Stunde:Stunden;",
+            "Dauer: %d |4Tag:Tage;"
+        ),
+        'cooldown'      => array(                           // ITEM_COOLDOWN_TOTAL*
+            '(%s Abklingzeit)',
+            "(%d Sek. Abklingzeit)",
+            "(%d Min. Abklingzeit)",
+            "(%d |4Stunde:Stunden; Abklingzeit)",
+            "(%d |4Tag:Tage; Abklingzeit)"
+        ),
         'damage'        => array(                           // *DAMAGE_TEMPLATE*
                         //  basic,                                              basic /w school,                                    add basic,                  add basic /w school
             'single'    => ['%d Schaden',                                       '%1$d %2$sschaden',                                 '+ %1$d Schaden',           '+ %1$d %2$sschaden'        ],
@@ -1815,7 +1871,7 @@ $lang = array(
             "Benutzen: ",           "Anlegen: ",        "Chance bei Treffer: ", "",                             "",
             "",                     ""
         ),
-        'bonding'       => array(
+        'bonding'       => array(                           // ITEM_BIND_*
             "Accountgebunden",                          "Wird beim Aufheben gebunden",                          "Wird beim Anlegen gebunden",
             "Wird bei Benutzung gebunden",              "Questgegenstand",                                      "Questgegenstand"
         ),
@@ -1892,54 +1948,54 @@ $lang = array(
             12 => "Quest",
             13 => "Schlüssel",
         ),
-        'statType'      => array(
-            "Mana",
-            "Gesundheit",
+        'statType'      => array(                           // ITEM_MOD_*
+            '%1$c%2$d Mana',
+            '%1$c%2$d Gesundheit',
             null,
-            "Beweglichkeit",
-            "Stärke",
-            "Intelligenz",
-            "Willenskraft",
-            "Ausdauer",
+            '%1$c%2$d Beweglichkeit',
+            '%1$c%2$d Stärke',
+            '%1$c%2$d Intelligenz',
+            '%1$c%2$d Willenskraft',
+            '%1$c%2$d Ausdauer',
             null, null, null, null,
             "Erhöht die Verteidigungswertung um %d.",
             "Erhöht Eure Ausweichwertung um %d.",
             "Erhöht Eure Parierwertung um %d.",
             "Erhöht Eure Blockwertung um %d.",
             "Erhöht Nahkampftrefferwertung um %d.",
-            "Erhöht Fernkampftrefferwertung um %d.",
+            "Erhöht Distanztrefferwertung um %d.",
             "Erhöht Zaubertrefferwertung um %d.",
             "Erhöht kritische Nahkampftrefferwertung um %d.",
-            "Erhöht kritische Fernkampftrefferwertung um %d.",
+            "Erhöht kritische Distanztrefferwertung um %d.",
             "Erhöht kritische Zaubertrefferwertung um %d.",
-            "Erhöht Vermeidungswertung für Nahkampftreffer um +3.",
+            "Erhöht Vermeidungswertung für Nahkampftreffer um %d.",
             "Erhöht Vermeidungswertung für Distanztreffer um %d.",
             "Erhöht Vermeidungswertung für Zaubertreffer um %d.",
             "Erhöht Vermeidungswertung für kritische Nahkampftreffer um %d.",
             "Erhöht Vermeidungswertung für kritische Distanztreffer um %d.",
             "Erhöht Vermeidungswertung für kritische Zaubertreffer um %d.",
             "Erhöht Nahkampftempowertung um %d.",
-            "Erhöht Fernkampftempowertung um %d.",
+            "Erhöht Distanztempowertung um %d.",
             "Erhöht Zaubertempowertung um %d.",
-            "Erhöht Eure Trefferwertung um %d.",
-            "Erhöht Eure kritische Trefferwertung um %d.",
+            "Erhöht Trefferwertung um %d.",
+            "Erhöht kritische Trefferwertung um %d.",
             "Erhöht Vermeidungswertung um %d.",
             "Erhöht Vermeidungswertung für kritische Treffer um %d.",
             "Erhöht Eure Abhärtungswertung um %d.",
-            "Erhöht Eure Tempowertung um %d.",
-            "Erhöht Waffenkundewertung um %d.",
+            "Erhöht Tempowertung um %d.",
+            "Erhöht Eure Waffenkundewertung um %d.",
             "Erhöht Angriffskraft um %d.",
             "Erhöht Distanzangriffskraft um %d.",
             "Erhöht die Angriffskraft in Katzen-, Bären-, Terrorbären- und Mondkingestalt um %d.",
             "Erhöht die von Zaubern und Effekten verursachte Heilung um bis zu %d.",
             "Erhöht den von Zaubern und Effekten verursachten Schaden um bis zu %d.",
             "Stellt alle 5 Sek. %d Mana wieder her.",
-            "Erhöht Euren Rüstungsdurchschlagwert um %d.",
+            "Erhöht Eure Rüstungsdurchschlagwertung um %d.",
             "Erhöht die Zaubermacht um %d.",
             "Stellt alle 5 Sek. %d Gesundheit wieder her.",
             "Erhöht den Zauberdurchschlag um %d.",
-            "Erhöht Blockwert um %d.",
-            "Unbekannter Bonus #%d (%d)",
+            "Erhöht den Blockwert Eures Schilds um %d.",
+            "Unbekannter Bonus #%d (%d)"
         )
     )
 );

@@ -16,6 +16,7 @@ $lang = array(
         'pl'            => ["年", "月", "周", "天", "小时", "分钟", "秒", "毫秒"],
         'ab'            => ["年",    "月",     "周",    "天",  "小时",    "分钟",     "秒",     "毫秒"]
     ),
+    'lang' => ['英语', null, '法语', '德语', '中文', null, '西班牙语', null, '俄语'],
     'main' => array(
         'name'          => "名字",
         'link'          => "链接",
@@ -52,11 +53,13 @@ $lang = array(
         'or'            => "或",
         'back'          => "返回",
         'reputationTip' => "声望点数",
-        'byUser'        => '由<a href="'.HOST_URL.'/?user=%1$s"%2$s>%1$s</a>',
+        'byUser'        => '由<a href="HOST_URL/?user=%1$s"%2$s>%1$s</a>',
         'help'          => "帮助",
         'status'        => "状态",
         'yes'           => "是",
         'no'            => "无",
+        'any'           => "任意",
+        'all'           => "全部",
 
         // filter
         'extSearch'     => "扩展搜索",
@@ -99,7 +102,7 @@ $lang = array(
         ),
 
         // article & infobox
-        'englishOnly'   => "该页面仅以<b>英语</b>提供。",
+        'langOnly'   => "该页面仅以<b>%s</b>提供。",
 
         // calculators
         'preset'        => "预设",
@@ -129,6 +132,7 @@ $lang = array(
         'dateFmtShort'  => "Y/m/d",
         'dateFmtLong'   => "Y/m/d \a\\t H:i A",
         'timeAgo'       => '%s之前',
+        'nfSeparators'  => [',', '.'],
 
         // error
         'intError'      => "发生内部错误。",
@@ -137,9 +141,15 @@ $lang = array(
         'bannedRating'  => "你评级评论的权力已被冻结。", # LANG.tooltip_banned_rating
         'tooManyVotes'  => "你已经达到每日投票上限。请明天再来！", # LANG.tooltip_too_many_votes
         'alreadyReport' => "您已报告。", # LANG.ct_resp_error7
+<<<<<<< HEAD
         'textTooShort'  => "[你的留言太短了。]",
         'cannotComment' => "[你已被禁止发表评论。]",
         'textLength'    => "[你的评论有 %d 个字符，必须至少有 %d 个字符，最多 %d 个字符。]",
+=======
+        'textTooShort'  => "你的留言太短了。",
+        'cannotComment' => "你已被禁止发表评论。",
+        'textLength'    => "你的评论有 %d 个字符，必须至少有 %d 个字符，最多 %d 个字符。",
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
 
         'moreTitles'    => array(
             'reputation'    => "网站声望",
@@ -170,6 +180,7 @@ $lang = array(
         'added'     => "已添加",
         'rating'    => "评分",
         'votes'     => "[span id=guiderating-value]%d[/span]/5 （[span id=guiderating-votes][n5=%d][/span] 投票）[span id=guiderating][/span]",
+<<<<<<< HEAD
         'noVotes'   => "[投票数量不足] [span id=guiderating][/span]",
         'byAuthor'  => "来自 %s",
         'notFound'  => "[该指南不存在。]",
@@ -182,12 +193,30 @@ $lang = array(
             'fullTitleTip'    => '[完整的指南标题将用于指南页面，并可能包含面向搜索引擎优化的词语]',
             'name'            => '名称',
             'nameTip'         => '[这应该是一个简单明了的指南名称，用于菜单和指南列表]',
+=======
+        'noVotes'   => "投票数量不足 [span id=guiderating][/span]",
+        'byAuthor'  => "来自 %s",
+        'notFound'  => "该指南不存在。",
+        'clTitle'     => '修改日志 "<a href="?guide=%1$d">%2$s</a>"',
+        'clStatusSet' => '状态已设置为 %s',
+        'clCreated'   => '已创建',
+        'clMinorEdit' => '小修改',
+        'editor'    => array(
+            'fullTitle'       => '完整标题',
+            'fullTitleTip'    => '完整的指南标题将用于指南页面，并可能包含面向搜索引擎优化的词语',
+            'name'            => '名称',
+            'nameTip'         => '这应该是一个简单明了的指南名称，用于菜单和指南列表',
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
             'description'     => '描述',
             'descriptionTip'  => '描述将用于说明片段&lt;br /&gt;&lt;br /&gt;如果不填，则自动生成。',
         //  'commentEmail'    => '评论电子邮件',
         //  'commentEmailTip' => '当用户对此指南发表评论时，作者是否收到电子邮件通知？',
             'changelog'       => '当前编辑的修改日志',
+<<<<<<< HEAD
             'changelogTip'    => '[在此处输入此次更新的修改日志]',
+=======
+            'changelogTip'    => '在此处输入此次更新的修改日志',
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
             'save'            => '保存',
             'submit'          => '提交以供审核',
             'autoupdate'      => '预览',
@@ -199,10 +228,17 @@ $lang = array(
             'images'          => '图片',
             'statusTip'       => array(
                 GUIDE_STATUS_DRAFT    => '你的指南目前是草稿状态，只有你自己可见。试着输入更多的文字，当你觉得可以了的时候就提交送审吧。',
+<<<<<<< HEAD
                 GUIDE_STATUS_REVIEW   => '[你的指南正在审核中]',
                 GUIDE_STATUS_APPROVED => '[你的指南已发布]',
                 GUIDE_STATUS_REJECTED => '[你的指南已被拒绝。在修正问题后，你可以重新提交审核。]',
                 GUIDE_STATUS_ARCHIVED => '[你的指南已过时，并已归档。它将不再列出，也无法编辑。]',
+=======
+                GUIDE_STATUS_REVIEW   => '你的指南正在审核中',
+                GUIDE_STATUS_APPROVED => '你的指南已发布',
+                GUIDE_STATUS_REJECTED => '你的指南已被拒绝。在修正问题后，你可以重新提交审核。',
+                GUIDE_STATUS_ARCHIVED => '你的指南已过时，并已归档。它将不再列出，也无法编辑。',
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
             )
         ),
         'category'  => array(
@@ -242,7 +278,8 @@ $lang = array(
             'eu' => "欧洲",
             'kr' => "韩国",
             'tw' => "台湾",
-            'cn' => "中国"
+            'cn' => "中国",
+            'dev' => "开发"
         ),
         'encounterNames'=> array(
             243 => "黑铁七贤",
@@ -267,7 +304,7 @@ $lang = array(
         ),
         'error'         => array(
             'unkFormat'   => "未知图像格式。",
-            'tooSmall'    => "你的截图太小了。 (&lt; ".CFG_SCREENSHOT_MIN_SIZE."x".CFG_SCREENSHOT_MIN_SIZE.").",
+            'tooSmall'    => "你的截图太小了。 (&lt; CFG_SCREENSHOT_MIN_SIZE x CFG_SCREENSHOT_MIN_SIZE).",
             'selectSS'    => "请选择截图上传。",
             'notAllowed'  => "你不允许上传截图！",
         )
@@ -357,6 +394,13 @@ $lang = array(
         'modes'         => [-1 => "任何", "普通 / 普通 10人", "英雄 / 普通 25人", "英雄 10人", "英雄 25人"],
         'expansions'    => ["经典旧世", "燃烧的远征", "巫妖王之怒"],
         'stats'         => ["力量", "敏捷", "耐力", "智力", "精神"],
+        'timeAbbrev'    => array(
+            '',
+            "%d|4秒:秒;",
+            "%d|4分钟:分钟;",
+            "%d|4小时:小时;",
+            "%d|4天:天;"
+        ),
         'sources'       => array(
             "未知", "已制造", "掉落", "PvP", "任务",
             "商人", "训练师", "发现", "救赎", "天赋",
@@ -365,8 +409,13 @@ $lang = array(
             "已加工", "失窃", "废弃", "已剥皮", "游戏商店"
         ),
         'pvpSources'    => array(
+<<<<<<< HEAD
             null,                           "竞技场赛季 1",               "竞技场赛季 2",               "竞技场赛季 3",               "竞技场赛季 4",
             "竞技场赛季 5",               "竞技场赛季 6",               "竞技场赛季 7",               "竞技场赛季 8",               "2009竞技场锦标赛"
+=======
+            42 => "竞技场赛季 1",         52 => "竞技场赛季 2",         71 => "竞技场赛季 3",         80 => "竞技场赛季 4",        157 => "竞技场赛季 5",
+           163 => "竞技场赛季 6",        167 => "竞技场赛季 7",        169 => "竞技场赛季 8",        177 => "2009竞技场锦标赛"
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         ),
         'languages'     => array(
              1 => "兽人语",                   2 => "达纳苏斯语",               3 => "牛头人语",                 6 => "矮人语",                  7 => "通用语",                 8 => "恶魔语",
@@ -376,7 +425,7 @@ $lang = array(
         'gl'            => [null, "大", "小"],
         'si'            => [1 => "联盟", -1 => "仅限联盟", 2 => "部落", -2 => "仅限部落", 3 => "双方"],
         'resistances'   => [null, '神圣抗性', '火焰抗性', '自然抗性', '冰霜抗性', '暗影抗性', '奥术抗性'],
-        'dt'            => [null, "魔法", "诅咒", "疾病", "中毒", "潜行", "隐形", null, null, "激怒"],
+        'dt'            => [null, "魔法", "诅咒", "疾病", "中毒", "潜行", "隐形", "魔法, 诅咒, 疾病, 中毒", "法术 (NPC)", "激怒"],
         'sc'            => ["物理", "神圣", "火焰", "自然", "冰霜", "暗影", "奥术"],
         'cl'            => [null, "战士", "圣骑士", "猎人", "潜行者", "牧师", "死亡骑士", "萨满祭司", "法师", "术士", null, "德鲁伊"],
         'ra'            => [-2 => "部落", -1 => "联盟", null, "人类", "兽人", "矮人", "暗夜精灵", "亡灵", "牛头人", "侏儒", "巨魔", null, "血精灵", "德莱尼"],
@@ -424,12 +473,12 @@ $lang = array(
              9 => ['痛苦', '恶魔学识', '毁灭'],
              1 => ['武器', '狂怒', '防护']
         ),
-        'pvpRank'       => array(
-            null,                                                           "下士 / 斥候",                                              "下士 / 步兵",
-            "中士 / 中士",                                          "军士长 / 高阶军士",                            "士官长 / 一等军士长",
-            "骑士 / 石头守卫",                                         "骑士中尉 / 血卫士",                              "骑士队长 / 军团士兵",
-            "护卫骑士 / 百夫长",                                  "少校 / 勇士",                              "司令 / 中将",
-            "统帅 / 将军",                                            "元帅 / 督军",                                      "大元帅 / 高阶督军"
+        'pvpRank'       => array(                           // PVP_RANK_*
+            null,                                           ["侦察兵", "列兵"],                     ["步兵", "下士"],
+            ["中士", "中士"],                               ["高阶军士", "军士长"],                 ["一等军士长", "士官长"],
+            ["石头守卫", "骑士"],                           ["血卫士", "骑士中尉"],                 ["军团士兵", "骑士队长"],
+            ["百夫长", "护卫骑士"],                         ["勇士", "少校"],                       ["中将", "司令"],
+            ["将军", "统帅"],                               ["督军", "元帅"],                       ["高阶督军", "大元帅"]
         ),
         'orientation'   => ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest']
     ),
@@ -617,7 +666,7 @@ $lang = array(
             SAI_ACTION_SET_FACTION                        => ['(%1$d)?Set faction of #target# to [faction=%7$d]:Reset faction of #target#;.', null],
             SAI_ACTION_MORPH_TO_ENTRY_OR_MODEL            => ['(%7$d)?Reset apperance.:Take the appearance of;(%1$d)? [npc=%1$d].:;(%2$d)?[model npc=%2$d border=1 float=right][/model]:;', null],
             SAI_ACTION_SOUND                              => ['Play sound(%2$d)? to invoking player:;:[div float=right width=270px][sound=%1$d][/div]', 'Played by environment.'],
-            SAI_ACTION_PLAY_EMOTE                         => ['Emote [emote=%1$d] to #target#.', null],
+            SAI_ACTION_PLAY_EMOTE                         => ['(%1$d)?Emote [emote=%1$d] to #target#.: End Emote.;', null],
             SAI_ACTION_FAIL_QUEST                         => ['Fail [quest=%1$d] for #target#.', null],
             SAI_ACTION_OFFER_QUEST                        => ['(%2$d)?Add [quest=%1$d] to #target#\'s log:Offer [quest=%1$d] to #target#;.', null],
             SAI_ACTION_SET_REACT_STATE                    => ['#target# becomes %7$s.', null],
@@ -628,7 +677,7 @@ $lang = array(
             SAI_ACTION_THREAT_SINGLE_PCT                  => ['Modify #target#\'s threat by %7$d%%.', null],
             SAI_ACTION_THREAT_ALL_PCT                     => ['Modify the threat of all targets by %7$d%%.', null],
             SAI_ACTION_CALL_AREAEXPLOREDOREVENTHAPPENS    => ['Exploration event of [quest=%1$d] is completed for #target#.', null],
-            SAI_ACTION_SET_EMOTE_STATE                    => ['Continuously emote [emote=%1$d] to #target#.', null],
+            SAI_ACTION_SET_EMOTE_STATE                    => ['(%1$d)?Continuously emote [emote=%1$d] to #target#.:End emote state;', null],
             SAI_ACTION_SET_UNIT_FLAG                      => ['Set (%2$d)?UnitFlags2:UnitFlags; %7$s.', null],
             SAI_ACTION_REMOVE_UNIT_FLAG                   => ['Unset (%2$d)?UnitFlags2:UnitFlags; %7$s.', null],
 /* 20*/     SAI_ACTION_AUTO_ATTACK                        => ['(%1$d)?Start:Stop; auto attacking #target#.', null],
@@ -640,7 +689,7 @@ $lang = array(
             SAI_ACTION_CALL_GROUPEVENTHAPPENS             => ['Satisfy objective of [quest=%1$d] for #target#.', null],
             SAI_ACTION_COMBAT_STOP                        => ['End current combat.', null],
             SAI_ACTION_REMOVEAURASFROMSPELL               => ['Remove (%1$d)?all auras:auras of [spell=%1$d]; from #target#.', 'Only own auras'],
-            SAI_ACTION_FOLLOW                             => ['Follow #target#(%1$d)? at %1$dm distance:;(%3$d)? until reaching [npc=%3$d]:;.', '(%7$d)?Angle: %7$.2f°:;(%8$d)? Some form of Quest Credit is given:;'],
+            SAI_ACTION_FOLLOW                             => ['Follow #target#(%1$d)? at %1$dm distance:;(%3$d)? until reaching [npc=%3$d]:;.', '(%7$d)?Angle\u003A %7$.2f°:;(%8$d)? Some form of Quest Credit is given:;'],
 /* 30*/     SAI_ACTION_RANDOM_PHASE                       => ['Pick random Event Phase from %7$s.', null],
             SAI_ACTION_RANDOM_PHASE_RANGE                 => ['Pick random Event Phase between %1$d and %2$d.', null],
             SAI_ACTION_RESET_GOBJECT                      => ['Reset #target#.', null],
@@ -653,7 +702,7 @@ $lang = array(
             SAI_ACTION_CALL_FOR_HELP                      => ['Call for help.', 'Use default help emote'],
 /* 40*/     SAI_ACTION_SET_SHEATH                         => ['Sheath %7$s weapons.', null],
             SAI_ACTION_FORCE_DESPAWN                      => ['Despawn #target#(%1$d)? after %7$s:;(%2$d)? and then respawn after %8$s:;', null],
-            SAI_ACTION_SET_INVINCIBILITY_HP_LEVEL         => ['Become invincable below (%2$d)?%2$d%%:%1$d; HP.', null],
+            SAI_ACTION_SET_INVINCIBILITY_HP_LEVEL         => ['Become inviniable below (%2$d)?%2$d%%:%1$d; HP.', null],
             SAI_ACTION_MOUNT_TO_ENTRY_OR_MODEL            => ['(%7$d)?Dismount.:Mount ;(%1$d)?[npc=%1$d].:;(%2$d)?[model npc=%2$d border=1 float=right][/model]:;', null],
             SAI_ACTION_SET_INGAME_PHASE_MASK              => ['Set visibility of #target# to phase %7$s.', null],
             SAI_ACTION_SET_DATA                           => ['[b]%2$d[/b] is stored in data field #[b]%1$d[/b] of #target#.', null],
@@ -866,7 +915,11 @@ $lang = array(
 
         // form-text
         'emailInvalid'  => "该电子邮件地址无效。", // message_emailnotvalid
+<<<<<<< HEAD
         'emailNotFound' => "你输入的电子邮件地址与任何帐户不关联。<br><br>如果您忘记了使用哪个电子邮件注册了您的帐户，请发送电子邮件至".CFG_CONTACT_EMAIL."寻求帮助。",
+=======
+        'emailNotFound' => "你输入的电子邮件地址与任何帐户不关联。<br><br>如果您忘记了使用哪个电子邮件注册了您的帐户，请发送电子邮件至CFG_CONTACT_EMAIL寻求帮助。",
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         'createAccSent' => "电子邮件发送到<b>%s</b>。只需按照说明创建你的帐户。",
         'recovUserSent' => "电子邮件发送到<b>%s</b>。只需按照说明恢复你的用户名。",
         'recovPassSent' => "电子邮件发送到<b>%s</b>。只需按照说明重置你的密码。",
@@ -903,18 +956,47 @@ $lang = array(
         'posts'         => "论坛帖子",
         // user mail
         'tokenExpires'  => "此令牌将在%s过期。",
+<<<<<<< HEAD
         'accConfirm'    => ["账户确认", "欢迎来到".CFG_NAME_SHORT."!\r\n\r\n点击下方链接以激活您的账户。\r\n\r\n".HOST_URL."?account=signup&token=%s\r\n\r\n如果您没有请求此邮件，请忽略它。"],
         'recoverUser'   => ["用户恢复",        "点击此链接登录\r\n\r\n".HOST_URL."?account=signin&token=%s\r\n\r\n如果您没有请求此邮件，请忽略它。"],
         'resetPass'     => ["重置密码",       "点击此链接以重置您的密码。\r\n\r\n".HOST_URL."?account=forgotpassword&token=%s\r\n\r\n如果您没有请求此邮件，请忽略它。"]
+=======
+        'accConfirm'    => ["账户确认", "欢迎来到CFG_NAME_SHORT!\r\n\r\n点击下方链接以激活您的账户。\r\n\r\nHOST_URL?account=signup&token=%s\r\n\r\n如果您没有请求此邮件，请忽略它。"],
+        'recoverUser'   => ["用户恢复",        "点击此链接登录\r\n\r\nHOST_URL?account=signin&token=%s\r\n\r\n如果您没有请求此邮件，请忽略它。"],
+        'resetPass'     => ["重置密码",       "点击此链接以重置您的密码。\r\n\r\nHOST_URL?account=forgotpassword&token=%s\r\n\r\n如果您没有请求此邮件，请忽略它。"]
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
     ),
     'emote' => array(
         'notFound'      => "这个表情不存在。",
-        'self'          => "对你自己",
-        'target'        => "对别人并且选择了目标",
-        'noTarget'      => "对别人并且不选择目标",
+//      'self'          => "对你自己",
+//      'target'        => "对别人并且选择了目标",
+//      'noTarget'      => "对别人并且不选择目标",
+        'targeted'      => "[Used with target]",
+        'untargeted'    => "[Used without target]",
         'isAnimated'    => "使用动画",
+        'eventSound'    => "[Event Sound]",
         'aliases'       => "别名",
         'noText'        => "这个表情没有文字。",
+        'noCommand'     => "[This Emote has no /-command. It can not be triggered.]",
+        'flags'         => array(
+            EMOTE_FLAG_ONLY_STANDING       => "Only while standig",
+            EMOTE_FLAG_USE_MOUNT           => "Emote applies to mount",
+            EMOTE_FLAG_NOT_CHANNELING      => "Not while channeling",
+            EMOTE_FLAG_ANIM_TALK           => "Talk anim - talk",
+            EMOTE_FLAG_ANIM_QUESTION       => "Talk anim - question",
+            EMOTE_FLAG_ANIM_EXCLAIM        => "Talk anim - exclamation",
+            EMOTE_FLAG_ANIM_SHOUT          => "Talk anim - shout",
+            EMOTE_FLAG_NOT_SWIMMING        => "Not while swimming",
+            EMOTE_FLAG_ANIM_LAUGH          => "Talk anim - laugh",
+            EMOTE_FLAG_CAN_LIE_ON_GROUND   => "Usable while sleeping or dead",
+            EMOTE_FLAG_NOT_FROM_CLIENT     => "Creature only",
+            EMOTE_FLAG_NOT_CASTING         => "Not while casting",
+            EMOTE_FLAG_END_MOVEMENT        => "Emote ends movement",
+            EMOTE_FLAG_INTERRUPT_ON_ATTACK => "Interrupt on attacking",
+            EMOTE_FLAG_ONLY_STILL          => "Only while still",
+            EMOTE_FLAG_NOT_FLYING          => "Not while flying"
+        ),
+        'state'         => ['[Oneshot]', '[Continuous State]', '[Continuous Emote]']
     ),
     'enchantment' => array(
         'details'       => "细节",
@@ -932,8 +1014,13 @@ $lang = array(
     ),
     'gameObject' => array(
         'notFound'      => "这个对象不存在。",
+<<<<<<< HEAD
         'cat'           => [0 => "其他", 9 => "书籍", 3 => "容器", -5 => "宝箱", 25 => "钓鱼点", -3 => "草药", -4 => "矿脉", -2 => "任务", -6 => "工具"],
         'type'          => [              9 => "书籍",  3 => "容器",  -5 => "宝箱",  25 => "",              -3 => "草药",  -4 => "矿脉",  -2 => "任务", -6 => ""],
+=======
+        'cat'           => [0 => "其他",  3 => "容器", 6 => "陷阱", 9 => "书籍", 25 => "钓鱼点", -5 => "宝箱", -3 => "草药", -4 => "矿脉", -2 => "任务", -6 => "工具"],
+        'type'          => [              3 => "容器", 6 => "",     9 => "书籍", 25 => "",       -5 => "宝箱", -3 => "草药", -4 => "矿脉", -2 => "任务", -6 => ""],
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         'unkPosition'   => "这个对象的位置未知。",
         'npcLootPH'     => '这个<b>%s</b>包含战利品，与<a href="?npc=%d">%s</a>的作战后，在他/她/它死亡后刷新。',
         'key'           => "钥匙",
@@ -985,9 +1072,11 @@ $lang = array(
         'resistances'   => "韧性",
         'foundIn'       => "这个NPC能在以下地区找到：",
         'tameable'      => "可驯服的(%s)",
+        'spirit'        => "[tooltip name=spirit][Only visible to dead players][/tooltip][span class=tip tooltip=spirit][Spirit][/span]",
         'waypoint'      => "路径点",
         'wait'          => "等待",
-        'respawnIn'     => "重生",
+        'respawnIn'     => "重生：%s",
+        'despawnAfter'  => "[Spawned by Script<br>Despawn after]：%s",
         'rank'          => [0 => "普通", 1 => "稀有", 4 => "精英", 2 => "稀有精英", 3 => "首领"],
         'textRanges'    => [null, "发送到地区", "发送到区域", "发送到地图", "发送到世界"],
         'textTypes'     => [null, "喊道", "说", "悄悄地说"],
@@ -1046,7 +1135,11 @@ $lang = array(
         'slain'         => "杀死",
         'reqNumCrt'     => "要求",
         'rfAvailable'   => "在服务器上可用：",
+<<<<<<< HEAD
         '_transfer'     => '这个成就将被转换到<a href="?achievement=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a>，如果你转移到<span class="icon-%s">%s</span>。',
+=======
+        '_transfer'     => '这个成就将被转换到<a href="?achievement=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a>，如果你转移到<span class="icon-%s">%s</span>。',
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         'cat'           => array(
                 1 => "属性",                                                           21 => "PvP",
                81 => "光辉事迹",                                                         92 => "综合",
@@ -1116,7 +1209,8 @@ $lang = array(
         'Battlegrounds' => "战场",
         'Miscellaneous' => "其他",
         'Azeroth'       => "艾泽拉斯",
-        'CosmicMap'     => "宇宙地图"
+        'CosmicMap'     => "宇宙地图",
+        'floorN'        => "[Level %d]"
     ),
     'privileges' => array(
         'main'          => "在我们的网站上，你可以通过 <a href=\"?reputation\">声望</a>. 来获取特权。获取声望的主要途径是获得评论的赞同。<br><br>因此，声望是衡量你对社区的贡献程度的一个大致指标。<br><br>随着声望的积累，你将获得社区的信任，并被赋予额外的特权。以下是完整的特权列表。",
@@ -1148,11 +1242,13 @@ $lang = array(
         'hcAvailable'   => "英雄模式可用&nbsp;(%d)",
         'numPlayers'    => "玩家人数",
         'noMap'         => "这个区域没有可用地图。",
+        'fishingSkill'  => "[25 &ndash; 100% chance to catch a listed fish.]",
         'instanceTypes' => ["区域", "运送", "地下城", "团队副本", "战场", "地下城", "竞技场", "团队副本", "团队副本"],
         'territories'   => ["联盟", "部落",   "争夺中", "安全区域", "PvP",          "世界PvP"],
         'cat'           => array(
             "东部王国",         "卡利姆多",                 "地下城",                 "团队副本",                    "未使用",                   null,
             "战场",            null,                       "外域",                  "竞技场",                   "诺森德"
+<<<<<<< HEAD
         ),
         'floors'        => array(
              206 => ["诺迪尔备战区", "掠龙氏族高台", "提尔之台"],
@@ -1191,6 +1287,8 @@ $lang = array(
             4494 => ["安卡赫特", "Level 2"],
             4722 => ["银色演武场", "寒冰深渊"],
             4812 => ["堡垒下层", "颅骨之墙", "死亡使者之台", "冰霜女王的巢穴", "上层区域", "皇家区", "冰封王座", "霜之哀伤"]
+=======
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         )
     ),
     'quest' => array(
@@ -1274,7 +1372,7 @@ $lang = array(
             2 => array( "地下城",
                   206 => "乌特加德城堡",                         209 => "影牙城堡",                           491 => "剃刀沼泽",                           717 => "监狱",                             718 => "哀嚎洞穴",
                   719 => "黑暗深渊",                           721 => "诺莫瑞根",                           722 => "剃刀高地",                           796 => "血色修道院",                         1176 => "祖尔法拉克",
-                 1196 => "乌特加德之巅",                        1337 => "奥达曼",                           1417 => "沉没的神庙",                         1581 => "死亡矿井",                          1583 => "黑石塔",
+                 1196 => "乌特加德之巅",                        1337 => "奥达曼",                           1477 => "沉没的神庙",                         1581 => "死亡矿井",                          1583 => "黑石塔",
                  1584 => "黑石深渊",                          1941 => "时光之穴",                          2017 => "斯坦索姆",                          2057 => "通灵学院",                          2100 => "玛拉顿",
                  2366 => "黑色沼泽",                          2367 => "旧希尔斯布莱德丘陵",                     2437 => "怒焰裂谷",                          2557 => "厄运之槌",                          3535 => "地狱火堡垒",
                  3562 => "地狱火城墙",                         3688 => "奥金顿",                           3713 => "鲜血熔炉",                          3714 => "破碎大厅",                          3715 => "蒸汽地窟",
@@ -1441,18 +1539,21 @@ $lang = array(
         '_inSlot'       => "在插槽中",
         '_collapseAll'  => "折叠全部",
         '_expandAll'    => "展开全部",
+<<<<<<< HEAD
         '_transfer'     => '这个法术将被转换到<a href="?spell=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a>，如果你转移到<span class="icon-%s">%s</span>。',
+=======
+        '_transfer'     => '这个法术将被转换到<a href="?spell=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a>，如果你转移到<span class="icon-%s">%s</span>。',
+        '_affected'     => "受影响法术",
+        '_seeMore'      => "[See more]",
+        '_rankRange'    => "排名:&nbsp;%d&nbsp;-&nbsp;%d",
+        '_showXmore'    => "[Show %d More]",
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         'currentArea'   => '&lt;当前区域&gt;',
         'discovered'    => "通过发现学习",
         'ppm'           => "%s每分钟触发几率",
         'procChance'    => "触发几率",
         'starter'       => "初始法术",
         'trainingCost'  => "训练成本",
-        'remaining'     => "持续%s",
-        'untilCanceled' => "直到主动取消",
-        'castIn'        => "%s秒施法时间",
-        'instantPhys'   => "瞬发",
-        'instantMagic'  => "瞬发",
         'channeled'     => "需引导",
         'range'         => "%s码范围",
         'meleeRange'    => "近战范围",
@@ -1463,21 +1564,70 @@ $lang = array(
         'pctCostOf'     => "的基础%s",
         'costPerSec'    => "，加%s每秒",
         'costPerLevel'  => "，加%s每级",
+        'pointsPerCP'   => "，加%s每连击",
         'stackGroup'    => "Stack Group",
         'linkedWith'    => "Linked with",
         '_scaling'      => "缩放比例",
+<<<<<<< HEAD
         'scaling'       => array(
             'directSP' => "直接效果的攻击强度 +%.2f%%",         'directAP' => "直接效果的攻击强度 +%.2f%%",
             'dotSP'    => "每个周期的法术强度 +%.2f%%",                    'dotAP'    => "每个周期的攻击强度 +%.2f%%"
+=======
+        'instantPhys'   => "瞬发",
+        'castTime' => array(
+            "瞬发法术",
+            "%.3g秒施法时间",
+            "%.3g分钟施法时间"
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         ),
+        'cooldown' => array(
+            "即时冷却",
+            "%.3g秒冷却时间",
+            "%.3g分钟冷却时间",
+         // "%.3g小时冷却时间",
+         // "%.3g天冷却时间"
+        ),
+        'duration'      => array(
+            "直到主动取消",
+            "%.2G秒",
+            "%.2G分钟",
+            "%.2G小时",
+            "%.2G天"
+        ),
+        'timeRemaining' => array(
+            "",
+            "剩余%d秒",
+            "剩余%d分钟",
+            "剩余%d小时",
+            "剩余%d天"
+        ),
+        'powerCost'     => array(
+            -2 => ["%d生命值",   "%d生命值，每秒增加%d"     ],
+             0 => ["%d法力值",   "%d点法力值，外加每秒%d点" ],
+             1 => ["%d怒气",     "%d怒气，外加每秒%d"       ],
+             2 => ["%d集中",     "%d集中，外加每秒%d"       ],
+             3 => ["%d能量",     "%d能量，外加每秒%d"       ],
+             6 => ["%d符文能量", "%d点符文能量，外加每秒%d点"],
+        ),
+        'powerDisplayCost' => ["%d %s", "%d %s，再加上每秒%d"],
+        'powerCostRunes'=> ["%d鲜血", "%d邪恶", "%d冰霜"],
         'powerRunes'    => ["鲜血", "邪恶", "冰霜", "死亡"],
-        'powerTypes'    => array(
+        'powerTypes'    => array(                           // POWER_TYPE_*
             // conventional
               -2 => "生命值",              0 => "法力值",                1 => "怒气",                2 => "集中",               3 => "能量",              4 => "快乐",
                5 => "符文",               6 => "符文能量",
             // powerDisplay
+<<<<<<< HEAD
               -1 => "弹药",              -41 => "蓝铁",            -61 => "蒸汽动力",   -101 => "能量",             -121 => "软泥",             -141 => "鲜血之力",
             -142 => "愤怒"
+=======
+              -1 => "弹药",              -41 => "蓝铁",            -61 => "蒸汽动力",   -101 => "热能",             -121 => "软泥",             -141 => "鲜血能量",
+            -142 => "愤怒"
+        ),
+        'scaling'       => array(
+            'directSP' => "直接效果的攻击强度 +%.2f%%",         'directAP' => "直接效果的攻击强度 +%.2f%%",
+            'dotSP'    => "每个周期的法术强度 +%.2f%%",                    'dotAP'    => "每个周期的攻击强度 +%.2f%%"
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         ),
         'relItems'      => array(
             'base'    => "<small>显示与<b>%s</b>相关的 %s<</small>",
@@ -1555,6 +1705,12 @@ $lang = array(
             "法术暴击几率",           			"受到近战命中几率",               	"受到远程命中几率",              	"受到法术命中几率",               "受到近战暴击几率",
             "受到远程暴击几率",     			"受到法术暴击几率",      			"急速（近战）",                     "急速（远程）",                   "急速（法术）",
             "主手武器技能",                		"副手武器技能",                 	"远程武器技能",                  	"精准",                           "护甲穿透"
+<<<<<<< HEAD
+=======
+        ),
+        'combatRatingMask' => array(
+            0xE0 => "[Hit Chance]",                 0x700 => "[Critical Hit Chance]",       0x1C000 => "韧性"
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         ),
         'lockType'      => array(
             null,                                   "锁上的物品",                          "药草",                            "矿点",                               "陷阱",
@@ -1564,7 +1720,11 @@ $lang = array(
             "书典",                          "未锁上的物品"
         ),
         'stealthType'   => ["一般", "陷阱"],
+<<<<<<< HEAD
         'invisibilityType' => [null, "一般", null, "陷阱", null, null, "醉酒", null, null, null, null, null],
+=======
+        'invisibilityType' => ["一般", "UNK-1", "UNK-2", "陷阱", "UNK-4", "UNK-5", "醉酒", "UNK-7", "UNK-8", "UNK-9", "UNK-10", "UNK-11"],
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         'attributes'    => array(                           // index defined by filters
             69 => "所有法术效果都是有害的",
             57 => "无法取消光环",
@@ -1624,7 +1784,9 @@ $lang = array(
             89 => "恐惧时可用",
             65 => "消耗所有力量"
         ),
-        'unkEffect'     => '未知效果',
+        'summonControl' => ['[Uncontrolled]', "守护者", "宠物", "被魅惑", '[Possessed Vehicle]', '[Uncontrolled Vehicle]'],
+        'summonSlot'    => ["宠物", "火焰图腾", "大地图腾", "水图腾", "空气图腾", "非战斗宠物", "任务"],
+        'unkEffect'     => '未知效果 (%1$d)',
         'effects'       => array(
 /*0-5    */ '无',                     '杀死',                '类型伤害',            'Dummy',                    '传送门',          '传送单位',
 /*6+     */ '应用光环',               '环境伤害',     'Drain Power',              'Drain Health',             'Heal',                     'Bind',
@@ -1648,14 +1810,14 @@ $lang = array(
 /*114+   */ 'Taunt',                    'Durability Damage - %',    'Skin Player Corpse (PvP)', 'AoE Resurrect with % Health','Learn Skill',            'Apply Area Aura - Pet',
 /*120+   */ 'Teleport to Graveyard',    'Normalized Weapon Damage', null,                       'Take Flight Path',         'Pull Towards',             'Modify Threat - %',
 /*126+   */ 'Spell Steal ',             'Prospect',                 'Apply Area Aura - Friend', 'Apply Area Aura - Enemy',  'Redirect Done Threat %',   'Play Sound',
-/*132+   */ 'Play Music',               'Unlearn Specialization',   'Kill Credit2',             'Call Pet',                 'Heal for % of Total Health','Give % of Total Power',
+/*132+   */ 'Play Music',               'Unlearn Specialization',   'Kill Credit 2',            'Call Pet',                 'Heal for % of Total Health','Give % of Total Power',
 /*138+   */ 'Leap Back',                'Abandon Quest',            'Force Cast',               'Force Spell Cast with Value','Trigger Spell with Value','Apply Area Aura - Pet Owner',
 /*144+   */ 'Knockback to Dest.',       'Pull Towards Dest.',       'Activate Rune',            'Fail Quest',               null,                       'Charge to Dest',
 /*150+   */ 'Start Quest',              'Trigger Spell 2',          'Summon - Refer-A-Friend',  'Create Tamed Pet',         'Discover Flight Path',     'Dual Wield 2H Weapons',
-/*156+   */ 'Add Socket to Item',       'Create Tradeskill Item',   'Milling',                  'Rename Pet',               null,                       'Change Talent Spec. Count',
+/*156+   */ 'Add Socket to Item',       'Create Tradeskill Item',   'Milling',                  'Rename Pet',               'Force Cast 2',             'Change Talent Spec. Count',
 /*162-167*/ 'Activate Talent Spec.',    null,                       'Remove Aura',              null,                       null,                       'Update Player Phase'
         ),
-        'unkAura'       => '未知光环',
+        'unkAura'       => '未知光环 (%1$d)',
         'auras'         => array(
 /*0-   */   '无',                                   'Bind Sight',                           'Possess',                              'Periodic Damage - Flat',               'Dummy',
 /*5+   */   'Confuse',                              'Charm',                                'Fear',                                 'Periodic Heal',                        'Mod Attack Speed',
@@ -1729,7 +1891,7 @@ $lang = array(
         'block'         => "%d格挡",
         'charges'       => "%d次",
         'locked'        => "已锁",
-        'ratingString'  => "%s&nbsp;@&nbsp;L%s",
+        'ratingString'  => '<!--rtg%%%1$d-->%2$s&nbsp;@&nbsp;Lvl<!--lvl-->%3$d',
         'heroic'        => "英雄级别",
         'startQuest'    => "该物品将触发一个任务",
         'bagSlotString' => "%d格%s",
@@ -1766,7 +1928,7 @@ $lang = array(
         'tool'          => "工具",
         'cost'          => "花费",
         'content'       => "内容",
-        '_transfer'     => '这个物品将被转换到<a href="?item=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a>，如果你转移到<span class="icon-%s">%s</span>。',
+        '_transfer'     => '这个物品将被转换到<a href="?item=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a>，如果你转移到<span class="icon-%s">%s</span>。',
         '_unavailable'  => "这个物品对玩家不可用。",
         '_rndEnchants'  => "随机附魔",
         '_chance'       => "（%s%%几率）",
@@ -1782,6 +1944,20 @@ $lang = array(
         'uniqueEquipped'=> ["装备唯一", null,     "装备唯一：%s （%d）"],
         'speed'         => "速度",
         'dps'           => "（每秒伤害%.1f）",
+        'duration'      => array(
+            '',
+            "持续时间：%d秒",
+            "持续时间：%d分钟",
+            "持续时间：%d小时",
+            "持续时间：%d天"
+        ),
+        'cooldown'      => array(
+            "（%s冷却）",
+            "(%d秒冷却时间)",
+            "(%d分钟冷却时间)",
+            "(%d小时冷却时间)",
+            "(%d天冷却时间)"
+        ),
         'damage'        => array(
                         //  basic,          basic /w school,    add basic,      add basic /w school
             'single'    => ["%d点伤害",        "%d点%s伤害",          "+ %d伤害",       "+%d %s伤害"          ],
@@ -1814,7 +1990,7 @@ $lang = array(
             "使用： ",                 "装备： ",             "击中时可能： ",              "",                             "",
             "",                     ""
         ),
-        'bonding'       => array(
+        'bonding'       => array(                           // ITEM_BIND_*
             "账号绑定",                                     "拾取后绑定",                                                "装备后绑定",
             "使用后绑定",                                    "任务物品",                                                 "任务物品"
         ),
@@ -1891,15 +2067,15 @@ $lang = array(
             12 => "任务",
             13 => "钥匙",
         ),
-        'statType'      => array(
-            "法力值",
-            "生命值",
+        'statType'      => array(                           // ITEM_MOD_*
+            "%c%d 法力值",
+            "%c%d 生命值",
             null,
-            "敏捷",
-            "力量",
-            "智力",
-            "精神",
-            "耐力",
+            "%c%d 敏捷",
+            "%c%d 力量",
+            "%c%d 智力",
+            "%c%d 精神",
+            "%c%d 耐力",
             null, null, null, null,
             "防御等级提高%d。",
             "使你的躲闪等级提高%d。",
@@ -1938,7 +2114,11 @@ $lang = array(
             "每5秒恢复%d点生命值。",
             "法术穿透提高%d。",
             "使你的盾牌格挡值提高%d。",
+<<<<<<< HEAD
             "未知加成 #%d (%d)",
+=======
+            "未知加成 #%d (%d)"
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         )
     )
 );

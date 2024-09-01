@@ -16,13 +16,12 @@ class CurrencyList extends BaseType
                         'ic' => ['j' => ['?_icons ic ON ic.id = c.iconId', true], 's' => ', ic.name AS iconString']
                     );
 
-    public function __construct($conditions = [])
+    public function __construct(array $conditions = [], array $miscData = [])
     {
-        parent::__construct($conditions);
+        parent::__construct($conditions, $miscData);
 
         foreach ($this->iterate() as &$_curTpl)
-            if (!$_curTpl['iconString'])
-                $_curTpl['iconString'] = 'inv_misc_questionmark';
+            $_curTpl['iconString'] = $_curTpl['iconString'] ?: DEFAULT_ICON;
     }
 
 
@@ -51,9 +50,9 @@ class CurrencyList extends BaseType
         {
             // todo (low): find out, why i did this in the first place
             if ($this->id == 104)                           // in case of honor commit sebbuku
-                $icon = ['inv_bannerpvp_02', 'inv_bannerpvp_01']; // ['alliance', 'horde'];
+                $icon = ['pvp-currency-alliance', 'pvp-currency-horde'];
             else if ($this->id == 103)                      // also arena-icon diffs from item-icon
-                $icon = ['money_arena', 'money_arena'];
+                $icon = ['pvp-arenapoints-icon', 'pvp-arenapoints-icon'];
             else
                 $icon = [$this->curTpl['iconString'], $this->curTpl['iconString']];
 

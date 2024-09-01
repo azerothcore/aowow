@@ -19,7 +19,7 @@ class PetsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -48,10 +48,10 @@ class PetsPage extends GenericPage
                 'computeDataFunc' => '$_'
             );
 
-            if (!$pets->hasDiffFields(['type']))
+            if (!$pets->hasDiffFields('type'))
                 $data['hiddenCols'] = ['type'];
         };
-        $this->lvTabs[] = ['pet', $data, 'petFoodCol'];
+        $this->lvTabs[] = [PetList::$brickFile, $data, 'petFoodCol'];
     }
 
     protected function generateTitle()

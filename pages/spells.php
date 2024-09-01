@@ -10,12 +10,15 @@ class SpellsPage extends GenericPage
 {
     use TrListPage;
 
+    protected $classPanel    = false;
+    protected $glyphPanel    = false;
+
     protected $type          = Type::SPELL;
     protected $tpl           = 'spells';
     protected $path          = [0, 1];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'filters.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/filters.js']];
 
     protected $_get          = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
@@ -88,16 +91,13 @@ class SpellsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
         $this->filterObj = new SpellListFilter(false, ['parentCats' => $this->category]);
 
         parent::__construct($pageCall, $pageParam);
 
         $this->name   = Util::ucFirst(Lang::game('spells'));
         $this->subCat = $pageParam !== '' ? '='.$pageParam : '';
-
-        $this->classPanel = false;
-        $this->glyphPanel = false;
     }
 
     protected function generateContent()
@@ -386,7 +386,7 @@ class SpellsPage extends GenericPage
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
-        $spells = new SpellList($conditions);
+        $spells = new SpellList($conditions, ['calcTotal' => true]);
 
         $this->extendGlobalData($spells->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
@@ -436,9 +436,9 @@ class SpellsPage extends GenericPage
         }
 
         // create note if search limit was exceeded; overwriting 'note' is intentional
-        if ($spells->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+        if ($spells->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
         {
-            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_spellsfound', $spells->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_spellsfound', $spells->getMatches(), Cfg::get('SQL_LIMIT_DEFAULT'));
             $tabData['_truncated'] = 1;
         }
 
@@ -446,15 +446,15 @@ class SpellsPage extends GenericPage
             $tabData['_errors'] = 1;
 
 
-        $mask = $spells->hasSetFields(['reagent1', 'skillLines', 'trainingCost', 'reqClassMask']);
-        if ($mask & 0x1)
-            $visibleCols[] = 'reagents';
-        if (!($mask & 0x2) && $this->category && !in_array($this->category[0], [9, 11]))
+        $mask = $spells->hasSetFields('skillLines', 'trainingCost', 'reqClassMask', null, 'reagent1', 'reagent2', 'reagent3', 'reagent4', 'reagent5', 'reagent6', 'reagent7', 'reagent8');
+        if (!($mask & 0x1) && $this->category && !in_array($this->category[0], [9, 11]))
             $hiddenCols[] = 'skill';
-        if ($mask & 0x4)
+        if ($mask & 0x2)
             $visibleCols[] = 'trainingcost';
-        if (($mask & 0x8) && !in_array('singleclass', $visibleCols))
+        if (($mask & 0x4) && !in_array('singleclass', $visibleCols))
             $visibleCols[] = 'classes';
+        if ($mask & 0xFF0)
+            $visibleCols[] = 'reagents';
 
 
         if ($visibleCols)
@@ -463,8 +463,11 @@ class SpellsPage extends GenericPage
         if ($hiddenCols)
             $tabData['hiddenCols'] = array_unique($hiddenCols);
 
-        $this->lvTabs[] = ['spell', $tabData];
+        $this->lvTabs[] = [SpellList::$brickFile, $tabData];
+    }
 
+    protected function postCache()
+    {
         // sort for dropdown-menus
         Lang::sort('game', 'ra');
         Lang::sort('game', 'cl');

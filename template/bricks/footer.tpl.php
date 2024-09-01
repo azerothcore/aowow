@@ -28,15 +28,15 @@ endif;
 
 <noscript>
     <div id="noscript-bg"></div>
-    <div id="noscript-text"><?php echo Lang::main('noJScript'); ?></div>
+    <div id="noscript-text"><?=Lang::main('noJScript'); ?></div>
 </noscript>
 
 <script type="text/javascript">DomContentLoaded.now()</script>
 <?php
-if (CFG_DEBUG && User::isInGroup(U_GROUP_DEV | U_GROUP_ADMIN)):
+if (Cfg::get('DEBUG') >= CLI::LOG_INFO && User::isInGroup(U_GROUP_DEV | U_GROUP_ADMIN)):
 ?>
 <script type="text/javascript">
-    window.open("/", "SqlLog", "width=1800,height=200,top=100,left=100,status=no,location=no,toolbar=no,menubar=no").document.write('<?=DB::getLogs();?>');
+    window.open("/", "SqlLog", "width=1800,height=200,top=100,left=100,status=no,location=no,toolbar=no,menubar=no").document.write('<?=DB::getProfiles();?>');
 </script>
 <?php
 endif;

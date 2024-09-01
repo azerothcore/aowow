@@ -16,9 +16,9 @@ class SkillList extends BaseType
                         'ic' => ['j' => ['?_icons ic ON ic.id = sl.iconId', true], 's' => ', ic.name AS iconString'],
                     );
 
-    public function __construct($conditions = [])
+    public function __construct(array $conditions = [], array $miscData = [])
     {
-        parent::__construct($conditions);
+        parent::__construct($conditions, $miscData);
 
         // post processing
         foreach ($this->iterate() as &$_curTpl)
@@ -34,7 +34,7 @@ class SkillList extends BaseType
             }
 
             if (!$_curTpl['iconId'])
-                $_curTpl['iconString'] = 'inv_misc_questionmark';
+                $_curTpl['iconString'] = DEFAULT_ICON;
         }
     }
 

@@ -10,6 +10,8 @@ class EventPage extends GenericPage
 {
     use TrDetailPage;
 
+    protected $dates         = [];
+
     protected $type          = Type::WORLDEVENT;
     protected $typeId        = 0;
     protected $tpl           = 'detail-page-generic';
@@ -67,7 +69,7 @@ class EventPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         /***********/
         /* Infobox */
@@ -121,7 +123,7 @@ class EventPage extends GenericPage
                 if ($hasFilter)
                     $tabData['note'] = sprintf(Util::$filterResultString, '?npcs&filter=cr=38;crs='.$this->hId.';crv=0');
 
-                $this->lvTabs[] = ['creature', $tabData];
+                $this->lvTabs[] = [CreatureList::$brickFile, $tabData];
             }
         }
 
@@ -140,7 +142,7 @@ class EventPage extends GenericPage
                 if ($hasFilter)
                     $tabData['note'] = sprintf(Util::$filterResultString, '?objects&filter=cr=16;crs='.$this->hId.';crv=0');
 
-                $this->lvTabs[] = ['object', $tabData];
+                $this->lvTabs[] = [GameObjectList::$brickFile, $tabData];
             }
         }
 
@@ -161,7 +163,7 @@ class EventPage extends GenericPage
                 if ($hasFilter)
                     $tabData['note'] = sprintf(Util::$filterResultString, '?achievements&filter=cr=11;crs='.$this->hId.';crv=0');
 
-                $this->lvTabs[] = ['achievement', $tabData];
+                $this->lvTabs[] = [AchievementList::$brickFile, $tabData];
             }
         }
 
@@ -184,11 +186,14 @@ class EventPage extends GenericPage
                 if ($hasFilter)
                     $tabData['note'] = sprintf(Util::$filterResultString, '?quests&filter=cr=33;crs='.$this->hId.';crv=0');
 
-                $this->lvTabs[] = ['quest', $tabData];
+                $this->lvTabs[] = [QuestList::$brickFile, $tabData];
 
                 $questItems = [];
                 foreach (array_column($quests->rewards, Type::ITEM) as $arr)
-                    $questItems = array_merge($questItems, $arr);
+                    $questItems = array_merge($questItems, array_keys($arr));
+
+                foreach (array_column($quests->choices, Type::ITEM) as $arr)
+                    $questItems = array_merge($questItems, array_keys($arr));
 
                 foreach (array_column($quests->requires, Type::ITEM) as $arr)
                     $questItems = array_merge($questItems, $arr);
@@ -221,7 +226,7 @@ class EventPage extends GenericPage
                 if ($hasFilter)
                     $tabData['note'] = sprintf(Util::$filterResultString, '?items&filter=cr=160;crs='.$this->hId.';crv=0');
 
-                $this->lvTabs[] = ['item', $tabData];
+                $this->lvTabs[] = [ItemList::$brickFile, $tabData];
             }
         }
 
@@ -242,23 +247,18 @@ class EventPage extends GenericPage
                 $this->extendGlobalData($relEvents->getJSGlobals());
                 $relData   = $relEvents->getListviewData();
                 foreach ($relEvents->getFoundIDs() as $id)
-                    $relData[$id]['condition'][0][$this->typeId][] = [[-CND_ACTIVE_EVENT, $this->eId]];
+                    Conditions::extendListviewRow($relData[$id], Conditions::SRC_NONE, $this->typeId, [-Conditions::ACTIVE_EVENT, $this->eId]);
 
                 $this->extendGlobalData($this->subject->getJSGlobals());
+                $d = $this->subject->getListviewData();
                 foreach ($rel as $r)
-                {
-                    if ($r <= 0)
-                        continue;
+                    if ($r > 0)
+                        if (Conditions::extendListviewRow($d[$this->eId], Conditions::SRC_NONE, $this->typeId, [-Conditions::ACTIVE_EVENT, $r]))
+                            $this->extendGlobalIds(Type::WORLDEVENT, $r);
 
-                    $this->extendGlobalIds(Type::WORLDEVENT, $r);
+                $relData = array_merge($relData, $d);
 
-                    $d = $this->subject->getListviewData();
-                    $d[$this->eId]['condition'][0][$this->typeId][] = [[-CND_ACTIVE_EVENT, $r]];
-
-                    $relData = array_merge($relData, $d);
-                }
-
-                $this->lvTabs[] = ['event', array(
+                $this->lvTabs[] = [WorldEventList::$brickFile, array(
                     'data'       => array_values($relData),
                     'id'         => 'see-also',
                     'name'       => '$LANG.tab_seealso',
@@ -266,6 +266,15 @@ class EventPage extends GenericPage
                     'extraCols'  => ['$Listview.extraCols.condition']
                 )];
             }
+        }
+
+        // tab: condition for
+        $cnd = new Conditions();
+        $cnd->getByCondition(Type::WORLDEVENT, $this->typeId)->prepare();
+        if ($tab = $cnd->toListviewTab('condition-for', '$LANG.tab_condition_for'))
+        {
+            $this->extendGlobalData($cnd->getJsGlobals());
+            $this->lvTabs[] = $tab;
         }
     }
 
@@ -300,7 +309,7 @@ class EventPage extends GenericPage
         else
         {
             if ($this->hId)
-                Util::$wowheadLink = 'http://'.Util::$subDomains[User::$localeId].'.wowhead.com/event='.$this->hId;
+                $this->wowheadLink = sprintf(WOWHEAD_LINK, Util::$subDomains[User::$localeId], 'event', $this->hId);
 
             /********************/
             /* finalize infobox */
@@ -341,7 +350,6 @@ class EventPage extends GenericPage
                     $data['endDate']   = $updated['end']   ? date(Util::$dateFormatInternal, $updated['end'])   : false;
                     $data['rec']       = $updated['rec'];
                 }
-
             }
         }
     }

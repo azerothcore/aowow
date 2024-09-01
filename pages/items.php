@@ -10,12 +10,15 @@ class ItemsPage extends GenericPage
 {
     use TrListPage;
 
+    protected $forceTabs     = false;
+    protected $gemScores     = [];
+
     protected $type          = Type::ITEM;
     protected $tpl           = 'items';
     protected $path          = [0, 0];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'filters.js'], [JS_FILE, 'swfobject.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/filters.js'], [SC_JS_FILE, 'js/swfobject.js']];
 
     protected $_get          = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
@@ -76,6 +79,7 @@ class ItemsPage extends GenericPage
         13 => true
     );
 
+    private $filterOpts      = [];
     private $sharedLV        = array(                       // common listview components across all tabs
         'hiddenCols'  => [],
         'visibleCols' => [],
@@ -96,12 +100,13 @@ class ItemsPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=weight-presets&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=weight-presets']);
 
         $conditions = [];
 
         if (!User::isInGroup(U_GROUP_EMPLOYEE))
             $conditions[] = [['cuFlags', CUSTOM_EXCLUDE_FOR_LISTVIEW, '&'], 0];
+
 
         /*******************/
         /* evaluate filter */
@@ -137,16 +142,16 @@ class ItemsPage extends GenericPage
         if (isset($this->filter['slot'][INVTYPE_SHIELD]))   // "Off Hand" => "Shield"
             $this->filter['slot'][INVTYPE_SHIELD] = Lang::item('armorSubClass', 6);
 
-
         $infoMask = ITEMINFO_JSON;
         if (array_intersect([63, 64, 125], $xCols))         // 63:buyPrice; 64:sellPrice; 125:reqarenartng
             $infoMask |= ITEMINFO_VENDOR;
 
         if ($xCols)
-            $this->sharedLV['extraCols'] = '$fi_getExtraCols(fi_extraCols, '.(isset($this->filter['gm']) ? $this->filter['gm'] : 0).', '.(array_intersect([63], $xCols) ? 1 : 0).')';
+            $this->sharedLV['extraCols'] = '$fi_getExtraCols(fi_extraCols, '.($this->filter['gm'] ?? 0).', '.(array_intersect([63], $xCols) ? 1 : 0).')';
 
         if ($this->filterObj->error)
             $this->sharedLV['_errors'] = '$1';
+
 
         /******************/
         /* set conditions */
@@ -159,11 +164,13 @@ class ItemsPage extends GenericPage
         if (isset($this->category[2]))
             $conditions[] = ['i.subSubClass', $this->category[2]];
 
+
         /***********************/
         /* handle auto-gemming */
         /***********************/
 
         $this->gemScores = $this->createGemScores();
+
 
         /*************************/
         /* handle upgrade search */
@@ -175,8 +182,8 @@ class ItemsPage extends GenericPage
             $upgItems = new ItemList(array(['id', array_keys($this->filter['upg'])]), ['extraOpts' => $this->filterObj->extraOpts]);
             if (!$upgItems->error)
             {
-                $this->extendGlobalData($upgItems->getJSGlobals());
                 $upgItemData = $upgItems->getListviewData($infoMask);
+                $this->extendGlobalData($upgItems->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
             }
         }
 
@@ -203,6 +210,7 @@ class ItemsPage extends GenericPage
             }
         }
 
+
         /********************************************************************************************************************************/
         /* group by                                                                                                                     */
         /*                                                                                                                              */
@@ -225,9 +233,9 @@ class ItemsPage extends GenericPage
         );
         $groups     = [];
         $nameSource = [];
-        $grouping   = isset($this->filter['gb']) ? $this->filter['gb'] : null;
+        $grouping   = $this->filter['gb'] ?? 0;
         $extraOpts  = [];
-        $maxResults = CFG_SQL_LIMIT_DEFAULT;
+        $maxResults = Cfg::get('SQL_LIMIT_DEFAULT');
 
         switch ($grouping)
         {
@@ -290,6 +298,7 @@ class ItemsPage extends GenericPage
                 $groups[0] = null;
         }
 
+
         /*****************************/
         /* create lv-tabs for groups */
         /*****************************/
@@ -311,16 +320,16 @@ class ItemsPage extends GenericPage
                     $finalCnd = $conditions;
             }
 
-            $items = new ItemList($finalCnd, ['extraOpts' => array_merge($extraOpts, $this->filterObj->extraOpts)]);
+            $items = new ItemList($finalCnd, ['extraOpts' => array_merge($extraOpts, $this->filterObj->extraOpts), 'calcTotal' => true]);
 
             if ($items->error)
                 continue;
 
-            $this->extendGlobalData($items->getJSGlobals());
             $tabData = array_merge(
                 ['data' => $items->getListviewData($infoMask)],
                 $this->sharedLV
             );
+            $this->extendGlobalData($items->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
             $upg = [];
             if ($upgItemData)
@@ -366,7 +375,7 @@ class ItemsPage extends GenericPage
             }
 
             if (!empty($this->filterObj->getSetWeights()))
-                if ($items->hasSetFields(['armor']))
+                if ($items->hasSetFields('armor'))
                     $tabData['visibleCols'][] = 'armor';
 
             // create note if search limit was exceeded; overwriting 'note' is intentional
@@ -405,7 +414,7 @@ class ItemsPage extends GenericPage
             }
             else if ($items->getMatches() > $maxResults)
             {
-                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_itemsfound', $items->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_itemsfound', $items->getMatches(), Cfg::get('SQL_LIMIT_DEFAULT'));
                 $tabData['_truncated'] = 1;
             }
 
@@ -418,7 +427,7 @@ class ItemsPage extends GenericPage
 
             $tabData['data'] = array_values($tabData['data']);
 
-            $this->lvTabs[] = ['item', $tabData];
+            $this->lvTabs[] = [ItemList::$brickFile, $tabData];
         }
 
         // reformat for use in template
@@ -429,9 +438,12 @@ class ItemsPage extends GenericPage
         if (empty($this->lvTabs))
         {
             $this->forceTabs = false;
-            $this->lvTabs[]  = ['item', ['data' => []]];
+            $this->lvTabs[]  = [ItemList::$brickFile, ['data' => []]];
         }
+    }
 
+    protected function postCache()
+    {
         // sort for dropdown-menus
         Lang::sort('game', 'ra');
         Lang::sort('game', 'cl');
@@ -463,10 +475,10 @@ class ItemsPage extends GenericPage
 
         // if slot-dropdown is available && Armor && $path points to Armor-Class
         $form = $this->filterObj->getForm();
-        if (count($this->path) == 4 && $this->category[0] == 4 && isset($form['sl']) && !is_array($form['sl']))
-            $this->path[] = $form['sl'];
-        else if (!empty($this->category[0]) && $this->category[0] == 0 && isset($form['ty']) && !is_array($form['ty']))
-            $this->path[] = $form['ty'];
+        if (count($this->path) == 4 && $this->category[0] == 4 && isset($form['sl']) && count($form['sl']) == 1)
+            $this->path[] = $form['sl'][0];
+        else if (isset($this->category[0]) && $this->category[0] == 0 && isset($form['ty']) && count($form['ty']) == 1)
+            $this->path[] = $form['ty'][0];
     }
 
     // fetch best possible gems for chosen weights
@@ -482,7 +494,7 @@ class ItemsPage extends GenericPage
             $this->sharedLV['computeDataFunc'] = '$fi_scoreSockets';
 
             $q    = intVal($this->filter['gm']);
-            $mask = 14;
+            $mask = 0xE;
             $cnd  = [10, ['class', ITEM_CLASS_GEM], ['gemColorMask', &$mask, '&'], ['quality', &$q]];
             if (!isset($this->filter['jc']))
                 $cnd[] = ['itemLimitCategory', 0];          // Jeweler's Gems
@@ -500,7 +512,7 @@ class ItemsPage extends GenericPage
             for ($i = 0; $i < 4; $i++)
             {
                 $mask = 1 << $i;
-                $q    = !$i ? 3 : intVal($this->filter['gm']);    // meta gems are always included.. ($q is backReferenced)
+                $q    = !$i ? ITEM_QUALITY_RARE : intVal($this->filter['gm']);    // meta gems are always included.. ($q is backReferenced)
                 $byColor = new ItemList($cnd, ['extraOpts' => $this->filterObj->extraOpts]);
                 if (!$byColor->error)
                 {

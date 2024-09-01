@@ -16,7 +16,7 @@ class PetPage extends GenericPage
     protected $path          = [0, 8];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'swfobject.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/swfobject.js']];
 
     public function __construct($pageCall, $id)
     {
@@ -43,7 +43,7 @@ class PetPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         /***********/
         /* Infobox */
@@ -95,7 +95,7 @@ class PetPage extends GenericPage
         );
         $tng = new CreatureList($condition);
 
-        $this->lvTabs[] = ['creature', array(
+        $this->lvTabs[] = [CreatureList::$brickFile, array(
             'data'        => array_values($tng->getListviewData(NPCINFO_TAMEABLE)),
             'name'        => '$LANG.tab_tameable',
             'hiddenCols'  => ['type'],
@@ -114,10 +114,10 @@ class PetPage extends GenericPage
             if ($mask & (1 << ($i - 1)))
                 $list[] = $i;
 
-        $food = new ItemList(array(['i.subClass', [5, 8]], ['i.FoodType', $list], CFG_SQL_LIMIT_NONE));
+        $food = new ItemList(array(['i.subClass', [5, 8]], ['i.FoodType', $list], Cfg::get('SQL_LIMIT_NONE')));
         $this->extendGlobalData($food->getJSGlobals());
 
-        $this->lvTabs[] = ['item', array(
+        $this->lvTabs[] = [ItemList::$brickFile, array(
             'data'       => array_values($food->getListviewData()),
             'name'       => '$LANG.diet',
             'hiddenCols' => ['source', 'slot', 'side'],
@@ -151,7 +151,7 @@ class PetPage extends GenericPage
         $spells = new SpellList($conditions);
         $this->extendGlobalData($spells->getJSGlobals(GLOBALINFO_SELF));
 
-        $this->lvTabs[] = ['spell', array(
+        $this->lvTabs[] = [SpellList::$brickFile, array(
             'data'        => array_values($spells->getListviewData()),
             'name'        => '$LANG.tab_abilities',
             'visibleCols' => ['schools', 'level'],
@@ -178,7 +178,7 @@ class PetPage extends GenericPage
         $talents = new SpellList($conditions);
         $this->extendGlobalData($talents->getJSGlobals(GLOBALINFO_SELF));
 
-        $this->lvTabs[] = ['spell', array(
+        $this->lvTabs[] = [SpellList::$brickFile, array(
             'data'        => array_values($talents->getListviewData()),
             'visibleCols' => ['tier', 'level'],
             'name'        => '$LANG.tab_talents',

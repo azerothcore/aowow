@@ -104,7 +104,7 @@ class TitlePage extends GenericPage
         {
             $this->extendGlobalData($quests->getJSGlobals(GLOBALINFO_REWARDS));
 
-            $this->lvTabs[] = ['quest', array(
+            $this->lvTabs[] = [QuestList::$brickFile, array(
                 'data'        => array_values($quests->getListviewData()),
                 'id'          => 'reward-from-quest',
                 'name'        => '$LANG.tab_rewardfrom',
@@ -121,7 +121,7 @@ class TitlePage extends GenericPage
             {
                 $this->extendGlobalData($acvs->getJSGlobals());
 
-                $this->lvTabs[] = ['achievement', array(
+                $this->lvTabs[] = [AchievementList::$brickFile, array(
                     'data'        => array_values($acvs->getListviewData()),
                     'id'          => 'reward-from-achievement',
                     'name'        => '$LANG.tab_rewardfrom',
@@ -131,7 +131,31 @@ class TitlePage extends GenericPage
             }
         }
 
-        // tab: criteria of (to be added by TC)
+        // tab: criteria of
+        if ($crt = DB::World()->selectCol('SELECT `criteria_id` FROM achievement_criteria_data WHERE `type` = 23 AND `value1` = ?d', $this->typeId))
+        {
+            $acvs = new AchievementList(array(['ac.id', $crt]));
+            if (!$acvs->error)
+            {
+                $this->extendGlobalData($acvs->getJSGlobals());
+
+                $this->lvTabs[] = [AchievementList::$brickFile, array(
+                    'data'        => array_values($acvs->getListviewData()),
+                    'id'          => 'criteria-of',
+                    'name'        => '$LANG.tab_criteriaof',
+                    'visibleCols' => ['category']
+                )];
+            }
+        }
+
+        // tab: condition-for
+        $cnd = new Conditions();
+        $cnd->getByCondition(Type::TITLE, $this->typeId)->prepare();
+        if ($tab = $cnd->toListviewTab('condition-for', '$LANG.tab_condition_for'))
+        {
+            $this->extendGlobalData($cnd->getJsGlobals());
+            $this->lvTabs[] = $tab;
+        }
     }
 }
 

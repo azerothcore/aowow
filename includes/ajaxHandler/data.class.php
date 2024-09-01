@@ -6,12 +6,12 @@ if (!defined('AOWOW_REVISION'))
 class AjaxData extends AjaxHandler
 {
     protected $_get = array(
-        'locale'    => ['filter' => FILTER_CALLBACK,             'options' => 'AjaxHandler::checkLocale'],
-        't'         => ['filter' => FILTER_UNSAFE_RAW,           'flags'   => FILTER_FLAG_STRIP_AOWOW   ],
+        'locale'    => ['filter' => FILTER_CALLBACK,           'options' => 'AjaxHandler::checkLocale'  ],
+        't'         => ['filter' => FILTER_CALLBACK,           'options' => 'AjaxHandler::checkTextLine'],
         'catg'      => ['filter' => FILTER_SANITIZE_NUMBER_INT                                          ],
-        'skill'     => ['filter' => FILTER_CALLBACK,             'options' => 'AjaxData::checkSkill'    ],
+        'skill'     => ['filter' => FILTER_CALLBACK,           'options' => 'AjaxData::checkSkill'      ],
         'class'     => ['filter' => FILTER_SANITIZE_NUMBER_INT                                          ],
-        'callback'  => ['filter' => FILTER_CALLBACK,             'options' => 'AjaxData::checkCallback' ]
+        'callback'  => ['filter' => FILTER_CALLBACK,           'options' => 'AjaxData::checkCallback'   ]
     );
 
     public function __construct(array $params)
@@ -59,14 +59,13 @@ class AjaxData extends AjaxHandler
                     $result .= $this->loadProfilerData($set, '777');
                     break;
                 case 'quests':
-                    // &partial: im not doing this right
-                    // it expects a full quest dump on first lookup but will query subCats again if clicked..?
-                    // for now omiting the detail clicks with empty results and just set catg update
                     $catg = isset($this->_get['catg']) ? $this->_get['catg'] : 'null';
                     if ($catg == 'null')
-                        $result .= $this->loadProfilerData($set);
-                    else if ($this->_get['callback'])
-                        $result .= "\n\$WowheadProfiler.loadOnDemand('quests', ".$catg.");\n";
+                        Util::loadStaticFile('p-'.$set, $result, false);
+                    else
+                        Util::loadStaticFile('p-'.$set.'-'.$catg, $result, true);
+
+                    $result .= "\n\$WowheadProfiler.loadOnDemand('".$set."', ".$catg.");\n";
 
                     break;
                 case 'recipes':
@@ -82,12 +81,11 @@ class AjaxData extends AjaxHandler
                     break;
                 // locale independant
                 case 'quick-excludes':
-                case 'zones':
                 case 'weight-presets':
                 case 'item-scaling':
                 case 'realms':
                 case 'statistics':
-                    if (!Util::loadStaticFile($set, $result) && CFG_DEBUG)
+                    if (!Util::loadStaticFile($set, $result) && Cfg::get('DEBUG'))
                         $result .= "alert('could not fetch static data: ".$set."');";
 
                     $result .= "\n\n";
@@ -103,7 +101,8 @@ class AjaxData extends AjaxHandler
                 case 'enchants':
                 case 'itemsets':
                 case 'pets':
-                    if (!Util::loadStaticFile($set, $result, true) && CFG_DEBUG)
+                case 'zones':
+                    if (!Util::loadStaticFile($set, $result, true) && Cfg::get('DEBUG'))
                         $result .= "alert('could not fetch static data: ".$set." for locale: ".User::$localeString."');";
 
                     $result .= "\n\n";

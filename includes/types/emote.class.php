@@ -12,9 +12,9 @@ class EmoteList extends BaseType
 
     protected       $queryBase = 'SELECT e.*, e.id AS ARRAY_KEY FROM ?_emotes e';
 
-    public function __construct($conditions = [])
+    public function __construct(array $conditions = [], array $miscData = [])
     {
-        parent::__construct($conditions);
+        parent::__construct($conditions, $miscData);
 
         // post processing
         foreach ($this->iterate() as &$curTpl)
@@ -33,7 +33,7 @@ class EmoteList extends BaseType
             $data[$this->id] = array(
                 'id'      => $this->curTpl['id'],
                 'name'    => $this->curTpl['cmd'],
-                'preview' => $this->getField('self', true) ?: ($this->getField('noTarget', true) ?: $this->getField('target', true))
+                'preview' => Util::parseHtmlText($this->getField('meToExt', true) ?: $this->getField('meToNone', true) ?: $this->getField('extToMe', true) ?: $this->getField('extToExt', true) ?: $this->getField('extToNone', true), true)
             );
 
             // [nyi] sounds

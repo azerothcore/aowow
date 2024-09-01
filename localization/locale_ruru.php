@@ -6,7 +6,6 @@ if (!defined('AOWOW_REVISION'))
 /*
     some translations have yet to be taken from or improved by the use of:
     <path>\World of Warcraft\Data\ruRU\patch-ruRu-3.MPQ\Interface\FrameXML\GlobalStrings.lua
-    like: ITEM_MOD_*, POWER_TYPE_*, ITEM_BIND_*, PVP_RANK_*
 */
 
 $lang = array(
@@ -16,6 +15,7 @@ $lang = array(
         'pl'            => ["годы", "месяцы", "недели", "дн.",  "часы", "мин",    "секунды", "миллисекундах"],
         'ab'            => ["г.",   "мес.",   "нед.",   "дн",   "ч.",   "мин",    "сек.",    "мс"]
     ),
+    'lang' => ["английском", null, "французском", "немецком", "китайском", null, "испанском", null, "русском"],
     'main' => array(
         'name'          => "название",
         'link'          => "Ссылка",
@@ -52,11 +52,13 @@ $lang = array(
         'or'            => " или ",
         'back'          => "Назад",
         'reputationTip' => "Очки репутации",
-        'byUser'        => 'От <a href="'.HOST_URL.'/?user=%1$s"%2$s>%1s</a> ',
+        'byUser'        => 'От <a href="HOST_URL/?user=%1$s"%2$s>%1s</a> ',
         'help'          => "Справка",
         'status'        => "Статус",
         'yes'           => "Да",
         'no'            => "Нет",
+        'any'           => "Любой",                         // Any[one] of X => "Любой из"
+        'all'           => "Все",
 
         // filter
         'extSearch'     => "Расширенный поиск",
@@ -99,7 +101,7 @@ $lang = array(
         ),
 
         // article & infobox
-        'englishOnly'   => "Эта страница доступна только на <b>английском</b> языке.",
+        'langOnly'   => "Эта страница доступна только на <b>%s</b> языке.",
 
         // calculators
         'preset'        => "Готовая таблица",
@@ -129,6 +131,7 @@ $lang = array(
         'dateFmtShort'  => "Y-m-d",
         'dateFmtLong'   => "Y-m-d в H:i A",
         'timeAgo'       => '%s назад',
+        'nfSeparators'  => [' ', ','],
 
         // error
         'intError'      => "[An internal error occured.]",
@@ -242,7 +245,8 @@ $lang = array(
             'eu' => "Европа",
             'kr' => "Корея",
             'tw' => "Тайвань",
-            'cn' => "Китай"
+            'cn' => "Китай",
+            'dev' => "Разработка"
         ),
         'encounterNames'=> array(
             243 => "Семеро",
@@ -267,7 +271,7 @@ $lang = array(
         ),
         'error'         => array(
             'unkFormat'   => "неизвестный формат изображения.",
-            'tooSmall'    => "Изображение слишком маленькое. (&lt; ".CFG_SCREENSHOT_MIN_SIZE."x".CFG_SCREENSHOT_MIN_SIZE.").",
+            'tooSmall'    => "Изображение слишком маленькое. (&lt; CFG_SCREENSHOT_MIN_SIZE x CFG_SCREENSHOT_MIN_SIZE).",
             'selectSS'    => "Выберите изображение для загрузки.",
             'notAllowed'  => "[You are not allowed to upload screenshots!]",
         )
@@ -358,6 +362,13 @@ $lang = array(
         'modes'         => [-1 => "Все", "Обычный / 10-норм.", "Героический / 25-норм.", "10-героич", "25-героич"],
         'expansions'    => array("World of Warcraft", "The Burning Crusade", "Wrath of the Lich King"),
         'stats'         => array("к силе", "к ловкости", "к выносливости", "к интеллекту", "к духу"),
+        'timeAbbrev'    => array(
+            '',
+            "%d с.",
+            "%d мин.",
+            "%d ч.",
+            "%d д."
+        ),
         'sources'       => array(
             "Неизвестно",                   "Ремесло",                      "Добыча",                       "PvP",                          "Задание",                      "Продавец",
             "Тренер",                       "Открытие",                     "Рекламная акция",              "Талант",                       "Начальное заклинание",         "Мероприятие",
@@ -366,8 +377,8 @@ $lang = array(
             "Внутриигровой магазин"
         ),
         'pvpSources'    => array(
-            null,                           "Сезон арены 1",                "Сезон арены 2",                "Сезон арены 3",                "Сезон арены 4",
-            "Сезон арены 5",                "Сезон арены 6",                "Сезон арены 7",                "Сезон арены 8",                "Турнир арены 2009"
+             42 => "Сезон арены 1",          52 => "Сезон арены 2",          71 => "Сезон арены 3",          80 => "Сезон арены 4",         157 => "Сезон арены 5",
+            163 => "Сезон арены 6",         167 => "Сезон арены 7",         169 => "Сезон арены 8",         177 => "Турнир арены 2009"
         ),
         'languages'     => array(
              1 => "орочий",                  2 => "дарнасский",              3 => "таурахэ",                 6 => "дворфийский",             7 => "всеобщий",                8 => "язык демонов",
@@ -377,7 +388,7 @@ $lang = array(
         'gl'            => array(null, "Большой", "Малый"),
         'si'            => array(1 => "Альянс", -1 => "Альянс только", 2 => "Орда", -2 => "Орда только", null, 3 => "Обе"),
         'resistances'   => array(null, "Сопротивление светлой магии", "Сопротивление огню", "Сопротивление силам природы", "Сопротивление магии льда", "Сопротивление темной магии", "Сопротивление тайной магии"),
-        'dt'            => array(null, "Магия", "Проклятие", "Болезнь", "Яд", "Незаметность", "Невидимость", null, null, "Исступление"),
+        'dt'            => array(null, "Магия", "Проклятие", "Болезнь", "Яд", "Незаметность", "Невидимость", "Магия, Проклятие, Болезнь, Яд", "Заклинание (НИП)", "Исступление"),
         'sc'            => array("Физический урон", "Свет", "Огонь", "природа", "Лед", "Тьма", "Тайная магия"),
         'cl'            => array(null, "Воин", "Паладин", "Охотник", "Разбойник", "Жрец", "Рыцарь смерти", "Шаман", "Маг", "Чернокнижник", null, "Друид"),
         'ra'            => array(-2 => "Орда", -1 => "Альянс", null, "Человек", "Орк", "Дворф", "Ночной эльф", "Нежить", "Таурен", "Гном", "Тролль", null, "Эльф крови", "Дреней"),
@@ -425,12 +436,12 @@ $lang = array(
              9 => ['Колдовство',        'Демонология',       'Разрушение'  ],
              1 => ['Оружие',            'Неистовство',       'Защита'      ]
         ),
-        'pvpRank'       => array(
-            null,                                                           "Private / Scout",                                              "Corporal / Grunt",
-            "Sergeant / Sergeant",                                          "Master Sergeant / Senior Sergeant",                            "Sergeant Major / First Sergeant",
-            "Knight / Stone Guard",                                         "Knight-Lieutenant / Blood Guard",                              "Knight-Captain / Legionnare",
-            "Knight-Champion / Centurion",                                  "Lieutenant Commander / Champion",                              "Commander / Lieutenant General",
-            "Marshal / General",                                            "Field Marshal / Warlord",                                      "Grand Marshal / High Warlord"
+        'pvpRank'       => array(                           // PVP_RANK_*
+            null,                                                           ["Разведчик", "Рядовой"],                                       ["Рубака", "Капрал"],
+            ["Сержант", "Сержант"],                                         ["Старший сержант", "Сержант"],                                 ["Высший сержант", "Старший сержант"],
+            ["Каменный Страж", "Рыцарь"],                                   ["Кровавый страж", "Рыцарь-лейтенант"],                         ["Легионер", "Рыцарь-капитан"],
+            ["Центурион", "Рыцарь-защитник"],                               ["Защитник", "Лейтенант-командор"],                             ["Лейтенант-генерал", "Командор"],
+            ["Генерал", "Маршал"],                                          ["Вождь", "Фельдмаршал"],                                       ["Верховный вождь", "Главнокомандующий"]
         ),
         'orientation'   => ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest']
     ),
@@ -618,7 +629,7 @@ $lang = array(
             SAI_ACTION_SET_FACTION                        => ['(%1$d)?Set faction of #target# to [faction=%7$d]:Reset faction of #target#;.', null],
             SAI_ACTION_MORPH_TO_ENTRY_OR_MODEL            => ['(%7$d)?Reset apperance.:Take the appearance of;(%1$d)? [npc=%1$d].:;(%2$d)?[model npc=%2$d border=1 float=right][/model]:;', null],
             SAI_ACTION_SOUND                              => ['Play sound(%2$d)? to invoking player:;:[div float=right width=270px][sound=%1$d][/div]', 'Played by environment.'],
-            SAI_ACTION_PLAY_EMOTE                         => ['Emote [emote=%1$d] to #target#.', null],
+            SAI_ACTION_PLAY_EMOTE                         => ['(%1$d)?Emote [emote=%1$d] to #target#.: End Emote.;', null],
             SAI_ACTION_FAIL_QUEST                         => ['Fail [quest=%1$d] for #target#.', null],
             SAI_ACTION_OFFER_QUEST                        => ['(%2$d)?Add [quest=%1$d] to #target#\'s log:Offer [quest=%1$d] to #target#;.', null],
             SAI_ACTION_SET_REACT_STATE                    => ['#target# becomes %7$s.', null],
@@ -629,7 +640,7 @@ $lang = array(
             SAI_ACTION_THREAT_SINGLE_PCT                  => ['Modify #target#\'s threat by %7$d%%.', null],
             SAI_ACTION_THREAT_ALL_PCT                     => ['Modify the threat of all targets by %7$d%%.', null],
             SAI_ACTION_CALL_AREAEXPLOREDOREVENTHAPPENS    => ['Exploration event of [quest=%1$d] is completed for #target#.', null],
-            SAI_ACTION_SET_EMOTE_STATE                    => ['Continuously emote [emote=%1$d] to #target#.', null],
+            SAI_ACTION_SET_EMOTE_STATE                    => ['(%1$d)?Continuously emote [emote=%1$d] to #target#.:End emote state;', null],
             SAI_ACTION_SET_UNIT_FLAG                      => ['Set (%2$d)?UnitFlags2:UnitFlags; %7$s.', null],
             SAI_ACTION_REMOVE_UNIT_FLAG                   => ['Unset (%2$d)?UnitFlags2:UnitFlags; %7$s.', null],
 /* 20*/     SAI_ACTION_AUTO_ATTACK                        => ['(%1$d)?Start:Stop; auto attacking #target#.', null],
@@ -641,7 +652,7 @@ $lang = array(
             SAI_ACTION_CALL_GROUPEVENTHAPPENS             => ['Satisfy objective of [quest=%1$d] for #target#.', null],
             SAI_ACTION_COMBAT_STOP                        => ['End current combat.', null],
             SAI_ACTION_REMOVEAURASFROMSPELL               => ['Remove (%1$d)?all auras:auras of [spell=%1$d]; from #target#.', 'Only own auras'],
-            SAI_ACTION_FOLLOW                             => ['Follow #target#(%1$d)? at %1$dm distance:;(%3$d)? until reaching [npc=%3$d]:;.', '(%7$d)?Angle: %7$.2f°:;(%8$d)? Some form of Quest Credit is given:;'],
+            SAI_ACTION_FOLLOW                             => ['Follow #target#(%1$d)? at %1$dm distance:;(%3$d)? until reaching [npc=%3$d]:;.', '(%7$d)?Angle\u003A %7$.2f°:;(%8$d)? Some form of Quest Credit is given:;'],
 /* 30*/     SAI_ACTION_RANDOM_PHASE                       => ['Pick random Event Phase from %7$s.', null],
             SAI_ACTION_RANDOM_PHASE_RANGE                 => ['Pick random Event Phase between %1$d and %2$d.', null],
             SAI_ACTION_RESET_GOBJECT                      => ['Reset #target#.', null],
@@ -654,7 +665,7 @@ $lang = array(
             SAI_ACTION_CALL_FOR_HELP                      => ['Call for help.', 'Use default help emote'],
 /* 40*/     SAI_ACTION_SET_SHEATH                         => ['Sheath %7$s weapons.', null],
             SAI_ACTION_FORCE_DESPAWN                      => ['Despawn #target#(%1$d)? after %7$s:;(%2$d)? and then respawn after %8$s:;', null],
-            SAI_ACTION_SET_INVINCIBILITY_HP_LEVEL         => ['Become invincable below (%2$d)?%2$d%%:%1$d; HP.', null],
+            SAI_ACTION_SET_INVINCIBILITY_HP_LEVEL         => ['Become inviniable below (%2$d)?%2$d%%:%1$d; HP.', null],
             SAI_ACTION_MOUNT_TO_ENTRY_OR_MODEL            => ['(%7$d)?Dismount.:Mount ;(%1$d)?[npc=%1$d].:;(%2$d)?[model npc=%2$d border=1 float=right][/model]:;', null],
             SAI_ACTION_SET_INGAME_PHASE_MASK              => ['Set visibility of #target# to phase %7$s.', null],
             SAI_ACTION_SET_DATA                           => ['[b]%2$d[/b] is stored in data field #[b]%1$d[/b] of #target#.', null],
@@ -867,7 +878,7 @@ $lang = array(
 
         // form-text
         'emailInvalid'  => "Недопустимый адрес email.", // message_emailnotvalid
-        'emailNotFound' => "The email address you entered is not associated with any account.<br><br>If you forgot the email you registered your account with email ".CFG_CONTACT_EMAIL." for assistance.",
+        'emailNotFound' => "The email address you entered is not associated with any account.<br><br>If you forgot the email you registered your account with email CFG_CONTACT_EMAIL for assistance.",
         'createAccSent' => "An email was sent to <b>%s</b>. Simply follow the instructions to create your account.",
         'recovUserSent' => "An email was sent to <b>%s</b>. Simply follow the instructions to recover your username.",
         'recovPassSent' => "An email was sent to <b>%s</b>. Simply follow the instructions to reset your password.",
@@ -904,18 +915,41 @@ $lang = array(
         'posts'         => "Сообщений на форумах",
         // user mail
         'tokenExpires'  => "This token expires in %s.",
-        'accConfirm'    => ["Account Confirmation", "Welcome to ".CFG_NAME_SHORT."!\r\n\r\nClick the Link below to activate your account.\r\n\r\n".HOST_URL."?account=signup&token=%s\r\n\r\nIf you did not request this mail simply ignore it."],
-        'recoverUser'   => ["User Recovery",        "Follow this link to log in.\r\n\r\n".HOST_URL."?account=signin&token=%s\r\n\r\nIf you did not request this mail simply ignore it."],
-        'resetPass'     => ["Password Reset",       "Follow this link to reset your password.\r\n\r\n".HOST_URL."?account=forgotpassword&token=%s\r\n\r\nIf you did not request this mail simply ignore it."]
+        'accConfirm'    => ["Account Confirmation", "Welcome to CFG_NAME_SHORT!\r\n\r\nClick the Link below to activate your account.\r\n\r\nHOST_URL?account=signup&token=%s\r\n\r\nIf you did not request this mail simply ignore it."],
+        'recoverUser'   => ["User Recovery",        "Follow this link to log in.\r\n\r\nHOST_URL?account=signin&token=%s\r\n\r\nIf you did not request this mail simply ignore it."],
+        'resetPass'     => ["Password Reset",       "Follow this link to reset your password.\r\n\r\nHOST_URL?account=forgotpassword&token=%s\r\n\r\nIf you did not request this mail simply ignore it."]
     ),
     'emote' => array(
         'notFound'      => "[This Emote doesn't exist.]",
-        'self'          => "[To Yourself]",
-        'target'        => "[To others with a target]",
-        'noTarget'      => "[To others without a target]",
+//      'self'          => "[To Yourself]",
+//      'target'        => "[To others with a target]",
+//      'noTarget'      => "[To others without a target]",
+        'targeted'      => "[Used with target]",
+        'untargeted'    => "[Used without target]",
         'isAnimated'    => "[Uses an animation]",
+        'eventSound'    => "[Event Sound]",
         'aliases'       => "[Aliases]",
         'noText'        => "[This Emote has no text.]",
+        'noCommand'     => "[This Emote has no /-command. It can not be triggered.]",
+        'flags'         => array(
+            EMOTE_FLAG_ONLY_STANDING       => "Only while standig",
+            EMOTE_FLAG_USE_MOUNT           => "Emote applies to mount",
+            EMOTE_FLAG_NOT_CHANNELING      => "Not while channeling",
+            EMOTE_FLAG_ANIM_TALK           => "Talk anim - talk",
+            EMOTE_FLAG_ANIM_QUESTION       => "Talk anim - question",
+            EMOTE_FLAG_ANIM_EXCLAIM        => "Talk anim - exclamation",
+            EMOTE_FLAG_ANIM_SHOUT          => "Talk anim - shout",
+            EMOTE_FLAG_NOT_SWIMMING        => "Not while swimming",
+            EMOTE_FLAG_ANIM_LAUGH          => "Talk anim - laugh",
+            EMOTE_FLAG_CAN_LIE_ON_GROUND   => "Usable while sleeping or dead",
+            EMOTE_FLAG_NOT_FROM_CLIENT     => "Creature only",
+            EMOTE_FLAG_NOT_CASTING         => "Not while casting",
+            EMOTE_FLAG_END_MOVEMENT        => "Emote ends movement",
+            EMOTE_FLAG_INTERRUPT_ON_ATTACK => "Interrupt on attacking",
+            EMOTE_FLAG_ONLY_STILL          => "Only while still",
+            EMOTE_FLAG_NOT_FLYING          => "Not while flying"
+        ),
+        'state'         => ['[Oneshot]', '[Continuous State]', '[Continuous Emote]']
     ),
     'enchantment' => array(
         'details'       => "Подробности",
@@ -933,14 +967,14 @@ $lang = array(
     ),
     'gameObject' => array(
         'notFound'      => "Такой объект не существует.",
-        'cat'           => [0 => "Другое", 9 => "Книги", 3 => "Контейнеры", -5 => "Сундуки", 25 => "Рыболовные лунки",-3 => "Травы",    -4 => "Полезные ископаемые", -2 => "Задания", -6 => "Инструменты"],
-        'type'          => [               9 => "Книга", 3 => "Контейнер",  -5 => "Сундук",  25 => "",                -3 => "Растение", -4 => "Полезное ископаемое", -2 => "Задание", -6 => ""],
+        'cat'           => [0 => "Другое", 3 => "Контейнеры", 6 => "Ловушки", 9 => "Книги", 25 => "Рыболовные лунки", -5 => "Сундуки", -3 => "Травы",    -4 => "Полезные ископаемые", -2 => "Задания", -6 => "Инструменты"],
+        'type'          => [               3 => "Контейнер",  6 => "",        9 => "Книга", 25 => "",                 -5 => "Сундук",  -3 => "Растение", -4 => "Полезное ископаемое", -2 => "Задание", -6 => ""],
         'unkPosition'   => "Местонахождение этого объекта неизвестно.",
         'npcLootPH'     => '[The <b>%s</b> contains the loot from the fight against <a href="?npc=%d">%s</a>. It spawns after his death.]',
         'key'           => "Ключ",
         'focus'         => "[Spell Focus]",
         'focusDesc'     => "[Spells requiring this Focus can be cast near this Object]",
-        'trap'          => "Ловушки",
+        'trap'          => "Ловушка",
         'triggeredBy'   => "Срабатывает от",
         'capturePoint'  => "Точка захвата",
         'foundIn'       => "Этот НИП может быть найден в следующих зонах:",
@@ -986,9 +1020,11 @@ $lang = array(
         'resistances'   => "Сопротивление",
         'foundIn'       => "Этот объект может быть найден в следующих зонах:",
         'tameable'      => "Можно приручить (%s)",
+        'spirit'        => "[tooltip name=spirit][Only visible to dead players][/tooltip][span class=tip tooltip=spirit][Spirit][/span]",
         'waypoint'      => "Путевой точки",
         'wait'          => "Период ожидания",
-        'respawnIn'     => "Reentry in",    /// ..lol?
+        'respawnIn'     => "Reentry in: %s",
+        'despawnAfter'  => "[Spawned by Script<br>Despawn after]: %s",
         'rank'          => [0 => "Обычный", 1 => "Элитный", 4 => "Редкий", 2 => "Редкий элитный", 3 =>"Босс"],
         'textRanges'    => [null, "[sent to area]", "[sent to zone]", "[sent to map]", "[sent to world]"],
         'textTypes'     => [null, "кричит", "говорит", "шепчет"],
@@ -1047,7 +1083,7 @@ $lang = array(
         'slain'         => "убито",
         'reqNumCrt'     => "Требуется",
         'rfAvailable'   => "[Available on realm]: ",
-        '_transfer'     => 'Этот предмет превратится в <a href="?achievement=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
+        '_transfer'     => 'Этот предмет превратится в <a href="?achievement=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
         'cat'           => array(
                 1 => "Статистика",                                                   21 => "PvP",
                81 => "Великие подвиги",                                              92 => "Общее",
@@ -1118,6 +1154,7 @@ $lang = array(
         'Miscellaneous' => "Разное",
         'Azeroth'       => "Азерот",
         'CosmicMap'     => "Звёздная карта",
+        'floorN'        => "Уровень %d"
     ),
     'privileges' => array(
         'main'          => "Здесь на AoWoW вы можете зарабатывать <a href=\"?reputation\">репутацию</a>. Основной источник получения репутации — увеличение рейтинга ваших комментариев другими пользователями.<br><br>Репутация примерно измеряет количество вашего вклада в сообщество.<br><br>По мере того, как вы зарабатываете репутацию, вы получаете доверие сообщества и особые привилегии. Полный список привилегий расположен ниже.",
@@ -1149,49 +1186,12 @@ $lang = array(
         'hcAvailable'   => "Доступен героический режим&nbsp;(%d)",
         'numPlayers'    => "Количество игроков",
         'noMap'         => "Для данной местности нет доступной карты.",
+        'fishingSkill'  => "[25 &ndash; 100% chance to catch a listed fish.]",
         'instanceTypes' => ["Игровая зона", "Транзит", "Подземелье",   "Рейд",      "Поле боя", "Подземелье", "Арена", "Рейд", "Рейд"],
         'territories'   => ["Альянс",       "Орда",    "Оспариваемая", "Святилище", "PvP",      "Мировое PvP"],
         'cat'           => array(
             "Восточные королевства",    "Калимдор",                 "Подземелья",               "Рейды",                    "Неактивно",                null,
             "Поля боя",                 null,                       "Запределье",               "Арены",                    "Нордскол"
-        ),
-        'floors'        => array(
-             206 => ["Подготовка Норндира", "Подъем Укротителей драконов", "Терраса Тира"],
-             209 => ["Внутренний двор", "Обеденный зал", "Свободная берлога", "Нижняя обсерватория", "Верхняя обсерватория", "Палата лорда Годфри", "Крепостной вал"],
-             719 => ["Пруд Аск'ара", "Алтарь святилища Луны", "Забытый пруд"],
-             721 => ["Машинный зал", "Спальни", "Пусковая установка", "Двор Механиков"],
-             796 => ["[Кладбище]", "[Библиотека]", "[Арсенал]", "[Собор]"],
-            1196 => ["Подножие", "Вершина"],
-            1337 => ["Зал Хранителей", "Трон Каз'горота"],
-            1581 => ["Мертвые копи", "Потайная бухта"],
-            1583 => ["Тазз'Алаор", "Паучий лабиринт", "Ордамар", "Зал Чернорука", "Зал Драконов", "Гнездовье", "Стадион Черной горы"],
-            1584 => ["Тюремный блок", "Тенегорн"],
-            2017 => ["Площадь рыцарей", "Улица Испытаний"],
-            2057 => ["Хранилище реликвий", "Чертог Призыва", "Кабинет ректора", "[Barov Family Vault]"],
-            2100 => ["Пещеры Мародона", "Могила Зейтара"],
-            2557 => ["Палаты Гордока", "Центральный сад", "Двор высокорожденных", "Тюрьма Бессмер'тера", "Квартал Криводревов", "Святилище Элдретарра"],
-            2677 => ["Гарнизон Драконьей Пасти", "Залы Раздора", "Багровые лаборатории", "Логово Нефариана"],
-            3428 => ["Подземелье улья", "Ворота храма", "Обитель К'Туна"],
-            3456 => ["Квартал Мерзости", "Паучий квартал", "Военный квартал", "Чумной квартал", "Нижний некрополь", "Верхний некрополь"],
-            3457 => ["Комнаты cлуг", "Cтойла", "Пиршественный зал", "Гостевые комнаты", "Балкон в опере", "Терраса Мастера", "Низ разрушенной лестницы", "Верх разрушенной лестницы", "Галерея", "Библиотека Стража", "Хранилище", "Верхний ярус библиотеки", "Обсерватория", "Игровой зал", "Покои Медива", "Энергетический блок", "Пустомарь"],
-            3715 => ["Паровое подземелье", "Охладительные резервуары"],
-            3790 => ["Потусторонние залы", "Мост Душ"],
-            3791 => ["Гнездовье Сетекк", "Залы Плача"],
-            3848 => ["Изоляционная камера: Трион", "Изоляционная камера: Максимус", "Ядро Сдерживания"],
-            3849 => ["Механар", "Комната Вычислений"],
-            3959 => ["Campo de Treinamento Illidari", "Esgotos de Karabor", "Santuário das Sombras", "Salões da Angústia", "Vigia do Sanguinávido", "Covil dos Prazeres Mortais", "Câmara de Comando", "Ápice do Templo"],
-            4075 => ["Плато Солнечного Колодца", "Святилище Затмения"],
-            4100 => ["Дорога к Стратхольму", "Стратхольм"],
-            4131 => ["Пристанище Великого Магистра", "Обзорная площадка"],
-            4196 => ["Залы крепости Драк'Тарон", "Дозорное укрепление Драк'Тарона"],
-            4228 => ["Кольцо отклонения", "Кольцо ускорения", "Кольцо трансмутации", "Кольцо управления"],
-            4272 => ["Стойкий гарнизон", "Галерея Творцов"],
-            4273 => ["Большой переход", "Вестибюль Ульдуара", "Внутреннее святилище Ульдуара", "Темница Йогг-Сарона", "Искра Воображения", "Око разума"],
-            4277 => ["Родовая яма", "Логово Хадронокса", "Золоченые врата"],
-            4395 => ["Даларан", "Клоака"],
-            4494 => ["Ан'кахет", "Уровень 2"],
-            4722 => ["Колизей Серебряного Авангарда", "Ледяные глубины"],
-            4812 => ["Нижний ярус", "Черепной вал", "Подъем Смертоносного", "Логово Королевы Льда", "Верхний ярус", "Королевские палаты", "Ледяной Трон", "Ледяная Скорбь"]
         )
     ),
     'quest' => array(
@@ -1275,7 +1275,7 @@ $lang = array(
             2 => array( "Подземелья",
                   206 => "Крепость Утгард",                209 => "Крепость Темного Клыка",         491 => "Лабиринты Иглошкурых",           717 => "Тюрьма",                         718 => "Пещеры Стенаний",
                   719 => "Непроглядная Пучина",            721 => "Гномреган",                      722 => "Курганы Иглошкурых",             796 => "Монастырь Алого ордена",        1176 => "Зул'Фаррак",
-                 1196 => "Вершина Утгард",                1337 => "Ульдаман",                      1417 => "Затонувший храм",               1581 => "Мертвые копи",                  1583 => "Пик Черной горы",
+                 1196 => "Вершина Утгард",                1337 => "Ульдаман",                      1477 => "Затонувший храм",               1581 => "Мертвые копи",                  1583 => "Пик Черной горы",
                  1584 => "Глубины Черной горы",           1941 => "Пещеры Времени",                2017 => "Стратхольм",                    2057 => "Некроситет",                    2100 => "Мародон",
                  2366 => "Черные топи",                   2367 => "Старые предгорья Хилсбрада",    2437 => "Огненная пропасть",             2557 => "Забытый Город",                 3535 => "Цитадель Адского Пламени",
                  3562 => "Бастионы Адского Пламени",      3688 => "Аукиндон",                      3713 => "Кузня Крови",                   3714 => "Разрушенные залы",              3715 => "Паровое подземелье",
@@ -1442,43 +1442,80 @@ $lang = array(
         '_inSlot'       => "в слот",
         '_collapseAll'  => "Свернуть все",
         '_expandAll'    => "Развернуть все",
-        '_transfer'     => 'Этот предмет превратится в <a href="?spell=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
+        '_transfer'     => 'Этот предмет превратится в <a href="?spell=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
+        '_affected'     => "Влияет на заклинания",
+        '_seeMore'      => "[See more]",
+        '_rankRange'    => "Ранг:&nbsp;%d&nbsp;-&nbsp;%d",
+        '_showXmore'    => "Показать на %d больше",
         'currentArea'   => '&lt;current area&gt;',
         'discovered'    => "Изучается путём освоения местности",
-        'ppm'           => "Срабатывает %s раз в минуту",
+        'ppm'           => "(Срабатывает %s раз в минуту)",
         'procChance'    => "Шанс срабатывания",
         'starter'       => "Начальное заклинание",
         'trainingCost'  => "Цена обучения",
-        'remaining'     => "Осталось: %s",
-        'untilCanceled' => "до отмены",
-        'castIn'        => "Применение: %s сек.",
-        'instantPhys'   => "Мгновенное действие",
-        'instantMagic'  => "Мгновенное действие",
         'channeled'     => "Направляемое",
         'range'         => "Радиус действия: %s м",
         'meleeRange'    => "Дистанция ближнего боя",
         'unlimRange'    => "Неограниченное расстояние",
         'reagents'      => "Реагент",
         'tools'         => "Инструменты",
-        'home'          => "%lt;Гостиница&gt;",
+        'home'          => "&lt;Гостиница&gt;",
         'pctCostOf'     => "от базовой %s",
         'costPerSec'    => ", плюс %s в секунду",
         'costPerLevel'  => ", плюс %s за уровень",
+        'pointsPerCP'   => ", плюс %s в прием в серии",
         'stackGroup'    => "[Stack Group]",
         'linkedWith'    => "[Linked with]",
         '_scaling'      => "[Scaling]",
-        'scaling'       => array(
-            'directSP' => "[+%.2f%% of spell power to direct component]",        'directAP' => "[+%.2f%% of attack power to direct component]",
-            'dotSP'    => "[+%.2f%% of spell power per tick]",                   'dotAP'    => "[+%.2f%% of attack power per tick]"
+        'instantPhys'   => "Мгновенное действие",
+        'castTime' => array(
+            "Мгновенное действие",
+            "Применение: %.3g сек.",
+            "применение заклинания: %.3g мин."
         ),
+        'cooldown'      => array(
+            "Мгновенное восстановление",
+            "Восстановление: %.3g сек.",
+            "Восстановление: %.3g мин.",
+         // "Восстановление: %.3g ч.",
+         // "Восстановление: %.3g д."
+        ),
+        'duration'      => array(
+            "до отмены",
+            "%.2G сек",
+            "%.2G мин",
+            "%.2G ч",
+            "%.2G д"
+        ),
+        'timeRemaining' => array(
+            "",
+            "Осталось: %d |4секунда:секунды:секунд;",
+            "Осталось: %d |4минута:минуты:минут;",
+            "Осталось: %d |4час:часа:часов;",
+            "Осталось: %d |4день:дня:дней;"
+        ),
+        'powerCost'     => array(
+            -2 => ["Здоровье: %d",                                    "Здоровье: %d плюс %d/сек."],
+             0 => ["Мана: %d",                                        "Мана: %d плюс %d/сек"     ],
+             1 => ["Ярость: %d",                                      "Ярость: %d плюс %d/сек"   ],
+             2 => ["Тонус: %d",                                       "Тонус: %d плюс %d/сек."   ],
+             3 => ["Энергия: %d",                                     "Энергия: %d плюс %d/сек." ],
+             6 => ["Требуется %d |4единица:единицы:единиц; силы рун", "Cила рун: %d плюс %d/сек" ],
+         ),
+        'powerDisplayCost' => ['%2$s: %1$d', "%d %s и %d в сек. дополнительно"],
+        'powerCostRunes'=> ["%d |4руна:руны:рун; крови", "%d |4руна:руны:рун; нечестивости", "%d |4руна:руны:рун; льда"],
         'powerRunes'    => ["Руна крови", "Руна льда", "Лед", "Смерти"],
-        'powerTypes'    => array(
+        'powerTypes'    => array(                           // POWER_TYPE_*
             // conventional
               -2 => "Здоровье",            0 => "Мана",                1 => "Ярость",              2 => "Тонус",               3 => "Энергия",             4 => "Настроение",
                5 => "Руны",                6 => "Руническая сила",
             // powerDisplay
               -1 => "Боеприпасы",        -41 => "Колчедан",          -61 => "Давление пара",    -101 => "Жар",              -121 => "Слизнюк",          -141 => "Сила крови",
             -142 => "Гнев"
+        ),
+        'scaling'       => array(
+            'directSP' => "[+%.2f%% of spell power to direct component]",        'directAP' => "[+%.2f%% of attack power to direct component]",
+            'dotSP'    => "[+%.2f%% of spell power per tick]",                   'dotAP'    => "[+%.2f%% of attack power per tick]"
         ),
         'relItems'      => array(
             'base'    => "<small>Показать %s, относящиеся к профессии <b>%s</b></small>",
@@ -1557,6 +1594,9 @@ $lang = array(
             "CRIT_TAKEN_RANGED",                    "CRIT_TAKEN_SPELL",                     "HASTE_MELEE",                          "HASTE_RANGED",                         "HASTE_SPELL",
             "WEAPON_SKILL_MAINHAND",                "WEAPON_SKILL_OFFHAND",                 "WEAPON_SKILL_RANGED",                  "EXPERTISE",                            "ARMOR_PENETRATION"
         ),
+        'combatRatingMask' => array(
+            0xE0 => "[Hit Chance]",                 0x700 => "[Critical Hit Chance]",       0x1C000 => "Устойчивость"
+        ),
         'lockType'      => array(
             null,                                   "Взлом замков",                         "Травничество",                         "Горное дело",                          "Обезвреживание ловушки",
             "Открытие",                             "Клад (DND)",                           "Эльфийские самоцветы (DND)",           "Закрытие",                             "Установка",
@@ -1565,7 +1605,7 @@ $lang = array(
             "Начертание",                           "Открыть на ходу"
         ),
         'stealthType'   => ["GENERAL", "TRAP"],
-        'invisibilityType' => [null, "General", null, "Trap", null, null, "Drunk", null, null, null, null, null],
+        'invisibilityType' => ["General", "UNK-1", "UNK-2", "Trap", "UNK-4", "UNK-5", "Drunk", "UNK-7", "UNK-8", "UNK-9", "UNK-10", "UNK-11"],
         'attributes'    => array(                           // index defined by filters
             69 => "Все пагубные эффекты заклинаний",
             57 => "Эффект не может быть отменен",
@@ -1625,7 +1665,9 @@ $lang = array(
             89 => "usablefearedМожет быть использовано, пока наложен Страх",
             65 => "Использует ресурс полностью"
         ),
-        'unkEffect'     => 'Unknown Effect',
+        'summonControl' => ['[Uncontrolled]', "Стражи", "Питомец", "Подчинённый", '[Possessed Vehicle]', '[Uncontrolled Vehicle]'],
+        'summonSlot'    => ["Питомец", "Тотем огня", "Тотем земли", "Тотем воды", "Тотем воздуха", "Спутник", "Задание"],
+        'unkEffect'     => 'Unknown Effect (%1$d)',
         'effects'       => array(
 /*0-5    */ 'None',                     'Instakill',                'School Damage',            'Dummy',                    'Portal Teleport',          'Teleport Units',
 /*6+     */ 'Apply Aura',               'Environmental Damage',     'Drain Power',              'Drain Health',             'Heal',                     'Bind',
@@ -1649,14 +1691,14 @@ $lang = array(
 /*114+   */ 'Taunt',                    'Durability Damage - %',    'Skin Player Corpse (PvP)', 'AoE Resurrect with % Health','Learn Skill',            'Apply Area Aura - Pet',
 /*120+   */ 'Teleport to Graveyard',    'Normalized Weapon Damage', null,                       'Take Flight Path',         'Pull Towards',             'Modify Threat - %',
 /*126+   */ 'Spell Steal ',             'Prospect',                 'Apply Area Aura - Friend', 'Apply Area Aura - Enemy',  'Redirect Done Threat %',   'Play Sound',
-/*132+   */ 'Play Music',               'Unlearn Specialization',   'Kill Credit2',             'Call Pet',                 'Heal for % of Total Health','Give % of Total Power',
+/*132+   */ 'Play Music',               'Unlearn Specialization',   'Kill Credit 2',            'Call Pet',                 'Heal for % of Total Health','Give % of Total Power',
 /*138+   */ 'Leap Back',                'Abandon Quest',            'Force Cast',               'Force Spell Cast with Value','Trigger Spell with Value','Apply Area Aura - Pet Owner',
 /*144+   */ 'Knockback to Dest.',       'Pull Towards Dest.',       'Activate Rune',            'Fail Quest',               null,                       'Charge to Dest',
 /*150+   */ 'Start Quest',              'Trigger Spell 2',          'Summon - Refer-A-Friend',  'Create Tamed Pet',         'Discover Flight Path',     'Dual Wield 2H Weapons',
-/*156+   */ 'Add Socket to Item',       'Create Tradeskill Item',   'Milling',                  'Rename Pet',               null,                       'Change Talent Spec. Count',
+/*156+   */ 'Add Socket to Item',       'Create Tradeskill Item',   'Milling',                  'Rename Pet',               'Force Cast 2',             'Change Talent Spec. Count',
 /*162-167*/ 'Activate Talent Spec.',    null,                       'Remove Aura',              null,                       null,                       'Update Player Phase'
         ),
-        'unkAura'       => 'Unknown Aura',
+        'unkAura'       => 'Unknown Aura (%1$d)',
         'auras'         => array(
 /*0-   */   'None',                                 'Bind Sight',                           'Possess',                              'Periodic Damage - Flat',               'Dummy',
 /*5+   */   'Confuse',                              'Charm',                                'Fear',                                 'Periodic Heal',                        'Mod Attack Speed',
@@ -1730,7 +1772,7 @@ $lang = array(
         'block'         => "Блок: %s",
         'charges'       => "%d |4заряд:заряда:зарядов;",
         'locked'        => "Заперто",
-        'ratingString'  => "%s&nbsp;@&nbsp;L%s",
+        'ratingString'  => '<!--rtg%%%1$d-->%2$s&nbsp;на&nbsp;<!--lvl-->%3$d&nbsp;ур.',
         'heroic'        => "Героический",
         'startQuest'    => "Этот предмет позволяет получить задание.",
         'bagSlotString' => '%2$s (%1$d |4ячейка:ячейки:ячеек;)',
@@ -1767,7 +1809,7 @@ $lang = array(
         'tool'          => "Инструмент",
         'cost'          => "Цена",
         'content'       => "Материал",
-        '_transfer'     => 'Этот предмет превратится в <a href="?item=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
+        '_transfer'     => 'Этот предмет превратится в <a href="?item=%d" class="q%d icontiny tinyspecial" style="background-image: url(STATIC_URL/images/wow/icons/tiny/%s.gif)">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
         '_unavailable'  => "Этот предмет не доступен игрокам.",
         '_rndEnchants'  => "Случайные улучшения",
         '_chance'       => "(шанс %s%%)",
@@ -1783,6 +1825,21 @@ $lang = array(
         'uniqueEquipped'=> ["Уникальный использующийся",    null,               "Уникальный использующийся предмет: %s (%d)"],
         'speed'         => "Скорость",
         'dps'           => "(%.1f ед. урона в секунду)",
+        'duration'      => array(
+            '',
+            "Срок действия: %d |4секунда:секунды:секунд;",
+            "Срок действия: %d |4минута:минуты:минут;",
+            "Исчезнет через %d ч.",
+            "Исчезнет через %d д."
+        ),
+
+        'cooldown'      => array(
+            "(Восстановление: %s)",
+            "(Восстановление: %d сек.)",
+            "(Восстановление: %d мин.)",
+            "(Восстановление: %d |4час:часа:часов;)",
+            "(Восстановление: %d |4день:дня:дней;)"
+        ),
         'damage'        => array(                           // *DAMAGE_TEMPLATE*
                         //  basic,                              basic /w school,                            add basic,                                      add basic /w school
             'single'    => ["Урон: %d",                         "%d ед. |3-6(%s)",                          "+ %d ед. урона",                               "+%d ед. урона (%s)"            ],
@@ -1797,7 +1854,7 @@ $lang = array(
         'gemColors'     => array(                           // *_GEM
             "Особый",               "Красный",          "Желтый",               "Синий"
         ),
-        'gemConditions' => array(                           // ENCHANT_CONDITION_*      so whats that pipe-code..?
+        'gemConditions' => array(                           // ENCHANT_CONDITION_*
             2 => "меньше, чем %d |4камень:камня:камней; |3-1(%s) цвета",
             3 => "больше |3-7(%s), чем |3-7(%s) камней",
             5 => "хотя бы %d |4камень:камня:камней; |3-1(%s) цвета"
@@ -1815,9 +1872,9 @@ $lang = array(
             "Использование: ",      "Если на персонаже: ",                      "Возможный эффект при попадании: ",
             "",                     "",                 "",                     ""
         ),
-        'bonding'       => array(
-            "Привязано к учетной записи",               "Персональный при поднятии",                            "Становится персональным при надевании",
-            "Персональный при использовании",           "Предмет, необходимый для задания",                     "Предмет, необходимый для задания"
+        'bonding'       => array(                           // ITEM_BIND_*
+            "Привязано к учетной записи",               "Становится персональным при получении",                "Становится персональным при надевании",
+            "Становится персональным при использовании","Предмет, необходимый для задания",                     "Предмет, необходимый для задания"
         ),
         "bagFamily"     => array(
             "Сумка",                "Колчан",           "Подсумок",             "Сумка душ",                    "Сумка кожевника",
@@ -1891,15 +1948,15 @@ $lang = array(
             12 => "Задание",
             13 => "Ключи",
         ),
-        'statType'      => array(
-            "к мане",
-            "к здоровью",
+        'statType'      => array(                           // ITEM_MOD_*
+            "%c%d к мане",
+            "%c%d к здоровью",
             null,
-            "к ловкости",
-            "к силе",
-            "к интеллекту",
-            "к духу",
-            "к выносливости",
+            "%c%d к ловкости",
+            "%c%d к силе",
+            "%c%d к интеллекту",
+            "%c%d к духу",
+            "%c%d к выносливости",
             null, null, null, null,
             "Рейтинг защиты +%d.",
             "Рейтинг уклонения +%d.",
@@ -1919,7 +1976,7 @@ $lang = array(
             "Рейтинг уклонения от крит. удара (заклинания) +%d.",
             "Рейтинг скорости ближнего боя +%d.",
             "Рейтинг скорости дальнего боя +%d.",
-            "Рейтинг скорости боя (заклинания) +%d.",
+            "Увеличивает рейтинг скорости на %d.",
             "Рейтинг меткости +%d.",
             "Рейтинг критического удара +%d.",
             "Рейтинг уклонения от удара +%d.",
@@ -1928,14 +1985,22 @@ $lang = array(
             "Рейтинг скорости +%d.",
             "Рейтинг мастерства +%d.",
             "Увеличивает силу атаки на %d.",
+<<<<<<< HEAD
             "Сила атаки дальнего боя +%d.",
             "Увеличивает силу атаки на %d в облике кошки, медведя, лютого медведя или лунного совуха.",
             "Увеличивает целительное действие магических заклинаний и эффектов на %d ед.",
             "Увеличивает наносимый игроком урон от магических эффектов и заклинаний на %d ед.",
             "Восполнение %d ед. маны раз в 5 секунд.",
+=======
+            "Увеличивает силу атаки дальнего боя на %d.",
+            "Увеличивает силу атаки на %d в облике кошки, медведя, лютого медведя и лунного совуха.",
+            "Увеличивает целительное действие магических заклинаний и эффектов на %d ед.",
+            "Увеличивает наносимый игроком урон от магических эффектов и заклинаний на %d ед.",
+            "Восполнение %d ед. маны в 5 секунд.",
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
             "Повышает рейтинг пробивания брони на %d.",
             "Увеличивает силу заклинаний на %d.",
-            "Восполняет %d ед. здоровья каждые 5 секунд.",
+            "Восполняет %d ед. здоровья раз в 5 секунд.",   // Восстанавливает %d здоровья раз в 5 сек. ?
             "Увеличивает проникающую способность заклинаний на %d.",
             "Увеличивает показатель блокирования щита на %d.",
             "Unknown Bonus #%d (%d)",

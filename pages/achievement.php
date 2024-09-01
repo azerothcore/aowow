@@ -25,6 +25,12 @@ class AchievementPage extends GenericPage
 {
     use TrDetailPage;
 
+    protected $mail          = [];
+    protected $series        = null;
+    protected $description   = '';
+    protected $criteria      = [];
+    protected $rewards       = [];
+
     protected $type          = Type::ACHIEVEMENT;
     protected $typeId        = 0;
     protected $tpl           = 'achievement';
@@ -151,9 +157,9 @@ class AchievementPage extends GenericPage
         /* Main Content */
         /****************/
 
-        $this->mail        = $this->createMail($reqBook);
         $this->headIcons   = [$this->subject->getField('iconString')];
         $this->infobox     = $infobox ? '[ul][li]'.implode('[/li][li]', $infobox).'[/li][/ul]' : null;
+        $this->mail        = $this->createMail($reqBook);
         $this->series      = $series ? [[array_values($series), null]] : null;
         $this->description = $this->subject->getField('description', true);
         $this->redButtons  = array(
@@ -173,37 +179,32 @@ class AchievementPage extends GenericPage
         );
 
         if ($reqBook)
-            $this->addScript([CSS_FILE, 'Book.css']);
+            $this->addScript([SC_CSS_FILE, 'css/Book.css']);
 
         // create rewards
         if ($foo = $this->subject->getField('rewards'))
         {
-            array_walk($foo, function(&$item) {
-                $item = $item[0] != Type::ITEM ? null : $item[1];
-            });
-
-            $bar = new ItemList(array(['i.id', $foo]));
-            foreach ($bar->iterate() as $id => $__)
+            if ($itemRewards = array_filter($foo, function($x) { return $x[0] == Type::ITEM; }))
             {
-                $this->rewards['item'][] = array(
-                    'name'      => $bar->getField('name', true),
-                    'quality'   => $bar->getField('quality'),
-                    'typeStr'   => Type::getFileString(Type::ITEM),
-                    'id'        => $id,
-                    'globalStr' => Type::getJSGlobalString(Type::ITEM)
-                );
+                $bar = new ItemList(array(['i.id', array_column($itemRewards, 1)]));
+                foreach ($bar->iterate() as $id => $__)
+                {
+                    $this->rewards['item'][] = array(
+                        'name'      => $bar->getField('name', true),
+                        'quality'   => $bar->getField('quality'),
+                        'typeStr'   => Type::getFileString(Type::ITEM),
+                        'id'        => $id,
+                        'globalStr' => Type::getJSGlobalString(Type::ITEM)
+                    );
+                }
             }
-        }
 
-        if ($foo = $this->subject->getField('rewards'))
-        {
-            array_walk($foo, function(&$item) {
-                $item = $item[0] != Type::TITLE ? null : $item[1];
-            });
-
-            $bar = new TitleList(array(['id', $foo]));
-            foreach ($bar->iterate() as $__)
-                $this->rewards['title'][] = sprintf(Lang::achievement('titleReward'), $bar->id, trim(str_replace('%s', '', $bar->getField('male', true))));
+            if ($titleRewards = array_filter($foo, function($x) { return $x[0] == Type::TITLE; }))
+            {
+                $bar = new TitleList(array(['id', array_column($titleRewards, 1)]));
+                foreach ($bar->iterate() as $__)
+                    $this->rewards['title'][] = sprintf(Lang::achievement('titleReward'), $bar->id, trim(str_replace('%s', '', $bar->getField('male', true))));
+            }
         }
 
         $this->rewards['text'] = $this->subject->getField('reward', true);
@@ -236,13 +237,17 @@ class AchievementPage extends GenericPage
             ['id', $this->typeId, '!']
         );
         $saList = new AchievementList($conditions);
-        $this->lvTabs[] = ['achievement', array(
-            'data'        => array_values($saList->getListviewData()),
-            'id'          => 'see-also',
-            'name'        => '$LANG.tab_seealso',
-            'visibleCols' => ['category']
-        )];
-        $this->extendGlobalData($saList->getJSGlobals());
+        if (!$saList->error)
+        {
+            $this->extendGlobalData($saList->getJSGlobals());
+
+            $this->lvTabs[] = [AchievementList::$brickFile, array(
+                'data'        => array_values($saList->getListviewData()),
+                'id'          => 'see-also',
+                'name'        => '$LANG.tab_seealso',
+                'visibleCols' => ['category']
+            )];
+        }
 
         // tab: criteria of
         $refs = DB::Aowow()->SelectCol('SELECT refAchievementId FROM ?_achievementcriteria WHERE Type = ?d AND value1 = ?d',
@@ -252,7 +257,7 @@ class AchievementPage extends GenericPage
         if (!empty($refs))
         {
             $coList = new AchievementList(array(['id', $refs]));
-            $this->lvTabs[] = ['achievement', array(
+            $this->lvTabs[] = [AchievementList::$brickFile, array(
                 'data'        => array_values($coList->getListviewData()),
                 'id'          => 'criteria-of',
                 'name'        => '$LANG.tab_criteriaof',
@@ -260,6 +265,16 @@ class AchievementPage extends GenericPage
             )];
             $this->extendGlobalData($coList->getJSGlobals());
         }
+
+        // tab: condition for
+        $cnd = new Conditions();
+        $cnd->getByCondition(Type::ACHIEVEMENT, $this->typeId)->prepare();
+        if ($tab = $cnd->toListviewTab('condition-for', '$LANG.tab_condition_for'))
+        {
+            $this->extendGlobalData($cnd->getJsGlobals());
+            $this->lvTabs[] = $tab;
+        }
+
 
         /*****************/
         /* Criteria List */

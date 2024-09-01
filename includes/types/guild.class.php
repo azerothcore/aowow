@@ -8,6 +8,8 @@ class GuildList extends BaseType
 {
     use profilerHelper, listviewHelper;
 
+    public static $contribute = CONTRIBUTE_NONE;
+
     public function getListviewData()
     {
         $this->getGuildScores();
@@ -88,17 +90,14 @@ class GuildListFilter extends Filter
     public    $extraOpts     = [];
     protected $genericFilter = [];
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'na'     => [FILTER_V_REGEX,    '/[\p{C};%\\\\]/ui',                            false], // name - only printable chars, no delimiter
-        'ma'     => [FILTER_V_EQUAL,    1,                                              false], // match any / all filter
-        'ex'     => [FILTER_V_EQUAL,    'on',                                           false], // only match exact
-        'si'     => [FILTER_V_LIST,     [1, 2],                                         false], // side
-        'rg'     => [FILTER_V_CALLBACK, 'cbRegionCheck',                                false], // region
-        'sv'     => [FILTER_V_CALLBACK, 'cbServerCheck',                                false], // server
+        'na' => [FILTER_V_REGEX,    parent::PATTERN_NAME, false], // name - only printable chars, no delimiter
+        'ma' => [FILTER_V_EQUAL,    1,                    false], // match any / all filter
+        'ex' => [FILTER_V_EQUAL,    'on',                 false], // only match exact
+        'si' => [FILTER_V_LIST,     [1, 2],               false], // side
+        'rg' => [FILTER_V_CALLBACK, 'cbRegionCheck',      false], // region
+        'sv' => [FILTER_V_CALLBACK, 'cbServerCheck',      false], // server
     );
-
-    protected function createSQLForCriterium(&$cr) { }
 
     protected function createSQLForValues()
     {
@@ -162,7 +161,7 @@ class RemoteGuildList extends GuildList
                     'c'  => ['j' => 'characters c ON c.guid = gm.guid', 's' => ', BIT_OR(IF(c.race IN (1, 3, 4, 7, 11), 1, 2)) - 1 AS faction']
                 );
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         // select DB by realm
         if (!$this->selectRealms($miscData))
@@ -185,7 +184,7 @@ class RemoteGuildList extends GuildList
         foreach ($this->iterate() as $guid => &$curTpl)
         {
             // battlegroup
-            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
+            $curTpl['battlegroup'] = Cfg::get('BATTLEGROUP');
 
             $r = explode(':', $guid)[0];
             if (!empty($realms[$r]))
@@ -216,7 +215,7 @@ class RemoteGuildList extends GuildList
                 $distrib[$curTpl['realm']]++;
         }
 
-        $limit = CFG_SQL_LIMIT_DEFAULT;
+        $limit = Cfg::get('SQL_LIMIT_DEFAULT');
         foreach ($conditions as $c)
             if (is_int($c))
                 $limit = $c;
@@ -254,7 +253,7 @@ class RemoteGuildList extends GuildList
 
         // basic guild data
         foreach (Util::createSqlBatchInsert($data) as $ins)
-            DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_guild (?#) VALUES '.$ins, array_keys(reset($data)));
+            DB::Aowow()->query('INSERT INTO ?_profiler_guild (?#) VALUES '.$ins.' ON DUPLICATE KEY UPDATE `id` = `id`', array_keys(reset($data)));
 
         // merge back local ids
         $localIds = DB::Aowow()->selectCol(
@@ -274,7 +273,7 @@ class LocalGuildList extends GuildList
 {
     protected       $queryBase = 'SELECT g.*, g.id AS ARRAY_KEY FROM ?_profiler_guild g';
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -295,7 +294,7 @@ class LocalGuildList extends GuildList
             }
 
             // battlegroup
-            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
+            $curTpl['battlegroup'] = Cfg::get('BATTLEGROUP');
         }
     }
 
