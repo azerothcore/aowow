@@ -25,12 +25,16 @@ class EmotesPage extends GenericPage
 
     protected function generateContent()
     {
+        $cnd = [Cfg::get('SQL_LIMIT_NONE')];
+        if (!User::isInGroup(U_GROUP_STAFF))
+            $cnd[] = [['cuFlags', CUSTOM_EXCLUDE_FOR_LISTVIEW, '&'], 0];
+
         $tabData = array(
-            'data' => array_values((new EmoteList())->getListviewData()),
+            'data' => array_values((new EmoteList($cnd))->getListviewData()),
             'name' => Util::ucFirst(Lang::game('emotes'))
         );
 
-        $this->lvTabs[] = ['emote', $tabData, 'emote'];
+        $this->lvTabs[] = [EmoteList::$brickFile, $tabData, 'emote'];
     }
 
     protected function generateTitle()

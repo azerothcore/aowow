@@ -11,6 +11,7 @@ class SoundPage extends GenericPage
     use TrDetailPage;
 
     protected $type          = Type::SOUND;
+    protected $typeId        = 0;
     protected $tpl           = 'sound';
     protected $path          = [0, 19];
     protected $tabId         = 0;
@@ -78,7 +79,7 @@ class SoundPage extends GenericPage
         /* Main Content */
         /****************/
 
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         // get spawns
         $map = null;
@@ -131,6 +132,14 @@ class SoundPage extends GenericPage
                 impactarea = ?d
         ', $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId, $this->typeId);
 
+        $seMiscValues = DB::Aowow()->selectCol('
+            SELECT `id` FROM ?_screeneffect_sounds WHERE
+                `ambienceDay` = ?d OR
+                `ambienceNight` = ?d OR
+                `musicDay` = ?d OR
+                `musicNight` = ?d
+        ', $this->typeId, $this->typeId, $this->typeId, $this->typeId);
+
         $cnd = array(
             'OR',
             ['AND', ['effect1Id', 132], ['effect1MiscValue', $this->typeId]],
@@ -141,15 +150,19 @@ class SoundPage extends GenericPage
         if ($displayIds)
             $cnd[] = ['spellVisualId', $displayIds];
 
+        if ($seMiscValues)
+            $cnd[] = array(
+                'OR',
+                ['AND', ['effect1AuraId', 260], ['effect1MiscValue', $seMiscValues]],
+                ['AND', ['effect2AuraId', 260], ['effect2MiscValue', $seMiscValues]],
+                ['AND', ['effect3AuraId', 260], ['effect3MiscValue', $seMiscValues]]
+            );
+
         $spells = new SpellList($cnd);
         if (!$spells->error)
         {
-            $data = $spells->getListviewData();
             $this->extendGlobalData($spells->getJSGlobals(GLOBALINFO_SELF));
-
-            $this->lvTabs[] = ['spell', array(
-                'data' => array_values($data),
-            )];
+            $this->lvTabs[] = [SpellList::$brickFile, ['data' => array_values($spells->getListviewData())]];
         }
 
 
@@ -182,7 +195,7 @@ class SoundPage extends GenericPage
             if (!$items->error)
             {
                 $this->extendGlobalData($items->getJSGlobals(GLOBALINFO_SELF));
-                $this->lvTabs[] = ['item', ['data' => array_values($items->getListviewData())]];
+                $this->lvTabs[] = [ItemList::$brickFile, ['data' => array_values($items->getListviewData())]];
             }
         }
 
@@ -228,19 +241,25 @@ class SoundPage extends GenericPage
                     }
                 }
 
-                if (array_filter(array_column($zoneIds, 'worldStateId')))
+                if ($worldStates = array_filter($zoneIds, function ($x) { return $x['worldStateId'] > 0; }))
                 {
                     $tabData['extraCols']  = ['$Listview.extraCols.condition'];
 
-                    foreach ($zoneIds as $zData)
-                        if ($zData['worldStateId'])
-                            $zoneData[$zData['id']]['condition'][0][$this->typeId][] = [[CND_WORLD_STATE, $zData['worldStateId'], $zData['worldStateValue']]];
+                    foreach ($worldStates as $state)
+                    {
+                        if (isset($zoneData[$state['id']]))
+                            Conditions::extendListviewRow($zoneData[$state['id']], Conditions::SRC_NONE, $this->typeId, [Conditions::WORLD_STATE, $state['worldStateId'], $state['worldStateValue']]);
+                        else
+                            foreach ($zoneData as &$d)
+                                if (in_array($state['id'], $d['subzones']))
+                                    Conditions::extendListviewRow($d, Conditions::SRC_NONE, $this->typeId, [Conditions::WORLD_STATE, $state['worldStateId'], $state['worldStateValue']]);
+                    }
                 }
 
                 $tabData['data'] = array_values($zoneData);
                 $tabData['hiddenCols'] = ['territory'];
 
-                $this->lvTabs[] = ['zone', $tabData];
+                $this->lvTabs[] = [ZoneList::$brickFile, $tabData];
             }
         }
 
@@ -252,19 +271,19 @@ class SoundPage extends GenericPage
             if (!$races->error)
             {
                 $this->extendGlobalData($races->getJSGlobals(GLOBALINFO_SELF));
-                $this->lvTabs[] = ['race', ['data' => array_values($races->getListviewData())]];
+                $this->lvTabs[] = [CharRaceList::$brickFile, ['data' => array_values($races->getListviewData())]];
             }
         }
 
 
         // tab: Emotes (EmotesTextSound (containing emote audio))
-        if ($em = DB::Aowow()->selectCol('SELECT emoteId FROM ?_emotes_sounds WHERE soundId = ?d GROUP BY emoteId', $this->typeId))
+        if ($em = DB::Aowow()->selectCol('SELECT emoteId FROM ?_emotes_sounds WHERE soundId = ?d GROUP BY emoteId UNION SELECT id FROM ?_emotes WHERE soundId = ?d', $this->typeId, $this->typeId))
         {
             $races = new EmoteList(array(['id', $em]));
             if (!$races->error)
             {
                 $this->extendGlobalData($races->getJSGlobals(GLOBALINFO_SELF));
-                $this->lvTabs[] = ['emote', array(
+                $this->lvTabs[] = [EmoteList::$brickFile, array(
                     'data' => array_values($races->getListviewData()),
                     'name' => Util::ucFirst(Lang::game('emotes'))
                 ), 'emote'];
@@ -313,7 +332,7 @@ class SoundPage extends GenericPage
         if ($creatureIds || $displayIds)
         {
             $extra = [];
-            $cnds = [CFG_SQL_LIMIT_NONE, &$extra];
+            $cnds = [Cfg::get('SQL_LIMIT_NONE'), &$extra];
             if (!User::isInGroup(U_GROUP_STAFF))
                 $cnds[] = [['cuFlags', CUSTOM_EXCLUDE_FOR_LISTVIEW, '&'], 0];
 
@@ -331,10 +350,10 @@ class SoundPage extends GenericPage
             $npcs = new CreatureList($cnds);
             if (!$npcs->error)
             {
-                $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+                $this->addScript([SC_JS_FILE, '?data=zones']);
 
                 $this->extendGlobalData($npcs->getJSGlobals(GLOBALINFO_SELF));
-                $this->lvTabs[] = ['creature', ['data' => array_values($npcs->getListviewData())]];
+                $this->lvTabs[] = [CreatureList::$brickFile, ['data' => array_values($npcs->getListviewData())]];
             }
         }
     }

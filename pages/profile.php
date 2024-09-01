@@ -18,17 +18,15 @@ class ProfilePage extends GenericPage
     protected $tabId     = 1;
     protected $path      = [1, 5, 1];
     protected $tpl       = 'profile';
-    protected $js        = array(
-        [JS_FILE, 'filters.js'],
-        [JS_FILE, 'TalentCalc.js'],
-        [JS_FILE, 'swfobject.js'],
-        [JS_FILE, 'profile_all.js'],
-        [JS_FILE, 'profile.js'],
-        [JS_FILE, 'Profiler.js']
-    );
-    protected $css       = array(
-        [CSS_FILE, 'talentcalc.css'],
-        [CSS_FILE, 'Profiler.css']
+    protected $scripts   = array(
+        [SC_JS_FILE,  'js/filters.js'],
+        [SC_JS_FILE,  'js/TalentCalc.js'],
+        [SC_JS_FILE,  'js/swfobject.js'],
+        [SC_JS_FILE,  'js/profile_all.js'],
+        [SC_JS_FILE,  'js/profile.js'],
+        [SC_JS_FILE,  'js/Profiler.js'],
+        [SC_CSS_FILE, 'css/talentcalc.css'],
+        [SC_CSS_FILE, 'css/Profiler.css']
     );
 
     protected $_get      = array(
@@ -44,7 +42,9 @@ class ProfilePage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        if (!CFG_PROFILER_ENABLE)
+        parent::__construct($pageCall, $pageParam);
+
+        if (!Cfg::get('PROFILER_ENABLE'))
             $this->error();
 
         $params = array_map('urldecode', explode('.', $pageParam));
@@ -52,8 +52,6 @@ class ProfilePage extends GenericPage
             $params[0] = Profiler::urlize($params[0]);
         if (isset($params[1]))
             $params[1] = Profiler::urlize($params[1], true);
-
-        parent::__construct($pageCall, $pageParam);
 
         // temp locale
         if ($this->mode == CACHE_TYPE_TOOLTIP && $this->_get['domain'])
@@ -127,6 +125,7 @@ class ProfilePage extends GenericPage
 
                 unset($char['guildGUID']);
                 unset($char['guildName']);
+                unset($char['at_login']);
 
                 // create entry from realm with enough basic info to disply tooltips
                 DB::Aowow()->query('REPLACE INTO ?_profiler_profiles (?#) VALUES (?a)', array_keys($char), array_values($char));
@@ -150,7 +149,7 @@ class ProfilePage extends GenericPage
             return;
 
         // + .titles ?
-        $this->addScript([JS_FILE, '?data=enchants.gems.glyphs.itemsets.pets.pet-talents.quick-excludes.realms.statistics.weight-presets.achievements&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=enchants.gems.glyphs.itemsets.pets.pet-talents.quick-excludes.realms.statistics.weight-presets.achievements']);
 
         // as demanded by the raid activity tracker
         $bossIds = array(

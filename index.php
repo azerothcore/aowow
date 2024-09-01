@@ -1,22 +1,9 @@
 <?php
 
-// debugging START (disable this in production) // Qeme
-// ini_set('display_errors', 1);
-// ini_set('display_startup_errors', 1);
-// error_reporting(E_ALL);
-
-// echo "index.php is being executed.<br>";
-// debugging END
-
-require 'includes/shared.php';
+require 'includes/kernel.php';
 
 if (CLI)
     die("this script must not be run from CLI.\nto setup aowow use 'php aowow'\n");
-
-
-// maybe add additional setup checks?
-if (!DB::isConnectable(DB_AOWOW) || !DB::isConnectable(DB_WORLD))
-    (new GenericPage($pageCall))->maintenance();
 
 
 $altClass = '';

@@ -10,19 +10,21 @@ class NpcsPage extends GenericPage
 {
     use TrListPage;
 
+    protected $petFamPanel   = false;
+
     protected $type          = Type::NPC;
     protected $tpl           = 'npcs';
     protected $path          = [0, 4];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
     protected $validCats     = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-    protected $js            = [[JS_FILE, 'filters.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/filters.js']];
 
     protected $_get          = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
         $this->filterObj = new CreatureListFilter(false, ['parentCats' => $this->category]);
 
         parent::__construct($pageCall, $pageParam);
@@ -33,7 +35,7 @@ class NpcsPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         $conditions = [];
 
@@ -45,14 +47,12 @@ class NpcsPage extends GenericPage
             $conditions[] = ['type', $this->category[0]];
             $this->petFamPanel = $this->category[0] == 1;
         }
-        else
-            $this->petFamPanel = false;
 
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
         // beast subtypes are selected via filter
-        $npcs = new CreatureList($conditions, ['extraOpts' => $this->filterObj->extraOpts]);
+        $npcs = new CreatureList($conditions, ['extraOpts' => $this->filterObj->extraOpts, 'calcTotal' => true]);
 
         // recreate form selection
         $this->filter             = $this->filterObj->getForm();
@@ -81,17 +81,20 @@ class NpcsPage extends GenericPage
             $tabData['hiddenCols'] = ['type'];
 
         // create note if search limit was exceeded
-        if ($npcs->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+        if ($npcs->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
         {
-            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_npcsfound', $npcs->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_npcsfound', $npcs->getMatches(), Cfg::get('SQL_LIMIT_DEFAULT'));
             $tabData['_truncated'] = 1;
         }
 
         if ($this->filterObj->error)
             $tabData['_errors'] = 1;
 
-        $this->lvTabs[] = ['creature', $tabData];
+        $this->lvTabs[] = [CreatureList::$brickFile, $tabData];
+    }
 
+    protected function postCache()
+    {
         // sort for dropdown-menus
         Lang::sort('game', 'fa');
     }

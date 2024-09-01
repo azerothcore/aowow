@@ -10,18 +10,30 @@ class ArenaTeamsPage extends GenericPage
 {
     use TrProfiler;
 
+    private $filterObj  = null;
+
+    protected $subCat   = '';
+    protected $filter   = [];
+    protected $lvTabs   = [];
+
     protected $type     = Type::ARENA_TEAM;
 
     protected $tabId    = 1;
     protected $path     = [1, 5, 3];
     protected $tpl      = 'arena-teams';
-    protected $js       = [[JS_FILE, 'filters.js'], [JS_FILE, 'profile_all.js'], [JS_FILE, 'profile.js']];
+    protected $scripts  = array(
+        [SC_JS_FILE, 'js/filters.js'],
+        [SC_JS_FILE, 'js/profile_all.js'],
+        [SC_JS_FILE, 'js/profile.js']
+    );
 
     protected $_get     = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
     public function __construct($pageCall, $pageParam)
     {
-        if (!CFG_PROFILER_ENABLE)
+        parent::__construct($pageCall, $pageParam);
+
+        if (!Cfg::get('PROFILER_ENABLE'))
             $this->error();
 
         $this->getSubjectFromUrl($pageParam);
@@ -39,8 +51,6 @@ class ArenaTeamsPage extends GenericPage
             $this->sumSubjects += DB::Characters($idx)->selectCell('SELECT count(*) FROM arena_team');
         }
 
-        parent::__construct($pageCall, $pageParam);
-
         $this->name   = Lang::profiler('arenaTeams');
         $this->subCat = $pageParam ? '='.$pageParam : '';
     }
@@ -48,7 +58,7 @@ class ArenaTeamsPage extends GenericPage
     protected function generateTitle()
     {
         if ($this->realm)
-            array_unshift($this->title, $this->realm,/* CFG_BATTLEGROUP,*/ Lang::profiler('regions', $this->region), Lang::profiler('arenaTeams'));
+            array_unshift($this->title, $this->realm,/* Cfg::get('BATTLEGROUP'),*/ Lang::profiler('regions', $this->region), Lang::profiler('arenaTeams'));
         else if ($this->region)
             array_unshift($this->title, Lang::profiler('regions', $this->region), Lang::profiler('arenaTeams'));
         else
@@ -57,7 +67,7 @@ class ArenaTeamsPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=realms&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=realms']);
 
         $conditions = [];
         if (!User::isInGroup(U_GROUP_EMPLOYEE))
@@ -83,7 +93,7 @@ class ArenaTeamsPage extends GenericPage
         if (empty($this->filter['sz']))
             $tabData['visibleCols'][] = 'size';
 
-        $miscParams = [];
+        $miscParams = ['calcTotal' => true];
         if ($this->realm)
             $miscParams['sv'] = $this->realm;
         if ($this->region)
@@ -94,27 +104,31 @@ class ArenaTeamsPage extends GenericPage
         {
             $teams->initializeLocalEntries();
 
-            $dFields = $teams->hasDiffFields(['faction', 'type']);
+            $dFields = $teams->hasDiffFields('faction', 'type');
             if (!($dFields & 0x1))
                 $tabData['hiddenCols'][] = 'faction';
 
             $tabData['data'] = array_values($teams->getListviewData());
 
             // create note if search limit was exceeded
-            if ($this->filter['query'] && $teams->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+            if ($this->filter['query'] && $teams->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
             {
                 $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound2', $this->sumSubjects, $teams->getMatches());
                 $tabData['_truncated'] = 1;
             }
-            else if ($teams->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+            else if ($teams->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
                 $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound', $this->sumSubjects, 0);
 
             if ($this->filterObj->error)
                 $tabData['_errors'] = 1;
         }
 
-        $this->lvTabs[] = ['profile', $tabData, 'membersCol'];
+        $this->lvTabs[] = [ArenaTeamList::$brickFile, $tabData, 'membersCol'];
+    }
 
+    protected function postCache()
+    {
+        // sort for dropdown-menus
         Lang::sort('game', 'cl');
         Lang::sort('game', 'ra');
     }

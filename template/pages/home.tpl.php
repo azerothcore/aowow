@@ -85,10 +85,14 @@ endif;
             <a href="?aboutus"><?=Lang::main('aboutUs'); ?></a>|<a href="https://github.com/azerothcore/aowow" target="_blank">Github</a>|<a href="#" id="footer-links-language"><?=Lang::main('language'); ?></a>
         </div>
         <div class="footer-copy">
+<<<<<<< HEAD
             &#12484; 2024 Aowow<br />
             rev. <?=AOWOW_REVISION; ?>
             <br>
             AzerothCore rev: <a href="https://github.com/azerothcore/azerothcore-wotlk/commit/c0b6eae0e1b4">c0b6eae0e1b4</a>
+=======
+            &#12484; 2024 Aowow<br />rev. <?=AOWOW_REVISION; ?>
+>>>>>>> 79aa8fda7ed275f75027609a954555b34b6a51fb
         </div>
     </div>
 

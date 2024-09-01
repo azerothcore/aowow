@@ -6,6 +6,14 @@ if (!defined('AOWOW_REVISION'))
 
 class AdminPage extends GenericPage
 {
+    protected $getAll    = null;
+    protected $ssPages   = [];
+    protected $ssData    = [];
+    protected $ssNFound  = 0;
+    protected $lvTabs    = [];
+    protected $extraText = '';
+    protected $extraHTML = '';
+
     protected $tpl       = null;                            // depends on the subject
     protected $reqUGroup = U_GROUP_NONE;                    // actual group dependant on the subPage
     protected $reqAuth   = true;
@@ -98,57 +106,40 @@ class AdminPage extends GenericPage
     private function handleConfig() : void
     {
         $this->addScript(
-            [CSS_STRING, '.grid input[type=\'text\'], .grid input[type=\'number\'] { width:250px; text-align:left; }'],
-            [CSS_STRING, '.grid input[type=\'button\'] { width:65px; padding:2px; }'],
-            [CSS_STRING, '.grid a.tip { margin:0px 5px; opacity:0.8; }'],
-            [CSS_STRING, '.grid a.tip:hover  { opacity:1; }'],
-            [CSS_STRING, '.grid tr { height:30px; }'],
-            [CSS_STRING, '.grid .disabled { opacity:0.4 !important; }'],
-            [CSS_STRING, '.grid .status { position:absolute; right:5px; }']
+            [SC_CSS_STRING, '.grid input[type=\'text\'], .grid input[type=\'number\'] { width:250px; text-align:left; }'],
+            [SC_CSS_STRING, '.grid input[type=\'button\'] { width:65px; padding:2px; }'],
+            [SC_CSS_STRING, '.grid a.tip { margin:0px 5px; opacity:0.8; }'],
+            [SC_CSS_STRING, '.grid a.tip:hover  { opacity:1; }'],
+            [SC_CSS_STRING, '.grid tr { height:30px; }'],
+            [SC_CSS_STRING, '.grid .disabled { opacity:0.4 !important; }'],
+            [SC_CSS_STRING, '.grid .status { position:absolute; right:5px; }']
         );
 
-        $head = '<table class="grid"><tr><th><b>Key</b></th><th><b>Value</b></th><th style="width:150px;"><b>Options</b></th></tr>';
-        $mainTab = [];
-        $miscTab = [];
-        foreach (Util::$configCats as $idx => $catName)
+        $head = '<tr><th><b>Key</b></th><th><b>Value</b></th><th style="width:150px;"><b>Options</b></th></tr>';
+        foreach (Cfg::$categories as $idx => $catName)
         {
-            if ($rows = DB::Aowow()->select('SELECT * FROM ?_config WHERE cat = ?d ORDER BY `flags` DESC, `key` ASC', $idx))
-            {
-                $buff = $head;
-                foreach ($rows as $r)
-                    $buff .= $this->configAddRow($r);
+            $rows = '';
+            foreach (Cfg::forCategory($idx) as $key => [$value, $flags, , $default, $comment])
+                $rows .= $this->configAddRow($key, $value, $flags, $default, $comment);
 
-                if (!$idx)                                  //cat: misc
-                    $buff .= '<tr><td colspan="3"><a class="icon-add" onclick="cfg_add(this)">new configuration</a></td></tr>';
+            if ($idx == Cfg::CAT_MISCELLANEOUS)
+                $rows .= '<tr><td colspan="3"><a class="icon-add" onclick="cfg_add(this)">new configuration</a></td></tr>';
 
-                $buff .= '</table>';
+            if (!$rows)
+                continue;
 
-                if ($idx)
-                    $mainTab[$catName] = $buff;
-                else
-                    $miscTab[$catName] = $buff;
-            }
+            $this->lvTabs[] = [null, array(
+                'data' => '<table class="grid">' . $head . $rows . '</table>',
+                'name' => $catName,
+                'id'   => Profiler::urlize($catName)
+            )];
         }
-
-        foreach ($mainTab as $n => $t)
-            $this->lvTabs[] = [null, array(
-                'data' => $t,
-                'name' => $n,
-                'id'   => Profiler::urlize($n)
-            )];
-
-        foreach ($miscTab as $n => $t)
-            $this->lvTabs[] = [null, array(
-                'data' => $t,
-                'name' => $n,
-                'id'   => Profiler::urlize($n)
-            )];
     }
 
     private function handlePhpInfo() : void
     {
         $this->addScript([
-            CSS_STRING, "\npre {margin: 0px; font-family: monospace;}\n" .
+            SC_CSS_STRING, "\npre {margin: 0px; font-family: monospace;}\n" .
                         "td, th { border: 1px solid #000000; vertical-align: baseline;}\n" .
                         ".p {text-align: left;}\n" .
                         ".e {background-color: #ccccff; font-weight: bold; color: #000000;}\n" .
@@ -212,9 +203,9 @@ class AdminPage extends GenericPage
     private function handleScreenshots() : void
     {
         $this->addScript(
-            [JS_FILE,    'screenshot.js'],
-            [CSS_STRING, '.layout {margin: 0px 25px; max-width: inherit; min-width: 1200px; }'],
-            [CSS_STRING, '#highlightedRow { background-color: #322C1C; }']
+            [SC_JS_FILE,    'js/screenshot.js'],
+            [SC_CSS_STRING, '.layout {margin: 0px 25px; max-width: inherit; min-width: 1200px; }'],
+            [SC_CSS_STRING, '#highlightedRow { background-color: #322C1C; }']
         );
 
         $ssGetAll = $this->_get['all'];
@@ -222,7 +213,7 @@ class AdminPage extends GenericPage
         $ssData   = [];
         $nMatches = 0;
 
-        if ($this->_get['type'] && $this->_get['typeId'])
+        if ($this->_get['type'] && $this->_get['typeid'])
         {
             $ssData   = CommunityContent::getScreenshotsForManager($this->_get['type'], $this->_get['typeid']);
             $nMatches = count($ssData);
@@ -250,8 +241,8 @@ class AdminPage extends GenericPage
     private function handleWeightPresets() : void
     {
         $this->addScript(
-            [JS_FILE,    'filters.js'],
-            [CSS_STRING, '.wt-edit {display:inline-block; vertical-align:top; width:350px;}']
+            [SC_JS_FILE,    'js/filters.js'],
+            [SC_CSS_STRING, '.wt-edit {display:inline-block; vertical-align:top; width:350px;}']
         );
 
         $head = $body = '';
@@ -289,7 +280,7 @@ class AdminPage extends GenericPage
                 $data[$id]['rev'] = $rev;
         }
 
-        $this->lvTabs[] = ['guide', array(
+        $this->lvTabs[] = [GuideList::$brickFile, array(
             'data'       => array_values($data),
             'hiddenCols' => ['patch', 'comments', 'views', 'rating'],
             'extraCols'  => '$_'
@@ -312,55 +303,55 @@ class AdminPage extends GenericPage
         //
     }
 
-    private function configAddRow($r)
+    private function configAddRow($key, $value, $flags, $default, $comment)
     {
         $buff = '<tr>';
-        $info = explode(' - ', $r['comment']);
-        $key  = $r['flags'] & CON_FLAG_PHP ? strtolower($r['key']) : strtoupper($r['key']);
+        $info = explode(' - ', $comment);
+        $key  = $flags & Cfg::FLAG_PHP ? strtolower($key) : strtoupper($key);
 
         // name
-        if (!empty($info[1]))
-            $buff .= '<td>'.sprintf(Util::$dfnString, $info[1], $key).'</td>';
+        if (!empty($info[0]))
+            $buff .= '<td>'.sprintf(Util::$dfnString, $info[0], $key).'</td>';
         else
             $buff .= '<td>'.$key.'</td>';
 
         // value
-        if ($r['flags'] & CON_FLAG_TYPE_BOOL)
-            $buff .= '<td><div id="'.$key.'"><input id="'.$key.'1" type="radio" name="'.$key.'" value="1" '.($r['value'] ? 'checked' : null).' /><label for="'.$key.'1">Enabled</label> <input id="'.$key.'0" type="radio" name="'.$key.'" value="0" '.($r['value'] ? null : 'checked').' /><label for="'.$key.'0">Disabled</label></div></td>';
-        else if ($r['flags'] & CON_FLAG_OPT_LIST && !empty($info[2]))
+        if ($flags & Cfg::FLAG_TYPE_BOOL)
+            $buff .= '<td><div id="'.$key.'"><input id="'.$key.'1" type="radio" name="'.$key.'" value="1" '.($value ? 'checked' : null).' /><label for="'.$key.'1">Enabled</label> <input id="'.$key.'0" type="radio" name="'.$key.'" value="0" '.($value ? null : 'checked').' /><label for="'.$key.'0">Disabled</label></div></td>';
+        else if ($flags & Cfg::FLAG_OPT_LIST && !empty($info[1]))
         {
             $buff .= '<td><select id="'.$key.'" name="'.$key.'">';
-            foreach (explode(', ', $info[2]) as $option)
+            foreach (explode(', ', $info[1]) as $option)
             {
-                $opt = explode(':', $option);
-                $buff .= '<option value="'.$opt[0].'"'.($r['value'] == $opt[0] ? ' selected ' : null).'>'.$opt[1].'</option>';
+                [$idx, $name] = explode(':', $option);
+                $buff .= '<option value="'.$idx.'"'.($value == $idx ? ' selected ' : null).'>'.$name.'</option>';
             }
             $buff .= '</select></td>';
         }
-        else if ($r['flags'] & CON_FLAG_BITMASK && !empty($info[2]))
+        else if ($flags & Cfg::FLAG_BITMASK && !empty($info[1]))
         {
             $buff .= '<td><div id="'.$key.'">';
-            foreach (explode(', ', $info[2]) as $option)
+            foreach (explode(', ', $info[1]) as $option)
             {
-                $opt = explode(':', $option);
-                $buff .= '<input id="'.$key.$opt[0].'" type="checkbox" name="'.$key.'" value="'.$opt[0].'"'.($r['value'] & (1 << $opt[0]) ? ' checked ' : null).'><label for="'.$key.$opt[0].'">'.$opt[1].'</label>';
+                [$idx, $name] = explode(':', $option);
+                $buff .= '<input id="'.$key.$idx.'" type="checkbox" name="'.$key.'" value="'.$idx.'"'.($value & (1 << $idx) ? ' checked ' : null).'><label for="'.$key.$idx.'">'.$name.'</label>';
             }
             $buff .= '</div></td>';
         }
         else
-            $buff .= '<td><input id="'.$key.'" type="'.($r['flags'] & CON_FLAG_TYPE_STRING ? 'text" placeholder="<empty>' : 'number'.($r['flags'] & CON_FLAG_TYPE_FLOAT ? '" step="any' : '')).'" name="'.$key.'" value="'.$r['value'].'" /></td>';
+            $buff .= '<td><input id="'.$key.'" type="'.($flags & Cfg::FLAG_TYPE_STRING ? 'text" placeholder="<empty>' : 'number'.($flags & Cfg::FLAG_TYPE_FLOAT ? '" step="any' : '')).'" name="'.$key.'" value="'.$value.'" /></td>';
 
         // actions
         $buff .= '<td style="position:relative;">';
 
         $buff .= '<a class="icon-save tip" onclick="cfg_submit.bind(this, \''.$key.'\')()" onmouseover="$WH.Tooltip.showAtCursor(event, \'Save Changes\', 0, 0, \'q\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()"></a>';
 
-        if (strstr($info[0], 'default:'))
-            $buff .= '|<a class="icon-refresh tip" onclick="cfg_default(\''.$key.'\', \''.trim(explode('default:', $info[0])[1]).'\')" onmouseover="$WH.Tooltip.showAtCursor(event, \'Restore Default Value\', 0, 0, \'q\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()"></a>';
+        if (isset($default))
+            $buff .= '|<a class="icon-refresh tip" onclick="cfg_default(\''.$key.'\', \''.$default.'\')" onmouseover="$WH.Tooltip.showAtCursor(event, \'Restore Default Value\', 0, 0, \'q\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()"></a>';
         else
             $buff .= '|<a class="icon-refresh tip disabled"></a>';
 
-        if (!($r['flags'] & CON_FLAG_PERSISTENT))
+        if (!($flags & Cfg::FLAG_PERSISTENT))
             $buff .= '|<a class="icon-delete tip" onclick="cfg_remove.bind(this, \''.$key.'\')()" onmouseover="$WH.Tooltip.showAtCursor(event, \'Remove Setting\', 0, 0, \'q\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()"></a>';
 
         $buff .= '<span class="status"></span></td></tr>';

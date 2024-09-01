@@ -22,7 +22,7 @@ class QuestList extends BaseType
                         'e'   => ['j' => ['?_events e ON e.id = `q`.eventId', true], 's' => ', e.holidayId']
                     );
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -148,12 +148,15 @@ class QuestList extends BaseType
         return in_array($this->getField('zoneOrSortBak'), [-22, -284, -366, -369, -370, -376, -374]) && !$this->isRepeatable();
     }
 
-    public function getSourceData()
+    public function getSourceData(int $id = 0) : array
     {
         $data = [];
 
         foreach ($this->iterate() as $__)
         {
+            if ($id && $id != $this->id)
+                continue;
+
             $data[$this->id] = array(
                 "n"  => $this->getField('name', true),
                 "t"  => Type::QUEST,
@@ -208,7 +211,7 @@ class QuestList extends BaseType
                 'id'        => $this->id,
                 'level'     => $this->curTpl['level'],
                 'reqlevel'  => $this->curTpl['minLevel'],
-                'name'      => $this->getField('name', true),
+                'name'      => Lang::unescapeUISequences($this->getField('name', true), Lang::FMT_RAW),
                 'side'      => Game::sideByRaceMask($this->curTpl['reqRaceMask']),
                 'wflags'    => 0x0,
                 'xp'        => $this->curTpl['rewardXP']
@@ -313,7 +316,7 @@ class QuestList extends BaseType
         if (!$this->curTpl)
             return null;
 
-        $title = htmlentities($this->getField('name', true));
+        $title = Lang::unescapeUISequences(Util::htmlEscape($this->getField('name', true)), Lang::FMT_HTML);
         $level = $this->curTpl['level'];
         if ($level < 0)
             $level = 0;
@@ -348,7 +351,7 @@ class QuestList extends BaseType
             if ($ot)
                 $name = $ot;
             else
-                $name = $rng > 0 ? CreatureList::getName($rng) : GameObjectList::getName(-$rng);
+                $name = $rng > 0 ? CreatureList::getName($rng) : Lang::unescapeUISequences(GameObjectList::getName(-$rng), Lang::FMT_HTML);
 
             $xReq .= '<br /> - '.$name.($rngQty > 1 ? ' x '.$rngQty : null);
         }
@@ -361,7 +364,7 @@ class QuestList extends BaseType
             if (!$ri || $riQty < 1)
                 continue;
 
-            $xReq .= '<br /> - '.ItemList::getName($ri).($riQty > 1 ? ' x '.$riQty : null);
+            $xReq .= '<br /> - '.Lang::unescapeUISequences(ItemList::getName($ri), Lang::FMT_HTML).($riQty > 1 ? ' x '.$riQty : null);
         }
 
         if ($et = $this->getField('end', true))
@@ -425,10 +428,16 @@ class QuestList extends BaseType
 class QuestListFilter extends Filter
 {
     public    $extraOpts     = [];
-    protected $enums         = array(                       // massive enums could be put here, if you want to restrict inputs further to be valid IDs instead of just integers
-        37 => [null, 1, 2, 3, 4, 5, 6, 7, 8,    9, null, 11, true, false],
-        38 => [null, 1, 2, 3, 4, 5, 6, 7, 8, null,   10, 11, true, false],
+    protected $enums         = array(
+        37 => parent::ENUM_CLASSS,                          // classspecific
+        38 => parent::ENUM_RACE,                            // racespecific
+         9 => parent::ENUM_FACTION,                         // objectiveearnrepwith
+        33 => parent::ENUM_EVENT,                           // relatedevent
+        43 => parent::ENUM_CURRENCY,                        // currencyrewarded
+         1 => parent::ENUM_FACTION,                         // increasesrepwith
+        10 => parent::ENUM_FACTION                          // decreasesrepwith
     );
+
     protected $genericFilter = array(
          1 => [FILTER_CR_CALLBACK,  'cbReputation',     '>',                  null], // increasesrepwith
          2 => [FILTER_CR_NUMERIC,   'rewardXP',         NUM_CAST_INT              ], // experiencegained
@@ -451,9 +460,9 @@ class QuestListFilter extends Filter
         25 => [FILTER_CR_FLAG,      'cuFlags',          CUSTOM_HAS_COMMENT        ], // hascomments
         27 => [FILTER_CR_FLAG,      'flags',            QUEST_FLAG_DAILY          ], // daily
         28 => [FILTER_CR_FLAG,      'flags',            QUEST_FLAG_WEEKLY         ], // weekly
-        29 => [FILTER_CR_FLAG,      'flags',            QUEST_FLAG_REPEATABLE     ], // repeatable
+        29 => [FILTER_CR_CALLBACK,  'cbRepeatable',     null                      ], // repeatable
         30 => [FILTER_CR_NUMERIC,   'id',               NUM_CAST_INT,         true], // id
-        33 => [FILTER_CR_ENUM,      'e.holidayId'                                 ], // relatedevent
+        33 => [FILTER_CR_ENUM,      'e.holidayId',      true,                 true], // relatedevent
         34 => [FILTER_CR_CALLBACK,  'cbAvailable',      null,                 null], // availabletoplayers [yn]
         36 => [FILTER_CR_FLAG,      'cuFlags',          CUSTOM_HAS_VIDEO          ], // hasvideos
         37 => [FILTER_CR_CALLBACK,  'cbClassSpec',      null,                 null], // classspecific [enum]
@@ -464,12 +473,11 @@ class QuestListFilter extends Filter
         45 => [FILTER_CR_BOOLEAN,   'rewardTitleId'                               ]  // titlerewarded
     );
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
         'cr'    => [FILTER_V_RANGE, [1, 45],                                         true ], // criteria ids
         'crs'   => [FILTER_V_LIST,  [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 99999]], true ], // criteria operators
-        'crv'   => [FILTER_V_REGEX, '/\D/',                                          true ], // criteria values - only numerals
-        'na'    => [FILTER_V_REGEX, '/[\p{C};%\\\\]/ui',                             false], // name / text - only printable chars, no delimiter
+        'crv'   => [FILTER_V_REGEX, parent::PATTERN_INT,                             true ], // criteria values - only numerals
+        'na'    => [FILTER_V_REGEX, parent::PATTERN_NAME,                            false], // name / text - only printable chars, no delimiter
         'ex'    => [FILTER_V_EQUAL, 'on',                                            false], // also match subname
         'ma'    => [FILTER_V_EQUAL, 1,                                               false], // match any / all filter
         'minle' => [FILTER_V_RANGE, [1, 99],                                         false], // min quest level
@@ -479,17 +487,6 @@ class QuestListFilter extends Filter
         'si'    => [FILTER_V_LIST,  [-2, -1, 1, 2, 3],                               false], // siede
         'ty'    => [FILTER_V_LIST,  [0, 1, 21, 41, 62, [81, 85], 88, 89],            true ]  // type
     );
-
-    protected function createSQLForCriterium(&$cr)
-    {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCr = $this->genericCriterion($cr))
-                return $genCr;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
-    }
 
     protected function createSQLForValues()
     {
@@ -560,7 +557,10 @@ class QuestListFilter extends Filter
 
     protected function cbReputation($cr, $sign)
     {
-        if (!Util::checkNumeric($cr[1], NUM_REQ_INT) || $cr[1] <= 0)
+        if (!Util::checkNumeric($cr[1], NUM_CAST_INT))
+            return false;
+
+        if (!in_array($cr[1], $this->enums[$cr[0]]))
             return false;
 
         if ($_ = DB::Aowow()->selectRow('SELECT * FROM ?_factions WHERE id = ?d', $cr[1]))
@@ -593,7 +593,10 @@ class QuestListFilter extends Filter
 
     protected function cbCurrencyReward($cr)
     {
-        if (!Util::checkNumeric($cr[1], NUM_REQ_INT) || $cr[1] <= 0)
+        if (!Util::checkNumeric($cr[1], NUM_CAST_INT))
+            return false;
+
+        if (!in_array($cr[1], $this->enums[$cr[0]]))
             return false;
 
         return [
@@ -612,6 +615,17 @@ class QuestListFilter extends Filter
             return [['cuFlags', CUSTOM_UNAVAILABLE | CUSTOM_DISABLED, '&'], 0];
         else
             return ['cuFlags', CUSTOM_UNAVAILABLE | CUSTOM_DISABLED, '&'];
+    }
+
+    protected function cbRepeatable($cr)
+    {
+        if (!$this->int2Bool($cr[1]))
+            return false;
+
+        if ($cr[1])
+            return ['OR', ['flags', QUEST_FLAG_REPEATABLE, '&'], ['specialFlags', QUEST_FLAG_SPECIAL_REPEATABLE, '&']];
+        else
+            return ['AND', [['flags', QUEST_FLAG_REPEATABLE, '&'], 0], [['specialFlags', QUEST_FLAG_SPECIAL_REPEATABLE, '&'], 0]];
     }
 
     protected function cbItemChoices($cr)
@@ -640,9 +654,9 @@ class QuestListFilter extends Filter
             return false;
 
         if ($cr[1])
-            return ['AND', ['zoneOrSort', 0, '>'], [['flags', QUEST_FLAG_DAILY | QUEST_FLAG_WEEKLY | QUEST_FLAG_REPEATABLE , '&'], 0], [['specialFlags', QUEST_FLAG_SPECIAL_REPEATABLE | QUEST_FLAG_SPECIAL_MONTHLY , '&'], 0]];
+            return ['AND', ['zoneOrSort', 0, '>'], [['flags', QUEST_FLAG_DAILY | QUEST_FLAG_WEEKLY | QUEST_FLAG_REPEATABLE, '&'], 0], [['specialFlags', QUEST_FLAG_SPECIAL_REPEATABLE | QUEST_FLAG_SPECIAL_MONTHLY, '&'], 0]];
         else
-            return ['OR', ['zoneOrSort', 0, '<'], ['flags', QUEST_FLAG_DAILY | QUEST_FLAG_WEEKLY | QUEST_FLAG_REPEATABLE , '&'], ['specialFlags', QUEST_FLAG_SPECIAL_REPEATABLE | QUEST_FLAG_SPECIAL_MONTHLY , '&']];;
+            return ['OR', ['zoneOrSort', 0, '<'], ['flags', QUEST_FLAG_DAILY | QUEST_FLAG_WEEKLY | QUEST_FLAG_REPEATABLE, '&'], ['specialFlags', QUEST_FLAG_SPECIAL_REPEATABLE | QUEST_FLAG_SPECIAL_MONTHLY, '&']];
     }
 
     protected function cbSpellRewards($cr)
@@ -651,22 +665,22 @@ class QuestListFilter extends Filter
             return false;
 
         if ($cr[1])
-            return ['OR', ['sourceSpellId', 0, '>'], ['rewardSpell', 0, '>'], ['rsc.effect1Id', SpellList::$effects['teach']], ['rsc.effect2Id', SpellList::$effects['teach']], ['rsc.effect3Id', SpellList::$effects['teach']]];
+            return ['OR', ['sourceSpellId', 0, '>'], ['rewardSpell', 0, '>'], ['rsc.effect1Id', SpellList::EFFECTS_TEACH], ['rsc.effect2Id', SpellList::EFFECTS_TEACH], ['rsc.effect3Id', SpellList::EFFECTS_TEACH]];
         else
             return ['AND', ['sourceSpellId', 0], ['rewardSpell', 0], ['rewardSpellCast', 0]];
     }
 
     protected function cbEarnReputation($cr)
     {
-        if (!Util::checkNumeric($cr[1], NUM_REQ_INT))
+        if (!Util::checkNumeric($cr[1], NUM_CAST_INT))
             return false;
 
-        if ($cr[1] > 0)
-            return ['OR', ['reqFactionId1', $cr[1]], ['reqFactionId2', $cr[1]]];
-        else if ($cr[1] == FILTER_ENUM_ANY)         // any
+        if ($cr[1] == FILTER_ENUM_ANY)              // any
             return ['OR', ['reqFactionId1', 0, '>'], ['reqFactionId2', 0, '>']];
         else if ($cr[1] == FILTER_ENUM_NONE)        // none
             return ['AND', ['reqFactionId1', 0], ['reqFactionId2', 0]];
+        else if (in_array($cr[1], $this->enums[$cr[0]]))
+            return ['OR', ['reqFactionId1', $cr[1]], ['reqFactionId2', $cr[1]]];
 
         return false;
     }

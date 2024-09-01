@@ -24,7 +24,7 @@ class FactionsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -55,7 +55,7 @@ class FactionsPage extends GenericPage
         if (!$factions->error)
             $data = array_values($factions->getListviewData());
 
-        $this->lvTabs[] = ['faction', ['data' => $data]];
+        $this->lvTabs[] = [FactionList::$brickFile, ['data' => $data]];
     }
 
     protected function generateTitle()

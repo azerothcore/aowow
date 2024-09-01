@@ -10,17 +10,19 @@ class ZonesPage extends GenericPage
 {
     use TrListPage;
 
+    protected $map       = null;
+
     protected $type      = Type::ZONE;
     protected $tpl       = 'list-page-generic';
     protected $path      = [0, 6];
     protected $tabId     = 0;
     protected $mode      = CACHE_TYPE_PAGE;
     protected $validCats = [true, true, [0, 1, 2], [0, 1, 2], false, false, true, false, true, true, true];
-    protected $js        = [[JS_FILE, 'ShowOnMap.js']];
+    protected $scripts   = [[SC_JS_FILE, 'js/ShowOnMap.js']];
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -29,7 +31,7 @@ class ZonesPage extends GenericPage
 
     protected function generateContent()
     {
-        $conditions  = [CFG_SQL_LIMIT_NONE];
+        $conditions  = [Cfg::get('SQL_LIMIT_NONE')];
         $visibleCols = [];
         $hiddenCols  = [];
         $mapFile     = 0;
@@ -71,7 +73,7 @@ class ZonesPage extends GenericPage
 
         $zones = new ZoneList($conditions);
 
-        if (!$zones->hasSetFields(['type']))
+        if (!$zones->hasSetFields('type'))
             $hiddenCols[] = 'instancetype';
 
         $tabData = ['data' => array_values($zones->getListviewData())];
@@ -82,8 +84,7 @@ class ZonesPage extends GenericPage
         if ($hiddenCols)
             $tabData['hiddenCols'] = $hiddenCols;
 
-        $this->map      = null;
-        $this->lvTabs[] = ['zone', $tabData];
+        $this->lvTabs[] = [ZoneList::$brickFile, $tabData];
 
         // create flight map
         if ($mapFile)

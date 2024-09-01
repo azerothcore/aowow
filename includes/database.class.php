@@ -13,7 +13,6 @@ class DB
 {
     private static $interfaceCache  = [];
     private static $optionsCache    = [];
-    private static $connectionCache = [];
 
     private static $logs            = [];
 
@@ -25,28 +24,34 @@ class DB
     public static function connect($idx)
     {
         if (self::isConnected($idx))
-            return;
+        {
+            self::$interfaceCache[$idx]->link->close();
+            self::$interfaceCache[$idx] = null;
+        }
 
         $options = &self::$optionsCache[$idx];
         $interface = DbSimple_Generic::connect(self::createConnectSyntax($options));
 
-        if (!$interface || $interface->error)
-            die('Failed to connect to database on index #'.$idx.".\n");
-
         $interface->setErrorHandler(['DB', 'errorHandler']);
-        $interface->query('SET NAMES ?', 'utf8mb4');
         if ($options['prefix'])
             $interface->setIdentPrefix($options['prefix']);
 
-        // disable STRICT_TRANS_TABLES and STRICT_ALL_TABLES off. It prevents usage of implicit default values.
-        if ($idx == DB_AOWOW)
-            $interface->query("SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION'");
-        // disable ONLY_FULL_GROUP_BY (Allows for non-aggregated selects in a group-by query)
-        else
-            $interface->query("SET SESSION sql_mode = ''");
-
         self::$interfaceCache[$idx] = &$interface;
-        self::$connectionCache[$idx] = true;
+
+        // should be caught by registered error handler
+        if (!$interface || !$interface->link)
+            return;
+
+        $interface->query('SET NAMES ?', 'utf8mb4');
+
+        // disable STRICT_TRANS_TABLES and STRICT_ALL_TABLES off. It prevents usage of implicit default values.
+        // disable ONLY_FULL_GROUP_BY (Allows for non-aggregated selects in a group-by query)
+        $extraModes = ['STRICT_TRANS_TABLES', 'STRICT_ALL_TABLES', 'ONLY_FULL_GROUP_BY', 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE', 'ERROR_FOR_DIVISION_BY_ZERO'];
+        $oldModes   = explode(',', $interface->selectCell('SELECT @@sql_mode'));
+        $newModes = array_diff($oldModes, $extraModes);
+
+        if ($oldModes != $newModes)
+            $interface->query("SET SESSION sql_mode = ?", implode(',', $newModes));
     }
 
     public static function test(array $options, ?string &$err = '') : bool
@@ -56,16 +61,14 @@ class DB
         if (strstr($options['host'], ':'))
             [$options['host'], $port] = explode(':', $options['host']);
 
-        try {
-            $link = @mysqli_connect($options['host'], $options['user'], $options['pass'], $options['db'], $port ?: $defPort);
-            mysqli_close($link);
-        }
-        catch (Exception $e)
+        if ($link = mysqli_connect($options['host'], $options['user'], $options['pass'], $options['db'], $port ?: $defPort))
         {
-            $err = '['.mysqli_connect_errno().'] '.mysqli_connect_error();
-            return false;
-        }
+            mysqli_close($link);
             return true;
+        }
+
+        $err = '['.mysqli_connect_errno().'] '.mysqli_connect_error();
+        return false;
     }
 
     public static function errorHandler($message, $data)
@@ -73,16 +76,26 @@ class DB
         if (!error_reporting())
             return;
 
-        $error = "DB ERROR:<br /><br />\n\n<pre>".print_r($data, true)."</pre>";
+        // continue on warning, end on error
+        $isError = $data['code'] > 0;
 
-        echo CLI ? strip_tags($error) : $error;
-        exit;
+        // make number sensible again
+        $data['code'] = abs($data['code']);
+
+        if (Cfg::get('DEBUG') >= CLI::LOG_INFO)
+        {
+            echo "\nDB ERROR\n";
+            foreach ($data as $k => $v)
+                echo '  '.str_pad($k.':', 10).$v."\n";
+        }
+
+        trigger_error($message, $isError ? E_USER_ERROR : E_USER_WARNING);
     }
 
-    public static function logger($self, $query, $trace)
+    public static function profiler($self, $query, $trace)
     {
         if ($trace)                                         // actual query
-            self::$logs[] = [substr(str_replace("\n", ' ', $query), 0, 200)];
+            self::$logs[] = [str_replace("\n", ' ', $query)];
         else                                                // the statistics
         {
             end(self::$logs);
@@ -90,7 +103,7 @@ class DB
         }
     }
 
-    public static function getLogs()
+    public static function getProfiles()
     {
         $out = '<pre><table style="font-size:12;"><tr><th></th><th>Time</th><th>Query</th></tr>';
         foreach (self::$logs as $i => [$l, $t])
@@ -115,20 +128,12 @@ class DB
 
     public static function isConnected($idx)
     {
-        return isset(self::$connectionCache[$idx]);
+        return isset(self::$interfaceCache[$idx]) && self::$interfaceCache[$idx]->link;
     }
 
     public static function isConnectable($idx)
     {
         return isset(self::$optionsCache[$idx]);
-    }
-
-    private static function safeGetDB($idx)
-    {
-        if (!self::isConnected($idx))
-            self::connect($idx);
-
-        return self::getDB($idx);
     }
 
     /**
@@ -140,7 +145,7 @@ class DB
         if (!isset(self::$optionsCache[DB_CHARACTERS.$realm]))
             die('Connection info not found for live database of realm #'.$realm.'. Aborted.');
 
-        return self::safeGetDB(DB_CHARACTERS.$realm);
+        return self::getDB(DB_CHARACTERS.$realm);
     }
 
     /**
@@ -149,7 +154,7 @@ class DB
      */
     public static function Auth()
     {
-        return self::safeGetDB(DB_AUTH);
+        return self::getDB(DB_AUTH);
     }
 
     /**
@@ -158,7 +163,7 @@ class DB
      */
     public static function World()
     {
-        return self::safeGetDB(DB_WORLD);
+        return self::getDB(DB_WORLD);
     }
 
     /**
@@ -167,12 +172,13 @@ class DB
      */
     public static function Aowow()
     {
-        return self::safeGetDB(DB_AOWOW);
+        return self::getDB(DB_AOWOW);
     }
 
     public static function load($idx, $config)
     {
         self::$optionsCache[$idx] = $config;
+        self::connect($idx);
     }
 }
 

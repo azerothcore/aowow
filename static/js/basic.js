@@ -1852,6 +1852,13 @@ $WH.Tooltip = {
                     Slider.setSize(tooltip.slider, m - 6);
                     tooltip.className += ' tooltip-slider';
                 }
+                // btt<typeId> empty, try to find tt<typeId>
+                else if (tt = $WH.ge(tooltip.id.substr(1))) { // aowow - added for spells with buff, but w/o tooltip
+                    if (tt.slider) {
+                        Slider.setSize(tt.slider, tt.offsetWidth - 6);
+                        tooltip.className += ' tooltip-slider';
+                    }
+                }
 
                 if (!noShrink && tooltip.offsetHeight > document.body.clientHeight) {
                     table.className = 'shrink';
@@ -1905,9 +1912,10 @@ $WH.Tooltip = {
     set: function(text, text2) {
         var _ = $WH.Tooltip.tooltip;
 
-        _.style.width = '550px';
-        _.style.left  = '-2323px';
-        _.style.top   = '-2323px';
+        _.style.maxWidth = '320px';
+    //  _.style.width    = '550px';
+        _.style.left     = '-2323px';
+        _.style.top      = '-2323px';
 
         if (text.nodeName) {
             $WH.ee($WH.Tooltip.tooltipTd);
@@ -1925,9 +1933,10 @@ $WH.Tooltip = {
             $WH.Tooltip.showSecondary = true;
             var _ = $WH.Tooltip.tooltip2;
 
-            _.style.width = '550px';
-            _.style.left  = '-2323px';
-            _.style.top   = '-2323px';
+            _.style.maxWidth = '320px';
+        //  _.style.width    = '550px';
+            _.style.left     = '-2323px';
+            _.style.top      = '-2323px';
 
             if (text2.nodeName) {
                 $WH.ee($WH.Tooltip.tooltipTd2);
@@ -1960,15 +1969,17 @@ $WH.Tooltip = {
 
         var
             tooltip = $WH.Tooltip.tooltip,
-            tow     = $WH.Tooltip.tooltipTable.offsetWidth + 1,
-            toh     = $WH.Tooltip.tooltipTable.offsetHeight + 1,
+            tow     = $WH.Tooltip.tooltipTable.offsetWidth,
+            toh     = $WH.Tooltip.tooltipTable.offsetHeight,
             tt2     = $WH.Tooltip.tooltip2,
-            tt2w    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetWidth + 1 : 0,
-            tt2h    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetHeight + 1 : 0,
+            tt2w    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetWidth : 0,
+            tt2h    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetHeight : 0,
             _;
 
-        tooltip.style.width = tow + 'px';
-        tt2.style.width     = tt2w + 'px';
+        tooltip.style.width = 'max-content';
+     // tooltip.style.width = tow + 'px';
+        tt2.style.width     = 'max-content';
+     // tt2.style.width     = tt2w + 'px';
 
         var
             rect,
@@ -1997,11 +2008,11 @@ $WH.Tooltip = {
             bakLeft = left,
             bakTop  = top,
             tooltip = $WH.Tooltip.tooltip,
-            tow     = $WH.Tooltip.tooltipTable.offsetWidth + 1,
-            toh     = $WH.Tooltip.tooltipTable.offsetHeight + 1,
+            tow     = $WH.Tooltip.tooltipTable.offsetWidth,
+            toh     = $WH.Tooltip.tooltipTable.offsetHeight,
             tt2     = $WH.Tooltip.tooltip2,
-            tt2w    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetWidth + 1 : 0,
-            tt2h    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetHeight + 1 : 0,
+            tt2w    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetWidth : 0,
+            tt2h    = $WH.Tooltip.showSecondary ? $WH.Tooltip.tooltipTable2.offsetHeight : 0,
             winSize = $WH.g_getWindowSize(),
             scroll  = $WH.g_getScroll(),
             bcw     = winSize.w,
