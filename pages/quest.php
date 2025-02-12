@@ -998,7 +998,7 @@ class QuestPage extends GenericPage
         // tab: spawning pool (for the swarm)
         if ($qp = DB::World()->selectCol('SELECT pq2.entry FROM pool_quest pq1 JOIN pool_quest pq2 ON pq1.pool_entry = pq2.pool_entry WHERE pq1.entry = ?d', $this->typeId))
         {
-            $max = DB::World()->selectCell('SELECT numActive FROM pool_quest_template pqt JOIN pool_quest pq ON pq.pool_entry = pqt.entry WHERE pq.entry = ?d', $this->typeId);
+            $max = DB::World()->selectCell('SELECT max_limit FROM pool_template pqt JOIN pool_quest pq ON pq.pool_entry = pqt.entry WHERE pq.entry = ?d', $this->typeId);
             $pooledQuests = new QuestList(array(['id', $qp]));
             if (!$pooledQuests->error)
             {
