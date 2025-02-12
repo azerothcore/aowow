@@ -547,7 +547,7 @@ class NpcPage extends GenericPage
                           IFNULL(t2.ReqSkillLine, t1.ReqSkillLine) AS reqSkillId,
                           IFNULL(t2.ReqSkillRank, t1.ReqSkillRank) AS reqSkillValue,
                           IFNULL(t2.ReqLevel, t1.ReqLevel) AS reqLevel,
-                          IFNULL(t2.ReqSpell, t1.ReqSpell) AS reqSkillId
+                          IFNULL(t2.ReqSpell, t1.ReqSpell) AS reqSpellId
                 FROM      npc_trainer t1
                 LEFT JOIN npc_trainer t2 ON t2.ID = IF(t1.SpellID < 0, -t1.SpellID, null)
                 WHERE     t1.ID = ?d
