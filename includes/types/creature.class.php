@@ -9,7 +9,7 @@ class CreatureList extends BaseType
     use spawnHelper;
 
     public static   $type      = Type::NPC;
-    public static   $brickFile = 'creature';
+    public static   $brickFile = 'npc';
     public static   $dataTable = '?_creature';
 
     protected       $queryBase = 'SELECT ct.*, ct.id AS ARRAY_KEY FROM ?_creature ct';
@@ -24,7 +24,7 @@ class CreatureList extends BaseType
                         's'      => ['j' => ['?_spawns s ON s.type = 1 AND s.typeId = ct.id', true]]
                     );
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -257,28 +257,24 @@ class CreatureList extends BaseType
         return $data;
     }
 
-    public function getSourceData()
+    public function getSourceData(int $id = 0) : array
     {
         $data = [];
 
         foreach ($this->iterate() as $__)
         {
+            if ($id && $id != $this->id)
+                continue;
+
             $data[$this->id] = array(
                 'n'  => $this->getField('parentId') ? $this->getField('parent', true) : $this->getField('name', true),
                 't'  => Type::NPC,
-                'ti' => $this->getField('parentId') ?: $this->id,
-             // 'bd' => (int)($this->curTpl['cuFlags'] & NPC_CU_INSTANCE_BOSS || ($this->curTpl['typeFlags'] & 0x4 && $this->curTpl['rank']))
-             // 'z'   where am i spawned
-             // 'dd'   DungeonDifficulty requires 'z'
+                'ti' => $this->getField('parentId') ?: $this->id
             );
         }
 
         return $data;
     }
-
-    public function addRewardsToJScript(&$refs) { }
-
-
 }
 
 
@@ -286,78 +282,66 @@ class CreatureListFilter extends Filter
 {
     public    $extraOpts     = null;
     protected $enums         = array(
-        3 => array( 469, 1037, 1106,  529, 1012,   87,   21,  910,  609,  942,  909,  530,   69,  577,  930, 1068, 1104,  729,  369,   92,   54,  946,   67, 1052,  749,
-                     47,  989, 1090, 1098,  978, 1011,   93, 1015, 1038,   76,  470,  349, 1031, 1077,  809,  911,  890,  970,  169,  730,   72,   70,  932, 1156,  933,
-                    510, 1126, 1067, 1073,  509,  941, 1105,  990,  934,  935, 1094, 1119, 1124, 1064,  967, 1091,   59,  947,   81,  576,  922,   68, 1050, 1085,  889,
-                    589,  270)
+         3 => parent::ENUM_FACTION,                         // faction
+         6 => parent::ENUM_ZONE,                            // foundin
+        42 => parent::ENUM_FACTION,                         // increasesrepwith
+        43 => parent::ENUM_FACTION,                         // decreasesrepwith
+        38 => parent::ENUM_EVENT                            // relatedevent
     );
 
-    // cr => [type, field, misc, extraCol]
-    protected $genericFilter = array(                       // misc (bool): _NUMERIC => useFloat; _STRING => localized; _FLAG => match Value; _BOOLEAN => stringSet
-         1 => [FILTER_CR_CALLBACK, 'cbHealthMana',      'healthMax',               'healthMin'], // health [num]
-         2 => [FILTER_CR_CALLBACK, 'cbHealthMana',      'manaMin',                 'manaMax'  ], // mana [num]
-         3 => [FILTER_CR_CALLBACK, 'cbFaction',         null,                      null       ], // faction [enum]
-         5 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_REPAIRER                     ], // canrepair
-         6 => [FILTER_CR_ENUM,     's.areaId',          null                                  ], // foundin
-         7 => [FILTER_CR_CALLBACK, 'cbQuestRelation',   'startsQuests',            0x1        ], // startsquest [enum]
-         8 => [FILTER_CR_CALLBACK, 'cbQuestRelation',   'endsQuests',              0x2        ], // endsquest [enum]
-         9 => [FILTER_CR_BOOLEAN,  'lootId',                                                  ], // lootable
-        10 => [FILTER_CR_CALLBACK, 'cbRegularSkinLoot', NPC_TYPEFLAG_SPECIALLOOT              ], // skinnable [yn]
-        11 => [FILTER_CR_BOOLEAN,  'pickpocketLootId',                                        ], // pickpocketable
-        12 => [FILTER_CR_CALLBACK, 'cbMoneyDrop',       null,                      null       ], // averagemoneydropped [op] [int]
-        15 => [FILTER_CR_CALLBACK, 'cbSpecialSkinLoot', NPC_TYPEFLAG_HERBLOOT,     null       ], // gatherable [yn]
-        16 => [FILTER_CR_CALLBACK, 'cbSpecialSkinLoot', NPC_TYPEFLAG_MININGLOOT,   null       ], // minable [yn]
-        18 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_AUCTIONEER                   ], // auctioneer
-        19 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_BANKER                       ], // banker
-        20 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_BATTLEMASTER                 ], // battlemaster
-        21 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_FLIGHT_MASTER                ], // flightmaster
-        22 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_GUILD_MASTER                 ], // guildmaster
-        23 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_INNKEEPER                    ], // innkeeper
-        24 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_CLASS_TRAINER                ], // talentunlearner
-        25 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_GUILD_MASTER                 ], // tabardvendor
-        27 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_STABLE_MASTER                ], // stablemaster
-        28 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_TRAINER                      ], // trainer
-        29 => [FILTER_CR_FLAG,     'npcflag',           NPC_FLAG_VENDOR                       ], // vendor
-        31 => [FILTER_CR_FLAG,     'cuFlags',           CUSTOM_HAS_SCREENSHOT                 ], // hasscreenshots
-        32 => [FILTER_CR_FLAG,     'cuFlags',           NPC_CU_INSTANCE_BOSS                  ], // instanceboss
-        33 => [FILTER_CR_FLAG,     'cuFlags',           CUSTOM_HAS_COMMENT                    ], // hascomments
-        34 => [FILTER_CR_NYI_PH,   1,                   null                                  ], // usemodel [str] - displayId -> id:creatureDisplayInfo.dbc/model -> id:cratureModelData.dbc/modelPath
-        35 => [FILTER_CR_STRING,   'textureString'                                            ], // useskin
-        37 => [FILTER_CR_NUMERIC,  'id',                NUM_CAST_INT,              true       ], // id
-        38 => [FILTER_CR_CALLBACK, 'cbRelEvent',        null,                      null       ], // relatedevent [enum]
-        40 => [FILTER_CR_FLAG,     'cuFlags',           CUSTOM_HAS_VIDEO                      ], // hasvideos
-        41 => [FILTER_CR_NYI_PH,   1,                   null                                  ], // haslocation [yn] [staff]
-        42 => [FILTER_CR_CALLBACK, 'cbReputation',      '>',                       null       ], // increasesrepwith [enum]
-        43 => [FILTER_CR_CALLBACK, 'cbReputation',      '<',                       null       ], // decreasesrepwith [enum]
-        44 => [FILTER_CR_CALLBACK, 'cbSpecialSkinLoot', NPC_TYPEFLAG_ENGINEERLOOT, null       ]  // salvageable [yn]
+    protected $genericFilter = array(
+         1 => [parent::CR_CALLBACK, 'cbHealthMana',      'healthMax',               'healthMin'], // health [num]
+         2 => [parent::CR_CALLBACK, 'cbHealthMana',      'manaMin',                 'manaMax'  ], // mana [num]
+         3 => [parent::CR_CALLBACK, 'cbFaction',         null,                      null       ], // faction [enum]
+         5 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_REPAIRER                     ], // canrepair
+         6 => [parent::CR_ENUM,     's.areaId',          false,                     true       ], // foundin
+         7 => [parent::CR_CALLBACK, 'cbQuestRelation',   'startsQuests',            0x1        ], // startsquest [enum]
+         8 => [parent::CR_CALLBACK, 'cbQuestRelation',   'endsQuests',              0x2        ], // endsquest [enum]
+         9 => [parent::CR_BOOLEAN,  'lootId',                                                  ], // lootable
+        10 => [parent::CR_CALLBACK, 'cbRegularSkinLoot', NPC_TYPEFLAG_SPECIALLOOT              ], // skinnable [yn]
+        11 => [parent::CR_BOOLEAN,  'pickpocketLootId',                                        ], // pickpocketable
+        12 => [parent::CR_CALLBACK, 'cbMoneyDrop',       null,                      null       ], // averagemoneydropped [op] [int]
+        15 => [parent::CR_CALLBACK, 'cbSpecialSkinLoot', NPC_TYPEFLAG_HERBLOOT,     null       ], // gatherable [yn]
+        16 => [parent::CR_CALLBACK, 'cbSpecialSkinLoot', NPC_TYPEFLAG_MININGLOOT,   null       ], // minable [yn]
+        18 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_AUCTIONEER                   ], // auctioneer
+        19 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_BANKER                       ], // banker
+        20 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_BATTLEMASTER                 ], // battlemaster
+        21 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_FLIGHT_MASTER                ], // flightmaster
+        22 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_GUILD_MASTER                 ], // guildmaster
+        23 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_INNKEEPER                    ], // innkeeper
+        24 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_CLASS_TRAINER                ], // talentunlearner
+        25 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_GUILD_MASTER                 ], // tabardvendor
+        27 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_STABLE_MASTER                ], // stablemaster
+        28 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_TRAINER                      ], // trainer
+        29 => [parent::CR_FLAG,     'npcflag',           NPC_FLAG_VENDOR                       ], // vendor
+        31 => [parent::CR_FLAG,     'cuFlags',           CUSTOM_HAS_SCREENSHOT                 ], // hasscreenshots
+        32 => [parent::CR_FLAG,     'cuFlags',           NPC_CU_INSTANCE_BOSS                  ], // instanceboss
+        33 => [parent::CR_FLAG,     'cuFlags',           CUSTOM_HAS_COMMENT                    ], // hascomments
+        34 => [parent::CR_STRING,   'modelId',           STR_MATCH_EXACT | STR_ALLOW_SHORT     ], // usemodel [str] (wants int in string fmt <_<)
+        35 => [parent::CR_STRING,   'textureString'                                            ], // useskin [str]
+        37 => [parent::CR_NUMERIC,  'id',                NUM_CAST_INT,              true       ], // id
+        38 => [parent::CR_CALLBACK, 'cbRelEvent',        null,                      null       ], // relatedevent [enum]
+        40 => [parent::CR_FLAG,     'cuFlags',           CUSTOM_HAS_VIDEO                      ], // hasvideos
+        41 => [parent::CR_NYI_PH,   1,                   null                                  ], // haslocation [yn] [staff]
+        42 => [parent::CR_CALLBACK, 'cbReputation',      '>',                       null       ], // increasesrepwith [enum]
+        43 => [parent::CR_CALLBACK, 'cbReputation',      '<',                       null       ], // decreasesrepwith [enum]
+        44 => [parent::CR_CALLBACK, 'cbSpecialSkinLoot', NPC_TYPEFLAG_ENGINEERLOOT, null       ]  // salvageable [yn]
     );
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'    => [FILTER_V_LIST,     [[1, 3],[5, 12], 15, 16, [18, 25], [27, 29], [31, 35], 37, 38, [40, 44]], true ], // criteria ids
-        'crs'   => [FILTER_V_LIST,     [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 9999]],                           true ], // criteria operators
-        'crv'   => [FILTER_V_REGEX,    '/[\p{C}:;%\\\\]/ui',                                                     true ], // criteria values - only printable chars, no delimiter
-        'na'    => [FILTER_V_REGEX,    '/[\p{C};%\\\\]/ui',                                                      false], // name / subname - only printable chars, no delimiter
-        'ex'    => [FILTER_V_EQUAL,    'on',                                                                     false], // also match subname
-        'ma'    => [FILTER_V_EQUAL,    1,                                                                        false], // match any / all filter
-        'fa'    => [FILTER_V_CALLBACK, 'cbPetFamily',                                                            true ], // pet family [list]  -  cat[0] == 1
-        'minle' => [FILTER_V_RANGE,    [1, 99],                                                                  false], // min level [int]
-        'maxle' => [FILTER_V_RANGE,    [1, 99],                                                                  false], // max level [int]
-        'cl'    => [FILTER_V_RANGE,    [0, 4],                                                                   true ], // classification [list]
-        'ra'    => [FILTER_V_LIST,     [-1, 0, 1],                                                               false], // react alliance [int]
-        'rh'    => [FILTER_V_LIST,     [-1, 0, 1],                                                               false]  // react horde [int]
+        'cr'    => [parent::V_LIST,     [[1, 3],[5, 12], 15, 16, [18, 25], [27, 29], [31, 35], 37, 38, [40, 44]], true ], // criteria ids
+        'crs'   => [parent::V_LIST,     [parent::ENUM_NONE, parent::ENUM_ANY, [0, 9999]],                         true ], // criteria operators
+        'crv'   => [parent::V_REGEX,    parent::PATTERN_CRV,                                                      true ], // criteria values - only printable chars, no delimiter
+        'na'    => [parent::V_REGEX,    parent::PATTERN_NAME,                                                     false], // name / subname - only printable chars, no delimiter
+        'ex'    => [parent::V_EQUAL,    'on',                                                                     false], // also match subname
+        'ma'    => [parent::V_EQUAL,    1,                                                                        false], // match any / all filter
+        'fa'    => [parent::V_CALLBACK, 'cbPetFamily',                                                            true ], // pet family [list]  -  cat[0] == 1
+        'minle' => [parent::V_RANGE,    [1, 99],                                                                  false], // min level [int]
+        'maxle' => [parent::V_RANGE,    [1, 99],                                                                  false], // max level [int]
+        'cl'    => [parent::V_RANGE,    [0, 4],                                                                   true ], // classification [list]
+        'ra'    => [parent::V_LIST,     [-1, 0, 1],                                                               false], // react alliance [int]
+        'rh'    => [parent::V_LIST,     [-1, 0, 1],                                                               false]  // react horde [int]
     );
-
-    protected function createSQLForCriterium(&$cr)
-    {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCr = $this->genericCriterion($cr))
-                return $genCr;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
-    }
 
     protected function createSQLForValues()
     {
@@ -369,9 +353,9 @@ class CreatureListFilter extends Filter
         {
             $_ = [];
             if (isset($_v['ex']) && $_v['ex'] == 'on')
-                $_ = $this->modularizeString(['name_loc'.User::$localeId, 'subname_loc'.User::$localeId]);
+                $_ = $this->modularizeString(['name_loc'.Lang::getLocale()->value, 'subname_loc'.Lang::getLocale()->value]);
             else
-                $_ = $this->modularizeString(['name_loc'.User::$localeId]);
+                $_ = $this->modularizeString(['name_loc'.Lang::getLocale()->value]);
 
             if ($_)
                 $parts[] = $_;
@@ -404,91 +388,94 @@ class CreatureListFilter extends Filter
         return $parts;
     }
 
-    protected function cbPetFamily(&$val)
+    protected function cbPetFamily(string &$val) : bool
     {
         if (!$this->parentCats || $this->parentCats[0] != 1)
             return false;
 
-        if (!Util::checkNumeric($val, NUM_REQ_INT))
+        if (!Util::checkNumeric($val, NUM_CAST_INT))
             return false;
 
-        $type  = FILTER_V_LIST;
+        $type  = parent::V_LIST;
         $valid = [[1, 9], 11, 12, 20, 21, [24, 27], [30, 35], [37, 39], [41, 46]];
 
         return $this->checkInput($type, $valid, $val);
     }
 
-    protected function cbRelEvent($cr)
+    protected function cbRelEvent(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[1], NUM_REQ_INT))
-            return false;
+        if ($crs == parent::ENUM_ANY)
+        {
+            if ($eventIds = DB::Aowow()->selectCol('SELECT `id` FROM ?_events WHERE `holidayId` <> 0'))
+                if ($cGuids   = DB::World()->selectCol('SELECT DISTINCT `guid` FROM game_event_creature WHERE `eventEntry` IN (?a)', $eventIds))
+                    return ['s.guid', $cGuids];
 
-        if ($cr[1] == FILTER_ENUM_ANY)
-        {
-            $eventIds = DB::Aowow()->selectCol('SELECT id FROM ?_events WHERE holidayId <> 0');
-            $cGuids   = DB::World()->selectCol('SELECT DISTINCT guid FROM game_event_creature WHERE eventEntry IN (?a)', $eventIds);
-            return ['s.guid', $cGuids];
+            return [0];
         }
-        else if ($cr[1] == FILTER_ENUM_NONE)
+        else if ($crs == parent::ENUM_NONE)
         {
-            $eventIds = DB::Aowow()->selectCol('SELECT id FROM ?_events WHERE holidayId <> 0');
-            $cGuids   = DB::World()->selectCol('SELECT DISTINCT guid FROM game_event_creature WHERE eventEntry IN (?a)', $eventIds);
-            return ['s.guid', $cGuids, '!'];
+            if ($eventIds = DB::Aowow()->selectCol('SELECT `id` FROM ?_events WHERE `holidayId` <> 0'))
+                if ($cGuids   = DB::World()->selectCol('SELECT DISTINCT `guid` FROM game_event_creature WHERE `eventEntry` IN (?a)', $eventIds))
+                    return ['s.guid', $cGuids, '!'];
+
+            return [0];
         }
-        else if ($cr[1])
+        else if (in_array($crs, $this->enums[$cr]))
         {
-            $eventIds = DB::Aowow()->selectCol('SELECT id FROM ?_events WHERE holidayId = ?d', $cr[1]);
-            $cGuids   = DB::World()->selectCol('SELECT DISTINCT guid FROM game_event_creature WHERE eventEntry IN (?a)', $eventIds);
-            return ['s.guid', $cGuids];
+            if ($eventIds = DB::Aowow()->selectCol('SELECT `id` FROM ?_events WHERE `holidayId` = ?d', $crs))
+                if ($cGuids   = DB::World()->selectCol('SELECT DISTINCT `guid` FROM `game_event_creature` WHERE `eventEntry` IN (?a)', $eventIds))
+                    return ['s.guid', $cGuids];
+
+            return [0];
         }
 
-        return false;
+        return null;
     }
 
-    protected function cbMoneyDrop($cr)
+    protected function cbMoneyDrop(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
-        return ['AND', ['((minGold + maxGold) / 2)', $cr[2], $cr[1]]];
+        return ['AND', ['((minGold + maxGold) / 2)', $crv, $crs]];
     }
 
-    protected function cbQuestRelation($cr, $field, $val)
+    protected function cbQuestRelation(int $cr, int $crs, string $crv, $field, $val) : ?array
     {
-        switch ($cr[1])
+        switch ($crs)
         {
             case 1:                                 // any
                 return ['AND', ['qse.method', $val, '&'], ['qse.questId', null, '!']];
             case 2:                                 // alliance
-                return ['AND', ['qse.method', $val, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', RACE_MASK_HORDE, '&'], 0], ['qt.reqRaceMask', RACE_MASK_ALLIANCE, '&']];
+                return ['AND', ['qse.method', $val, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', ChrRace::MASK_HORDE, '&'], 0], ['qt.reqRaceMask', ChrRace::MASK_ALLIANCE, '&']];
             case 3:                                 // horde
-                return ['AND', ['qse.method', $val, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', RACE_MASK_ALLIANCE, '&'], 0], ['qt.reqRaceMask', RACE_MASK_HORDE, '&']];
+                return ['AND', ['qse.method', $val, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', ChrRace::MASK_ALLIANCE, '&'], 0], ['qt.reqRaceMask', ChrRace::MASK_HORDE, '&']];
             case 4:                                 // both
-                return ['AND', ['qse.method', $val, '&'], ['qse.questId', null, '!'], ['OR', ['AND', ['qt.reqRaceMask', RACE_MASK_ALLIANCE, '&'], ['qt.reqRaceMask', RACE_MASK_HORDE, '&']], ['qt.reqRaceMask', 0]]];
+                return ['AND', ['qse.method', $val, '&'], ['qse.questId', null, '!'], ['OR', ['AND', ['qt.reqRaceMask', ChrRace::MASK_ALLIANCE, '&'], ['qt.reqRaceMask', ChrRace::MASK_HORDE, '&']], ['qt.reqRaceMask', 0]]];
             case 5:                                 // none
                 $this->extraOpts['ct']['h'][] = $field.' = 0';
                 return [1];
         }
 
-        return false;
+        return null;
     }
 
-    protected function cbHealthMana($cr, $minField, $maxField)
+    protected function cbHealthMana(int $cr, int $crs, string $crv, $minField, $maxField) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
         // remap OP for this special case
-        switch ($cr[1])
+        switch ($crs)
         {
             case '=':                               // min > max is totally possible
-                $this->extraOpts['ct']['h'][] = $minField.' = '.$maxField.' AND '.$minField.' = '.$cr[2];
+                $this->extraOpts['ct']['h'][] = $minField.' = '.$maxField.' AND '.$minField.' = '.$crv;
                 break;
             case '>':
             case '>=':
             case '<':
             case '<=':
-                $this->extraOpts['ct']['h'][] = 'IF('.$minField.' > '.$maxField.', '.$maxField.', '.$minField.') '.$cr[1].' '.$cr[2];
+                $this->extraOpts['ct']['h'][] = 'IF('.$minField.' > '.$maxField.', '.$maxField.', '.$minField.') '.$crs.' '.$crv;
                 break;
         }
 
@@ -496,54 +483,53 @@ class CreatureListFilter extends Filter
         return [1];                                 // always true, use post-filter
     }
 
-    protected function cbSpecialSkinLoot($cr, $typeFlag)
+    protected function cbSpecialSkinLoot(int $cr, int $crs, string $crv, $typeFlag) : ?array
     {
-        if (!$this->int2Bool($cr[1]))
-            return false;
+        if (!$this->int2Bool($crs))
+            return null;
 
 
-        if ($cr[1])
+        if ($crs)
             return ['AND', ['skinLootId', 0, '>'], ['typeFlags', $typeFlag, '&']];
         else
             return ['OR', ['skinLootId', 0], [['typeFlags', $typeFlag, '&'], 0]];
     }
 
-    protected function cbRegularSkinLoot($cr, $typeFlag)
+    protected function cbRegularSkinLoot(int $cr, int $crs, string $crv, $typeFlag) : ?array
     {
-        if (!$this->int2Bool($cr[1]))
-            return false;
+        if (!$this->int2Bool($crs))
+            return null;
 
-        if ($cr[1])
+        if ($crs)
             return ['AND', ['skinLootId', 0, '>'], [['typeFlags', $typeFlag, '&'], 0]];
         else
             return ['OR', ['skinLootId', 0], ['typeFlags', $typeFlag, '&']];
     }
 
-    protected function cbReputation($cr, $op)
+    protected function cbReputation(int $cr, int $crs, string $crv, $op) : ?array
     {
-        if (!in_array($cr[1], $this->enums[3]))             // reuse
-            return false;
+        if (!in_array($crs, $this->enums[$cr]))
+            return null;
 
-        if ($_ = DB::Aowow()->selectRow('SELECT * FROM ?_factions WHERE id = ?d', $cr[1]))
-            $this->formData['reputationCols'][] = [$cr[1], Util::localizedString($_, 'name')];
+        if ($_ = DB::Aowow()->selectRow('SELECT * FROM ?_factions WHERE `id` = ?d', $crs))
+            $this->formData['reputationCols'][] = [$crs, Util::localizedString($_, 'name')];
 
-        if ($cIds = DB::World()->selectCol('SELECT creature_id FROM creature_onkill_reputation WHERE (RewOnKillRepFaction1 = ?d AND RewOnKillRepValue1 '.$op.' 0) OR (RewOnKillRepFaction2 = ?d AND RewOnKillRepValue2 '.$op.' 0)', $cr[1], $cr[1]))
+        if ($cIds = DB::World()->selectCol('SELECT `creature_id` FROM creature_onkill_reputation WHERE (`RewOnKillRepFaction1` = ?d AND `RewOnKillRepValue1` '.$op.' 0) OR (`RewOnKillRepFaction2` = ?d AND `RewOnKillRepValue2` '.$op.' 0)', $crs, $crs))
             return ['id', $cIds];
         else
             return [0];
     }
 
-    protected function cbFaction($cr)
+    protected function cbFaction(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[1], NUM_REQ_INT))
-            return false;
+        if (!Util::checkNumeric($crs, NUM_CAST_INT))
+            return null;
 
-        if (!in_array($cr[1], $this->enums[$cr[0]]))
-            return false;
-
+        if (!in_array($crs, $this->enums[$cr]))
+            return null;
 
         $facTpls = [];
-        $facs    = new FactionList(array('OR', ['parentFactionId', $cr[1]], ['id', $cr[1]]));
+        $facs    = new FactionList(array('OR', ['parentFactionId', $crs], ['id', $crs]));
         foreach ($facs->iterate() as $__)
             $facTpls = array_merge($facTpls, $facs->getField('templateIds'));
 

@@ -6,35 +6,36 @@ if (!defined('AOWOW_REVISION'))
 
 class ItemList extends BaseType
 {
-    use ListviewHelper;
+    use ListviewHelper, sourceHelper;
 
     public static   $type       = Type::ITEM;
     public static   $brickFile  = 'item';
     public static   $dataTable  = '?_items';
 
     public          $json       = [];
-    public          $itemMods   = [];
-    public          $sources    = [];
+    public          $jsonStats  = [];
 
     public          $rndEnchIds = [];
     public          $subItems   = [];
 
-    private         $sourceMore = null;
     private         $ssd        = [];
     private         $vendors    = [];
     private         $jsGlobals  = [];                       // getExtendedCost creates some and has no access to template
 
-    protected       $queryBase  = 'SELECT i.*, i.block AS tplBlock, i.id AS ARRAY_KEY, i.id AS id FROM ?_items i';
+    private         $enhanceR   = [];
+    private         $relEnchant = [];
+
+    protected       $queryBase  = 'SELECT i.*, i.block AS tplBlock, i.armor AS tplArmor, i.dmgMin1 AS tplDmgMin1, i.dmgMax1 AS tplDmgMax1, i.id AS ARRAY_KEY, i.id AS id FROM ?_items i';
     protected       $queryOpts  = array(                    // 3 => Type::ITEM
                         'i'   => [['is', 'src', 'ic'], 'o' => 'i.quality DESC, i.itemLevel DESC'],
                         'ic'  => ['j' => ['?_icons      `ic`  ON `ic`.`id` = `i`.`iconId`', true], 's' => ', ic.name AS iconString'],
                         'is'  => ['j' => ['?_item_stats `is`  ON `is`.`type` = 3 AND `is`.`typeId` = `i`.`id`', true], 's' => ', `is`.*'],
                         's'   => ['j' => ['?_spell      `s`   ON `s`.`effect1CreateItemId` = `i`.`id`', true], 'g' => 'i.id'],
                         'e'   => ['j' => ['?_events     `e`   ON `e`.`id` = `i`.`eventId`', true], 's' => ', e.holidayId'],
-                        'src' => ['j' => ['?_source     `src` ON `src`.`type` = 3 AND `src`.`typeId` = `i`.`id`', true], 's' => ', moreType, moreTypeId, src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14, src15, src16, src17, src18, src19, src20, src21, src22, src23, src24']
+                        'src' => ['j' => ['?_source     `src` ON `src`.`type` = 3 AND `src`.`typeId` = `i`.`id`', true], 's' => ', moreType, moreTypeId, moreZoneId, moreMask, src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14, src15, src16, src17, src18, src19, src20, src21, src22, src23, src24']
                     );
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -44,7 +45,12 @@ class ItemList extends BaseType
             if ($_curTpl['scalingStatDistribution'] > 0 && $_curTpl['scalingStatValue'] > 0)
                 $this->initScalingStats();
 
+            // fix missing icons
+            $_curTpl['iconString'] = $_curTpl['iconString'] ?: DEFAULT_ICON;
+
+            // from json to json .. the gentle fuckups of legacy code integration
             $this->initJsonStats();
+            $this->jsonStats[$this->id] = (new StatsContainer())->fromJson($_curTpl, true)->toJson(Stat::FLAG_ITEM /* | Stat::FLAG_SERVERSIDE */);
 
             if ($miscData)
             {
@@ -59,14 +65,14 @@ class ItemList extends BaseType
 
             // unify those pesky masks
             $_  = &$_curTpl['requiredClass'];
-            $_ &= CLASS_MASK_ALL;
-            if ($_ < 0 || $_ == CLASS_MASK_ALL)
+            $_ &= ChrClass::MASK_ALL;
+            if ($_ < 0 || $_ == ChrClass::MASK_ALL)
                 $_ = 0;
             unset($_);
 
             $_ = &$_curTpl['requiredRace'];
-            $_ &= RACE_MASK_ALL;
-            if ($_ < 0 || $_ == RACE_MASK_ALL)
+            $_ &= ChrRace::MASK_ALL;
+            if ($_ < 0 || $_ == ChrRace::MASK_ALL)
                 $_ = 0;
             unset($_);
 
@@ -257,8 +263,14 @@ class ItemList extends BaseType
                     }
 
                     // reqRating ins't really a cost .. so pass it by ref instead of return
-                    // use highest total value
-                    if (isset($data[$npcId]) && $costs['reqRating'] && (!$reqRating || $reqRating[0] < $costs['reqRating']))
+                    // data was invalid and deleted or some source doesn't require arena rating
+                    if (!isset($data[$npcId]) || ($reqRating && !$reqRating[0]))
+                        continue;
+
+                    // use lowest total value
+                    if (!$costs['reqRating'])
+                        $reqRating = [0, 2];
+                    else if ($costs['reqRating'] && (!$reqRating || $reqRating[0] > $costs['reqRating']))
                         $reqRating = [$costs['reqRating'], $costs['reqBracket']];
                 }
             }
@@ -276,7 +288,7 @@ class ItemList extends BaseType
     public function getListviewData($addInfoMask = 0x0, $miscData = null)
     {
         /*
-        * ITEMINFO_JSON     (0x01): itemMods (including spells) and subitems parsed
+        * ITEMINFO_JSON     (0x01): jsonStats (including spells) and subitems parsed
         * ITEMINFO_SUBITEMS (0x02): searched by comparison
         * ITEMINFO_VENDOR   (0x04): costs-obj, when displayed as vendor
         * ITEMINFO_GEM      (0x10): gem infos and score
@@ -290,7 +302,10 @@ class ItemList extends BaseType
             $this->initSubItems();
 
         if ($addInfoMask & ITEMINFO_JSON)
+        {
             $this->extendJsonStats();
+            Util::arraySumByKey($data, $this->jsonStats);
+        }
 
         $extCosts = [];
         if ($addInfoMask & ITEMINFO_VENDOR)
@@ -303,7 +318,7 @@ class ItemList extends BaseType
                 $data[$this->id][$k] = $v;
 
             // json vs listview quirk
-            $data[$this->id]['name'] = $data[$this->id]['quality'].$data[$this->id]['name'];
+            $data[$this->id]['name'] = $data[$this->id]['quality'].Lang::unescapeUISequences($this->getField('name', true), Lang::FMT_RAW);
             unset($data[$this->id]['quality']);
 
             if (!empty($this->relEnchant) && $this->curTpl['randomEnchant'])
@@ -317,9 +332,6 @@ class ItemList extends BaseType
 
             if ($addInfoMask & ITEMINFO_JSON)
             {
-                foreach ($this->itemMods[$this->id] as $k => $v)
-                    $data[$this->id][$k] = $v;
-
                 if ($_ = intVal(($this->curTpl['minMoneyLoot'] + $this->curTpl['maxMoneyLoot']) / 2))
                     $data[$this->id]['avgmoney'] = $_;
 
@@ -367,10 +379,8 @@ class ItemList extends BaseType
                         $costArr['restock'] = $entries['restock'];
 
                         if ($entries['event'])
-                        {
-                            $this->jsGlobals[Type::WORLDEVENT][$entries['event']] = $entries['event'];
-                            $costArr['condition'][0][$this->id][] = [[CND_ACTIVE_EVENT, $entries['event']]];
-                        }
+                            if (Conditions::extendListviewRow($costArr, Conditions::SRC_NONE, $this->id, [Conditions::ACTIVE_EVENT, $entries['event']]))
+                                $this->jsGlobals[Type::WORLDEVENT][$entries['event']] = $entries['event'];
 
                         if ($currency || $tokens)           // fill idx:3 if required
                             $costArr['cost'][] = $currency;
@@ -423,7 +433,7 @@ class ItemList extends BaseType
                 $data[$this->id]['nslots'] = $x;
 
             $_ = $this->curTpl['requiredRace'];
-            if ($_ && $_ & RACE_MASK_ALLIANCE != RACE_MASK_ALLIANCE && $_ & RACE_MASK_HORDE != RACE_MASK_HORDE)
+            if ($_ && $_ & ChrRace::MASK_ALLIANCE != ChrRace::MASK_ALLIANCE && $_ & ChrRace::MASK_HORDE != ChrRace::MASK_HORDE)
                 $data[$this->id]['reqrace'] = $_;
 
             if ($_ = $this->curTpl['requiredClass'])
@@ -436,7 +446,7 @@ class ItemList extends BaseType
                 if ($_ = $this->getField('displayId'))
                     $data[$this->id]['displayid'] = $_;
 
-            if ($this->getSources($s, $sm) && !($addInfoMask & ITEMINFO_MODEL))
+            if ($this->getSources($s, $sm))
             {
                 $data[$this->id]['source'] = $s;
                 if ($sm)
@@ -467,7 +477,7 @@ class ItemList extends BaseType
             if ($addMask & GLOBALINFO_SELF)
             {
                 $data[Type::ITEM][$id] = array(
-                    'name'    => $this->getField('name', true),
+                    'name'    => Lang::unescapeUISequences($this->getField('name', true), Lang::FMT_RAW),
                     'quality' => $this->curTpl['quality'],
                     'icon'    => $this->curTpl['iconString']
                 );
@@ -511,7 +521,7 @@ class ItemList extends BaseType
         if ($this->error)
             return;
 
-        $_name         = $this->getField('name', true);
+        $_name         = Lang::unescapeUISequences($this->getField('name', true), Lang::FMT_HTML);
         $_reqLvl       = $this->curTpl['requiredLevel'];
         $_quality      = $this->curTpl['quality'];
         $_flags        = $this->curTpl['flags'];
@@ -604,20 +614,10 @@ class ItemList extends BaseType
             $x .= '<br />'.sprintf(Lang::item($limit['isGem'] ? 'uniqueEquipped' : 'unique', 2), Util::localizedString($limit, 'name'), $limit['count']);
         }
 
-        // max duration
-        if ($dur = $this->curTpl['duration'])
-        {
-            $rt = '';
-            if ($this->curTpl['flagsCustom'] & 0x1)
-                $rt = $interactive ? ' ('.sprintf(Util::$dfnString, 'LANG.tooltip_realduration', Lang::item('realTime')).')' : ' ('.Lang::item('realTime').')';
-
-            $x .= "<br />".Lang::game('duration').Lang::main('colon').Util::formatTime(abs($dur) * 1000).$rt;
-        }
-
         // required holiday
         if ($eId = $this->curTpl['eventId'])
             if ($hName = DB::Aowow()->selectRow('SELECT h.* FROM ?_holidays h JOIN ?_events e ON e.holidayId = h.id WHERE e.id = ?d', $eId))
-                $x .= '<br />'.sprintf(Lang::game('requires'), '<a href="'.$eId.'" class="q1">'.Util::localizedString($hName, 'name').'</a>');
+                $x .= '<br />'.sprintf(Lang::game('requires'), '<a href="?event='.$eId.'" class="q1">'.Util::localizedString($hName, 'name').'</a>');
 
         // item begins a quest
         if ($this->curTpl['startQuest'])
@@ -657,8 +657,8 @@ class ItemList extends BaseType
         $speed  = $this->curTpl['delay'] / 1000;
         $sc1    = $this->curTpl['dmgType1'];
         $sc2    = $this->curTpl['dmgType2'];
-        $dmgmin = $this->curTpl['dmgMin1'] + $this->curTpl['dmgMin2'];
-        $dmgmax = $this->curTpl['dmgMax1'] + $this->curTpl['dmgMax2'];
+        $dmgmin = $this->curTpl['tplDmgMin1'] + $this->curTpl['dmgMin2'];
+        $dmgmax = $this->curTpl['tplDmgMax1'] + $this->curTpl['dmgMax2'];
         $dps    = $speed ? ($dmgmin + $dmgmax) / (2 * $speed) : 0;
 
         if ($_class == ITEM_CLASS_AMMUNITION && $dmgmin && $dmgmax)
@@ -670,10 +670,10 @@ class ItemList extends BaseType
         }
         else if ($dps)
         {
-            if ($this->curTpl['dmgMin1'] == $this->curTpl['dmgMax1'])
-                $dmg = sprintf(Lang::item('damage', 'single', $sc1 ? 1 : 0), $this->curTpl['dmgMin1'], $sc1 ? Lang::game('sc', $sc1) : null);
+            if ($this->curTpl['tplDmgMin1'] == $this->curTpl['tplDmgMax1'])
+                $dmg = sprintf(Lang::item('damage', 'single', $sc1 ? 1 : 0), $this->curTpl['tplDmgMin1'], $sc1 ? Lang::game('sc', $sc1) : null);
             else
-                $dmg = sprintf(Lang::item('damage', 'range', $sc1 ? 1 : 0), $this->curTpl['dmgMin1'], $this->curTpl['dmgMax1'], $sc1 ? Lang::game('sc', $sc1) : null);
+                $dmg = sprintf(Lang::item('damage', 'range', $sc1 ? 1 : 0), $this->curTpl['tplDmgMin1'], $this->curTpl['tplDmgMax1'], $sc1 ? Lang::game('sc', $sc1) : null);
 
             if ($_class == ITEM_CLASS_WEAPON)               // do not use localized format here!
                 $x .= '<table width="100%"><tr><td><!--dmg-->'.$dmg.'</td><th>'.Lang::item('speed').' <!--spd-->'.number_format($speed, 2).'</th></tr></table>';
@@ -687,7 +687,7 @@ class ItemList extends BaseType
                 $x .= sprintf(Lang::item('damage', 'single', $sc2 ? 3 : 2), $this->curTpl['dmgMin2'], $sc2 ? Lang::game('sc', $sc2) : null).'<br />';
 
             if ($_class == ITEM_CLASS_WEAPON)
-                $x .= '<!--dps-->'.sprintf(Lang::item('dps'), $dps).'<br />'; // do not use localized format here!
+                $x .= '<!--dps-->'.Lang::item('dps', [$dps]).'<br />';
 
             // display FeralAttackPower if set
             if ($fap = $this->getFeralAP())
@@ -701,10 +701,10 @@ class ItemList extends BaseType
             if ($interactive)
                 $spanI = 'class="q2 tip" onmouseover="$WH.Tooltip.showAtCursor(event, $WH.sprintf(LANG.tooltip_armorbonus, '.$this->curTpl['armorDamageModifier'].'), 0, 0, \'q\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()"';
 
-            $x .= '<span '.$spanI.'><!--addamr'.$this->curTpl['armorDamageModifier'].'--><span>'.Lang::item('armor', [$this->curTpl['armor']]).'</span></span><br />';
+            $x .= '<span '.$spanI.'><!--addamr'.$this->curTpl['armorDamageModifier'].'--><span>'.Lang::item('armor', [$this->curTpl['tplArmor']]).'</span></span><br />';
         }
-        else if ($this->curTpl['armor'])
-            $x .= '<span><!--amr-->'.Lang::item('armor', [$this->curTpl['armor']]).'</span><br />';
+        else if ($this->curTpl['tplArmor'])
+            $x .= '<span><!--amr-->'.Lang::item('armor', [$this->curTpl['tplArmor']]).'</span><br />';
 
         // Block (note: block value from field block and from field stats or parsed from itemSpells are displayed independently)
         if ($this->curTpl['tplBlock'])
@@ -761,22 +761,22 @@ class ItemList extends BaseType
             if (!$qty || $type <= 0)
                 continue;
 
+            $statId = Stat::getIndexFrom(Stat::IDX_ITEM_MOD, $type);
+
             // base stat
-            switch ($type)
+            switch ($statId)
             {
-                case ITEM_MOD_MANA:
-                case ITEM_MOD_HEALTH:
-                    // $type += 1;                          // i think i fucked up somewhere mapping item_mods: offsets may be required somewhere
-                case ITEM_MOD_AGILITY:
-                case ITEM_MOD_STRENGTH:
-                case ITEM_MOD_INTELLECT:
-                case ITEM_MOD_SPIRIT:
-                case ITEM_MOD_STAMINA:
-                    $x .= '<span><!--stat'.$type.'-->'.($qty > 0 ? '+' : '-').abs($qty).' '.Lang::item('statType', $type).'</span><br />';
+                case Stat::MANA:
+                case Stat::HEALTH:
+                case Stat::AGILITY:
+                case Stat::STRENGTH:
+                case Stat::INTELLECT:
+                case Stat::SPIRIT:
+                case Stat::STAMINA:
+                    $x .= '<span><!--stat'.$statId.'-->'.Lang::item('statType', $type, [ord($qty > 0 ? '+' : '-'), abs($qty)]).'</span><br />';
                     break;
                 default:                                    // rating with % for reqLevel
-                    $green[] = $this->parseRating($type, $qty, $interactive, $causesScaling);
-
+                    $green[] = $this->formatRating($statId, $type, $qty, $interactive, $causesScaling);
             }
         }
 
@@ -840,7 +840,7 @@ class ItemList extends BaseType
             $pop       = array_pop($enhance['g']);
             $col       = $pop ? 1 : 0;
             $hasMatch &= $pop ? (($gems[$pop]['colorMask'] & (1 << $colorId)) ? 1 : 0) : 0;
-            $icon      = $pop ? sprintf(Util::$bgImagePath['tiny'], STATIC_URL, strtolower($gems[$pop]['iconString'])) : null;
+            $icon      = $pop ? sprintf('style="background-image: url(%s/images/wow/icons/tiny/%s.gif)"', Cfg::get('STATIC_URL'), strtolower($gems[$pop]['iconString'])) : null;
             $text      = $pop ? Util::localizedString($gems[$pop], 'name') : Lang::item('socket', $colorId);
 
             if ($interactive)
@@ -854,7 +854,7 @@ class ItemList extends BaseType
         {
             $pop  = array_pop($enhance['g']);
             $col  = $pop ? 1 : 0;
-            $icon = $pop ? sprintf(Util::$bgImagePath['tiny'], STATIC_URL, strtolower($gems[$pop]['iconString'])) : null;
+            $icon = $pop ? sprintf('style="background-image: url(%s/images/wow/icons/tiny/%s.gif)"', Cfg::get('STATIC_URL'), strtolower($gems[$pop]['iconString'])) : null;
             $text = $pop ? Util::localizedString($gems[$pop], 'name') : Lang::item('socket', -1);
 
             if ($interactive)
@@ -874,6 +874,16 @@ class ItemList extends BaseType
         // durability
         if ($dur = $this->curTpl['durability'])
             $x .= sprintf(Lang::item('durability'), $dur, $dur).'<br />';
+
+        // max duration
+        if ($dur = $this->curTpl['duration'])
+        {
+            $rt = '';
+            if ($this->curTpl['flagsCustom'] & 0x1)
+                $rt = $interactive ? ' ('.sprintf(Util::$dfnString, 'LANG.tooltip_realduration', Lang::item('realTime')).')' : ' ('.Lang::item('realTime').')';
+
+            $x .= Lang::formatTime(abs($dur) * 1000, 'item', 'duration').$rt."<br />";
+        }
 
         $jsg = [];
         // required classes
@@ -898,7 +908,7 @@ class ItemList extends BaseType
 
         // required honorRank (not used anymore)
         if ($rhr = $this->curTpl['requiredHonorRank'])
-            $x .= sprintf(Lang::game('requires'), Lang::game('pvpRank', $rhr)).'<br />';
+            $x .= Lang::game('requires', [implode(' / ', Lang::game('pvpRank', $rhr))]).'<br />';
 
         // required CityRank..?
         // what the f..
@@ -910,7 +920,7 @@ class ItemList extends BaseType
             $x .= sprintf(Lang::item('reqMinLevel'), $_reqLvl).'<br />';
 
         // required arena team rating / personal rating / todo (low): sort out what kind of rating
-        if (!empty($this->getExtendedCost([], $reqRating)[$this->id]) && $reqRating)
+        if (!empty($this->getExtendedCost([], $reqRating)[$this->id]) && $reqRating && $reqRating[0])
             $x .= sprintf(Lang::item('reqRating', $reqRating[1]), $reqRating[0]).'<br />';
 
         // item level
@@ -936,7 +946,7 @@ class ItemList extends BaseType
             $x .= sprintf(Lang::game('requires'), '<a class="q1" href="?faction='.$reqFac.'">'.FactionList::getName($reqFac).'</a> - '.Lang::game('rep', $this->curTpl['requiredFactionRank'])).'<br />';
 
         // locked or openable
-        if ($locks = Lang::getLocks($this->curTpl['lockId'], $arr, true, true))
+        if ($locks = Lang::getLocks($this->curTpl['lockId'], $arr, true))
             $x .= '<span class="q0">'.Lang::item('locked').'<br />'.implode('<br />', array_map(function($x) { return sprintf(Lang::game('requires'), $x); }, $locks)).'</span><br />';
         else if ($this->curTpl['flags'] & ITEM_FLAG_OPENABLE)
             $x .= '<span class="q2">'.Lang::item('openClick').'</span><br />';
@@ -958,13 +968,19 @@ class ItemList extends BaseType
                         $cd = $this->curTpl['spellCategoryCooldown'.$j];
 
                     $extra = [];
-                    if ($cd >= 5000)
-                        $extra[] = Lang::game('cooldown', [Util::formatTime($cd, true)]);
-                    if ($this->curTpl['spellTrigger'.$j] == 2)
+                    if ($cd >= 5000 && $this->curTpl['spellTrigger'.$j] != SPELL_TRIGGER_EQUIP)
+                    {
+                        $pt = Util::parseTime($cd);
+                        if (count(array_filter($pt)) == 1)  // simple time: use simple method
+                            $extra[] = Lang::formatTime($cd, 'item', 'cooldown');
+                        else                                // build block with generic time
+                            $extra[] = Lang::item('cooldown', 0, [Lang::formatTime($cd, 'game', 'timeAbbrev', true)]);
+                    }
+                    if ($this->curTpl['spellTrigger'.$j] == SPELL_TRIGGER_HIT)
                         if ($ppm = $this->curTpl['spellppmRate'.$j])
                             $extra[] = Lang::spell('ppm', [$ppm]);
 
-                    $itemSpellsAndTrigger[$this->curTpl['spellId'.$j]] = [$this->curTpl['spellTrigger'.$j], $extra ? ' ('.implode(', ', $extra).')' : ''];
+                    $itemSpellsAndTrigger[$this->curTpl['spellId'.$j]] = [$this->curTpl['spellTrigger'.$j], $extra ? ' '.implode(', ', $extra) : ''];
                 }
             }
 
@@ -973,11 +989,14 @@ class ItemList extends BaseType
                 $itemSpells = new SpellList(array(['s.id', array_keys($itemSpellsAndTrigger)]));
                 foreach ($itemSpells->iterate() as $sId => $__)
                 {
-                    $parsed = $itemSpells->parseText('description', $_reqLvl > 1 ? $_reqLvl : MAX_LEVEL, false, $causesScaling)[0];
+                    [$parsed, $_, $scaling] = $itemSpells->parseText('description', $_reqLvl > 1 ? $_reqLvl : MAX_LEVEL);
                     if (!$parsed && User::isInGroup(U_GROUP_EMPLOYEE))
                         $parsed = '<span style="opacity:.75">&lt;'.$itemSpells->getField('name', true, true).'&gt;</span>';
                     else if (!$parsed)
                         continue;
+
+                    if ($scaling)
+                        $causesScaling = true;
 
                     if ($interactive)
                     {
@@ -1024,15 +1043,12 @@ class ItemList extends BaseType
                 // handle special cases where:
                 // > itemset has items of different qualities (handled by not limiting for this in the initial query)
                 // > itemset is virtual and multiple instances have the same itemLevel but not quality (filter below)
-                if ($itemset->getMatches() > 1)
+                foreach ($itemset->iterate() as $id => $__)
                 {
-                    foreach ($itemset->iterate() as $id => $__)
+                    if ($itemset->getField('quality') == $this->curTpl['quality'])
                     {
-                        if ($itemset->getField('quality') == $this->curTpl['quality'])
-                        {
-                            $itemset->pieceToSet = array_filter($itemset->pieceToSet, function($x) use ($id) { return $id == $x; });
-                            break;
-                        }
+                        $itemset->pieceToSet = array_filter($itemset->pieceToSet, function($x) use ($id) { return $id == $x; });
+                        break;
                     }
                 }
 
@@ -1074,8 +1090,12 @@ class ItemList extends BaseType
                     $boni = new SpellList(array(['s.id', array_keys($setSpellsAndIdx)]));
                     foreach ($boni->iterate() as $__)
                     {
+                        [$parsed, $_, $scaling] = $boni->parseText('description', $_reqLvl > 1 ? $_reqLvl : MAX_LEVEL);
+                        if ($scaling && $interactive)
+                            $causesScaling = true;
+
                         $setSpells[] = array(
-                            'tooltip' => $boni->parseText('description', $_reqLvl > 1 ? $_reqLvl : MAX_LEVEL, false, $causesScaling)[0],
+                            'tooltip' => $parsed,
                             'entry'   => $itemset->getField('spell'.$setSpellsAndIdx[$boni->id]),
                             'bonus'   => $itemset->getField('bonus'.$setSpellsAndIdx[$boni->id])
                         );
@@ -1111,32 +1131,33 @@ class ItemList extends BaseType
             {
                 $xCraft = '';
                 if ($desc = $this->getField('description', true))
-                    $x .= '<span class="q2">'.Lang::item('trigger', 0).' <a href="?spell='.$this->curTpl['spellId2'].'">'.$desc.'</a></span><br />';
+                    $x .= '<span class="q2">'.Lang::item('trigger', SPELL_TRIGGER_USE).' <a href="?spell='.$this->curTpl['spellId2'].'">'.$desc.'</a></span><br />';
 
                 // recipe handling (some stray Techniques have subclass == 0), place at bottom of tooltipp
                 if ($_class == ITEM_CLASS_RECIPE || $this->curTpl['bagFamily'] == 16)
                 {
-                    $craftItem  = new ItemList(array(['i.id', (int)$craftSpell->curTpl['effect1CreateItemId']]));
-                    if (!$craftItem->error)
+                    if ($craftSpell->canCreateItem())
                     {
-                        if ($itemTT = $craftItem->renderTooltip($interactive, $this->id))
-                            $xCraft .= '<div><br />'.$itemTT.'</div>';
+                        $craftItem  = new ItemList(array(['i.id', (int)$craftSpell->curTpl['effect1CreateItemId']]));
+                        if (!$craftItem->error)
+                            if ($itemTT = $craftItem->renderTooltip($interactive, $this->id))
+                                $xCraft .= '<div><br />'.$itemTT.'</div>';
+                    }
 
-                        $reagentItems = [];
-                        for ($i = 1; $i <= 8; $i++)
-                            if ($rId = $craftSpell->getField('reagent'.$i))
-                                $reagentItems[$rId] = $craftSpell->getField('reagentCount'.$i);
+                    $reagentItems = [];
+                    for ($i = 1; $i <= 8; $i++)
+                        if ($rId = $craftSpell->getField('reagent'.$i))
+                            $reagentItems[$rId] = $craftSpell->getField('reagentCount'.$i);
 
-                        if (isset($xCraft) && $reagentItems)
-                        {
-                            $reagents = new ItemList(array(['i.id', array_keys($reagentItems)]));
-                            $reqReag  = [];
+                    if ($reagentItems)
+                    {
+                        $reagents = new ItemList(array(['i.id', array_keys($reagentItems)]));
+                        $reqReag  = [];
 
-                            foreach ($reagents->iterate() as $__)
-                                $reqReag[] = '<a href="?item='.$reagents->id.'">'.$reagents->getField('name', true).'</a> ('.$reagentItems[$reagents->id].')';
+                        foreach ($reagents->iterate() as $__)
+                            $reqReag[] = '<a href="?item='.$reagents->id.'">'.$reagents->getField('name', true).'</a> ('.$reagentItems[$reagents->id].')';
 
-                            $xCraft .= '<div class="q1 whtt-reagents"><br />'.Lang::game('requires2').' '.implode(', ', $reqReag).'</div>';
-                        }
+                        $xCraft .= '<div class="q1 whtt-reagents"><br />'.Lang::game('requires2').' '.implode(', ', $reqReag).'</div>';
                     }
                 }
             }
@@ -1151,15 +1172,21 @@ class ItemList extends BaseType
 
         // funny, yellow text at the bottom, omit if we have a recipe
         if ($this->curTpl['description_loc0'] && !$this->canTeachSpell())
-            $xMisc[] = '<span class="q">"'.$this->getField('description', true).'"</span>';
+            $xMisc[] = '<span class="q">"'.Util::parseHtmlText($this->getField('description', true), false).'"</span>';
 
         // readable
         if ($this->curTpl['pageTextId'])
             $xMisc[] = '<span class="q2">'.Lang::item('readClick').'</span>';
 
-        // charges (i guess checking first spell is enough)
-        if ($this->curTpl['spellCharges1'])
-            $xMisc[] = '<span class="q1">'.Lang::item('charges', [abs($this->curTpl['spellCharges1'])]).'</span>';
+        // charges
+        for ($i = 1; $i < 6; $i++)
+        {
+            if (in_array($this->curTpl['spellTrigger'.$i], [SPELL_TRIGGER_USE, SPELL_TRIGGER_SOULSTONE, SPELL_TRIGGER_USE_NODELAY, SPELL_TRIGGER_LEARN]) && $this->curTpl['spellCharges'.$i])
+            {
+                $xMisc[] = '<span class="q1">'.Lang::item('charges', [abs($this->curTpl['spellCharges'.$i])]).'</span>';
+                break;
+            }
+        }
 
         // list required reagents
         if (isset($xCraft))
@@ -1177,24 +1204,24 @@ class ItemList extends BaseType
         // tooltip scaling
         if (!isset($xCraft))
         {
-            $link = [$subOf ? $subOf : $this->id, 1];       // itemId, scaleMinLevel
-            if (isset($this->ssd[$this->id]))               // is heirloom
-            {
-                array_push($link,
-                    $this->ssd[$this->id]['maxLevel'],      // scaleMaxLevel
-                    $this->ssd[$this->id]['maxLevel'],      // scaleCurLevel
-                    $this->curTpl['scalingStatDistribution'],  // scaleDist
-                    $this->curTpl['scalingStatValue']       // scaleFlags
-                );
-            }
-            else                                            // may still use level dependant ratings
-            {
-                array_push($link,
-                    $causesScaling ? MAX_LEVEL : 1,         // scaleMaxLevel
-                    $_reqLvl > 1 ? $_reqLvl : MAX_LEVEL     // scaleCurLevel
-                );
-            }
-            $x .= '<!--?'.implode(':', $link).'-->';
+            $itemId = $subOf ?: $this->id;
+
+            $x .= '<!--?';
+            // itemId
+            $x .= $itemId;
+            // scaleMinLevel
+            $x .= ':1';
+            // scaleMaxLevel
+            $x .= ':' . ($this->ssd[$itemId]['maxLevel'] ?? ($causesScaling ? MAX_LEVEL : 1));
+            // scaleCurLevel
+            $x .= ':' . ($this->ssd[$itemId]['maxLevel'] ?? ($_reqLvl ?: MAX_LEVEL));
+            // scaleDist
+            if ($this->curTpl['scalingStatDistribution'])
+                $x .= ':' . $this->curTpl['scalingStatDistribution'];
+            // scaleFlags
+            if ($this->curTpl['scalingStatValue'])
+                $x .= ':' . $this->curTpl['scalingStatValue'];
+            $x .= '-->';
         }
 
         return $x;
@@ -1290,12 +1317,6 @@ class ItemList extends BaseType
 
         foreach ($this->iterate() as $__)
         {
-            $this->itemMods[$this->id] = [];
-
-            foreach (Game::$itemMods as $mod)
-                if ($_ = floatVal($this->curTpl[$mod]))
-                    Util::arraySumByKey($this->itemMods[$this->id], [$mod => $_]);
-
             // fetch and add socketbonusstats
             if (!empty($this->json[$this->id]['socketbonus']))
                 $enchantments[$this->json[$this->id]['socketbonus']][] = $this->id;
@@ -1332,39 +1353,42 @@ class ItemList extends BaseType
                     unset($this->json[$item][$k]);
     }
 
-    public function getOnUseStats()
+    public function getOnUseStats() : ?StatsContainer
     {
-        $onUseStats = [];
+        if ($this->curTpl['class'] != ITEM_CLASS_CONSUMABLE)
+            return null;
+
+        $onUseStats = new StatsContainer();
 
         // convert Spells
-        $useSpells = [];
         for ($h = 1; $h <= 5; $h++)
         {
             if ($this->curTpl['spellId'.$h] <= 0)
                 continue;
 
-            if ($this->curTpl['class'] != ITEM_CLASS_CONSUMABLE || $this->curTpl['spellTrigger'.$h])
+            if ($this->curTpl['spellTrigger'.$h] != SPELL_TRIGGER_USE)
                 continue;
 
-            $useSpells[] = $this->curTpl['spellId'.$h];
-        }
-
-        if ($useSpells)
-        {
-            $eqpSplList = new SpellList(array(['s.id', $useSpells]));
-            foreach ($eqpSplList->getStatGain() as $stat)
-                Util::arraySumByKey($onUseStats, $stat);
+            if ($spell = DB::Aowow()->selectRow(
+               'SELECT effect1AuraId, effect1MiscValue, effect1BasePoints, effect1DieSides, effect2AuraId, effect2MiscValue, effect2BasePoints, effect2DieSides, effect3AuraId, effect3MiscValue, effect3BasePoints, effect3DieSides
+                FROM ?_spell
+                WHERE id = ?d',
+                $this->curTpl['spellId'.$h]))
+                $onUseStats->fromSpell($spell);
         }
 
         return $onUseStats;
     }
 
-    public function getSourceData()
+    public function getSourceData(int $id = 0) : array
     {
         $data = [];
 
         foreach ($this->iterate() as $__)
         {
+            if ($id && $id != $this->id)
+                continue;
+
             $data[$this->id] = array(
                 'n'    => $this->getField('name', true),
                 't'    => Type::ITEM,
@@ -1380,8 +1404,7 @@ class ItemList extends BaseType
 
     private function canTeachSpell()
     {
-        // 483: learn recipe; 55884: learn mount/pet
-        if (!in_array($this->curTpl['spellId1'], [483, 55884]))
+        if (!in_array($this->curTpl['spellId1'], LEARN_SPELLS))
             return false;
 
         // needs learnable spell
@@ -1391,86 +1414,72 @@ class ItemList extends BaseType
         return true;
     }
 
-    private function getFeralAP()
+    private function getFeralAP() : float
     {
         // must be weapon
         if ($this->curTpl['class'] != ITEM_CLASS_WEAPON)
-            return 0;
-
-        // must be 2H weapon (2H-Mace, Polearm, Staff, ..Fishing Pole)
-        if (!in_array($this->curTpl['subClass'], [5, 6, 10, 20]))
-            return 0;
+            return 0.0;
 
         // thats fucked up..
         if (!$this->curTpl['delay'])
-            return 0;
+            return 0.0;
 
         // must have enough damage
-        $dps = ($this->curTpl['dmgMin1'] + $this->curTpl['dmgMin2'] + $this->curTpl['dmgMax1'] + $this->curTpl['dmgMax2']) / (2 * $this->curTpl['delay'] / 1000);
-        if ($dps < 54.8)
-            return 0;
+        $dps = ($this->curTpl['tplDmgMin1'] + $this->curTpl['dmgMin2'] + $this->curTpl['tplDmgMax1'] + $this->curTpl['dmgMax2']) / (2 * $this->curTpl['delay'] / 1000);
+        if ($dps <= 54.8)
+            return 0.0;
 
-        return round(($dps - 54.8) * 14, 0);
+        $subClasses = [ITEM_SUBCLASS_MISC_WEAPON];
+        $weaponTypeMask = DB::Aowow()->selectCell('SELECT `weaponTypeMask` FROM ?_classes WHERE `id` = ?d', ChrClass::DRUID->value);
+        if ($weaponTypeMask)
+            for ($i = 0; $i < 21; $i++)
+                if ($weaponTypeMask & (1 << $i))
+                    $subClasses[] = $i;
+
+        // cannot be used by druids
+        if (!in_array($this->curTpl['subClass'], $subClasses))
+            return 0.0;
+
+        return round(($dps - 54.8) * 14);
     }
 
-    public function getSources(&$s, &$sm)
+    public function isRangedWeapon() : bool
     {
-        $s = $sm = null;
-        if (empty($this->sources[$this->id]))
+        if ($this->curTpl['class'] != ITEM_CLASS_WEAPON)
             return false;
 
-        if ($this->sourceMore === null)
-        {
-            $buff = [];
-            $this->sourceMore = [];
-
-            foreach ($this->iterate() as $_curTpl)
-                if ($_curTpl['moreType'] && $_curTpl['moreTypeId'])
-                    $buff[$_curTpl['moreType']][] = $_curTpl['moreTypeId'];
-
-            foreach ($buff as $type => $ids)
-                $this->sourceMore[$type] = (Type::newList($type, [['id', $ids]]))?->getSourceData();
-        }
-
-        $s = array_keys($this->sources[$this->id]);
-        if ($this->curTpl['moreType'] && $this->curTpl['moreTypeId'] && !empty($this->sourceMore[$this->curTpl['moreType']][$this->curTpl['moreTypeId']]))
-            $sm = [$this->sourceMore[$this->curTpl['moreType']][$this->curTpl['moreTypeId']]];
-        else if (!empty($this->sources[$this->id][3]))
-            $sm = [['p' => $this->sources[$this->id][3][0]]];
-
-        return true;
+        return in_array($this->curTpl['subClassBak'], [ITEM_SUBCLASS_BOW, ITEM_SUBCLASS_GUN, ITEM_SUBCLASS_THROWN, ITEM_SUBCLASS_CROSSBOW, ITEM_SUBCLASS_WAND]);
     }
 
-    private function parseRating($type, $value, $interactive = false, &$scaling = false)
+    private function formatRating(int $statId, int $itemMod, int $qty, bool $interactive = false, bool &$scaling = false) : string
     {
         // clamp level range
         $ssdLvl = isset($this->ssd[$this->id]) ? $this->ssd[$this->id]['maxLevel'] : 1;
         $reqLvl = $this->curTpl['requiredLevel'] > 1 ? $this->curTpl['requiredLevel'] : MAX_LEVEL;
         $level  = min(max($reqLvl, $ssdLvl), MAX_LEVEL);
 
-         // unknown rating
-        if (in_array($type, [2, 8, 9, 10, 11]) || $type > ITEM_MOD_BLOCK_VALUE || $type < 0)
+        // unknown rating
+        if (!$statId)
         {
             if (User::isInGroup(U_GROUP_EMPLOYEE))
-                return sprintf(Lang::item('statType', count(Lang::item('statType')) - 1), $type, $value);
+                return Lang::item('statType', count(Lang::item('statType')) - 1, [$itemMod, $qty]);
             else
-                return null;
+                return '';
         }
-        // level independant Bonus
-        else if (in_array($type, Game::$lvlIndepRating))
-            return Lang::item('trigger', 1).str_replace('%d', '<!--rtg'.$type.'-->'.$value, Lang::item('statType', $type));
+
+        // level independent Bonus
+        if (Stat::isLevelIndependent($statId))
+            return Lang::item('trigger', SPELL_TRIGGER_EQUIP).str_replace('%d', '<!--rtg'.$statId.'-->'.$qty, Lang::item('statType', $itemMod));
+
         // rating-Bonuses
+        $scaling = true;
+
+        if ($interactive)
+            $js = '&nbsp;<small>('.sprintf(Util::$changeLevelString, Util::setRatingLevel($level, $statId, $qty)).')</small>';
         else
-        {
-            $scaling = true;
+            $js = '&nbsp;<small>('.Util::setRatingLevel($level, $statId, $qty).')</small>';
 
-            if ($interactive)
-                $js = '&nbsp;<small>('.sprintf(Util::$changeLevelString, Util::setRatingLevel($level, $type, $value)).')</small>';
-            else
-                $js = '&nbsp;<small>('.Util::setRatingLevel($level, $type, $value).')</small>';
-
-            return Lang::item('trigger', 1).str_replace('%d', '<!--rtg'.$type.'-->'.$value.$js, Lang::item('statType', $type));
-        }
+        return Lang::item('trigger', SPELL_TRIGGER_EQUIP).str_replace('%d', '<!--rtg'.$statId.'-->'.$qty.$js, Lang::item('statType', $itemMod));
     }
 
     private function getSSDMod($type)
@@ -1528,8 +1537,8 @@ class ItemList extends BaseType
             $range   = isset($this->json[$this->id]['rgddps']) ? 0.3 : 0.2;
             $average = $extraDPS * $this->curTpl['delay'] / 1000;
 
-            $this->templates[$this->id]['dmgMin1'] = floor((1 - $range) * $average);
-            $this->templates[$this->id]['dmgMax1'] = floor((1 + $range) * $average);
+            $this->templates[$this->id]['tplDmgMin1'] = floor((1 - $range) * $average);
+            $this->templates[$this->id]['tplDmgMax1'] = floor((1 + $range) * $average);
         }
 
         // apply Spell Power from ScalingStatValue if set
@@ -1577,12 +1586,12 @@ class ItemList extends BaseType
             array_column($randEnchants, 'enchantId5')
         ));
 
-        $enchants = new EnchantmentList(array(['id', $enchIds], CFG_SQL_LIMIT_NONE));
+        $enchants = new EnchantmentList(array(['id', $enchIds], Cfg::get('SQL_LIMIT_NONE')));
         foreach ($enchants->iterate() as $eId => $_)
         {
             $this->rndEnchIds[$eId] = array(
                 'text'  => $enchants->getField('name', true),
-                'stats' => $enchants->getStatGain(true)
+                'stats' => $enchants->getStatGainForCurrent()
             );
         }
 
@@ -1667,16 +1676,19 @@ class ItemList extends BaseType
 
     private function initJsonStats()
     {
+        $class    = $this->curTpl['class'];
+        $subclass = $this->curTpl['subClass'];
+
         $json = array(
             'id'          => $this->id,
             'name'        => $this->getField('name', true),
             'quality'     => ITEM_QUALITY_HEIRLOOM - $this->curTpl['quality'],
             'icon'        => $this->curTpl['iconString'],
-            'classs'      => $this->curTpl['class'],
-            'subclass'    => $this->curTpl['subClass'],
+            'classs'      => $class,
+            'subclass'    => $subclass,
             'subsubclass' => $this->curTpl['subSubClass'],
-            'heroic'      => ($this->curTpl['flags'] & 0x8) >> 3,
-            'side'        => $this->curTpl['flagsExtra'] & 0x3 ? 3 - ($this->curTpl['flagsExtra'] & 0x3) : Game::sideByRaceMask($this->curTpl['requiredRace']),
+            'heroic'      => ($this->curTpl['flags'] & ITEM_FLAG_HEROIC) >> 3,
+            'side'        => $this->curTpl['flagsExtra'] & 0x3 ? SIDE_BOTH - ($this->curTpl['flagsExtra'] & 0x3) : ChrRace::sideFromMask($this->curTpl['requiredRace']),
             'slot'        => $this->curTpl['slot'],
             'slotbak'     => $this->curTpl['slotBak'],
             'level'       => $this->curTpl['itemLevel'],
@@ -1689,8 +1701,8 @@ class ItemList extends BaseType
             'frores'      => $this->curTpl['resFrost'],
             'shares'      => $this->curTpl['resShadow'],
             'arcres'      => $this->curTpl['resArcane'],
-            'armorbonus'  => max(0, intVal($this->curTpl['armorDamageModifier'])),
-            'armor'       => $this->curTpl['armor'],
+            'armorbonus'  => $class != ITEM_CLASS_ARMOR ? 0 : max(0, intVal($this->curTpl['armorDamageModifier'])),
+            'armor'       => $this->curTpl['tplArmor'],
             'dura'        => $this->curTpl['durability'],
             'itemset'     => $this->curTpl['itemset'],
             'socket1'     => $this->curTpl['socketColor1'],
@@ -1702,23 +1714,24 @@ class ItemList extends BaseType
             'scaflags'    => $this->curTpl['scalingStatValue']
         );
 
-        if ($this->curTpl['class'] == ITEM_CLASS_WEAPON || $this->curTpl['class'] == ITEM_CLASS_AMMUNITION)
+        if ($class == ITEM_CLASS_AMMUNITION)
+            $json['dps'] = round(($this->curTpl['tplDmgMin1'] + $this->curTpl['dmgMin2'] + $this->curTpl['tplDmgMax1'] + $this->curTpl['dmgMax2']) / 2, 2);
+        else if ($class == ITEM_CLASS_WEAPON)
         {
-
             $json['dmgtype1'] = $this->curTpl['dmgType1'];
-            $json['dmgmin1']  = $this->curTpl['dmgMin1'] + $this->curTpl['dmgMin2'];
-            $json['dmgmax1']  = $this->curTpl['dmgMax1'] + $this->curTpl['dmgMax2'];
-            $json['speed']    = number_format($this->curTpl['delay'] / 1000, 2);
-            $json['dps']      = !floatVal($json['speed']) ? 0 : number_format(($json['dmgmin1'] + $json['dmgmax1']) / (2 * $json['speed']), 1);
+            $json['dmgmin1']  = $this->curTpl['tplDmgMin1'] + $this->curTpl['dmgMin2'];
+            $json['dmgmax1']  = $this->curTpl['tplDmgMax1'] + $this->curTpl['dmgMax2'];
+            $json['speed']    = round($this->curTpl['delay'] / 1000, 2);
+            $json['dps']      = $json['speed'] ? round(($json['dmgmin1'] + $json['dmgmax1']) / (2 * $json['speed']), 1) : 0;
 
-            if (in_array($json['subclass'], [2, 3, 18, 19]))
+            if ($this->isRangedWeapon())
             {
                 $json['rgddmgmin'] = $json['dmgmin1'];
                 $json['rgddmgmax'] = $json['dmgmax1'];
                 $json['rgdspeed']  = $json['speed'];
                 $json['rgddps']    = $json['dps'];
             }
-            else if ($json['classs'] != ITEM_CLASS_AMMUNITION)
+            else
             {
                 $json['mledmgmin'] = $json['dmgmin1'];
                 $json['mledmgmax'] = $json['dmgmax1'];
@@ -1730,10 +1743,10 @@ class ItemList extends BaseType
                 $json['feratkpwr'] = $fap;
         }
 
-        if ($this->curTpl['class'] == ITEM_CLASS_ARMOR || $this->curTpl['class'] == ITEM_CLASS_WEAPON)
+        if ($class == ITEM_CLASS_ARMOR || $class == ITEM_CLASS_WEAPON)
             $json['gearscore'] = Util::getEquipmentScore($json['level'], $this->getField('quality'), $json['slot'], $json['nsockets']);
-        else if ($this->curTpl['class'] == ITEM_CLASS_GEM)
-            $json['gearscore'] = Util::getGemScore($json['level'], $this->getField('quality'), $this->getField('requiredSkill') == 755, $this->id);
+        else if ($class == ITEM_CLASS_GEM)
+            $json['gearscore'] = Util::getGemScore($json['level'], $this->getField('quality'), $this->getField('requiredSkill') == SKILL_JEWELCRAFTING, $this->id);
 
         // clear zero-values afterwards
         foreach ($json as $k => $v)
@@ -1744,8 +1757,6 @@ class ItemList extends BaseType
 
         $this->json[$json['id']] = $json;
     }
-
-    public function addRewardsToJScript(&$ref) { }
 }
 
 
@@ -1754,51 +1765,63 @@ class ItemListFilter extends Filter
     private   $ubFilter      = [];                          // usable-by - limit weapon/armor selection per CharClass - itemClass => available itemsubclasses
     private   $extCostQuery  = 'SELECT item FROM npc_vendor            WHERE extendedCost IN (?a) UNION
                                 SELECT item FROM game_event_npc_vendor WHERE extendedCost IN (?a)';
-    private   $otFields      = [18 => 4, 68 => 15, 69 => 16, 70 => 17, 72 => 2, 73 => 19, 75 => 21, 76 => 23, 88 => 20, 92 => 5, 93 => 3, 143 => 18, 171 => 8, 172 => 12];
 
     public    $extraOpts     = [];                          // score for statWeights
     public    $wtCnd         = [];
     protected $enums         = array(
-        99 => array(                                        // profession | recycled for 86, 87
-            null, 171, 164, 185, 333, 202, 129, 755, 165, 186, 197, true, false, 356, 182, 773
+         16 => parent::ENUM_ZONE,                           // drops in zone
+         17 => parent::ENUM_FACTION,                        // requiresrepwith
+         99 => parent::ENUM_PROFESSION,                     // requiresprof
+         86 => parent::ENUM_PROFESSION,                     // craftedprof
+         87 => parent::ENUM_PROFESSION,                     // reagentforability
+        105 => parent::ENUM_HEROICDUNGEON,                  // drops in nh dungeon
+        106 => parent::ENUM_HEROICDUNGEON,                  // drops in hc dungeon
+        126 => parent::ENUM_ZONE,                           // rewardedbyquestin
+        147 => parent::ENUM_MULTIMODERAID,                  // drops in nh raid 10
+        148 => parent::ENUM_MULTIMODERAID,                  // drops in nh raid 25
+        149 => parent::ENUM_HEROICRAID,                     // drops in hc raid 10
+        150 => parent::ENUM_HEROICRAID,                     // drops in hc raid 25
+        152 => parent::ENUM_CLASSS,                         // class-specific
+        153 => parent::ENUM_RACE,                           // race-specific
+        160 => parent::ENUM_EVENT,                          // relatedevent
+        169 => parent::ENUM_EVENT,                          // requiresevent
+        158 => parent::ENUM_CURRENCY,                       // purchasablewithcurrency
+        118 => array(                                       // itemcurrency
+            34853, 34854, 34855, 34856, 34857, 34858, 34848, 34851, 34852, 40625, 40626, 40627, 45632, 45633, 45634, 34169, 34186, 29754, 29753, 29755,
+            31089, 31091, 31090, 40610, 40611, 40612, 30236, 30237, 30238, 45635, 45636, 45637, 34245, 34332, 34339, 34345, 40631, 40632, 40633, 45638,
+            45639, 45640, 34244, 34208, 34180, 34229, 34350, 40628, 40629, 40630, 45641, 45642, 45643, 29757, 29758, 29756, 31092, 31094, 31093, 40613,
+            40614, 40615, 30239, 30240, 30241, 45644, 45645, 45646, 34342, 34211, 34243, 29760, 29761, 29759, 31097, 31095, 31096, 40616, 40617, 40618,
+            30242, 30243, 30244, 45647, 45648, 45649, 34216, 29766, 29767, 29765, 31098, 31100, 31099, 40619, 40620, 40621, 30245, 30246, 30247, 45650,
+            45651, 45652, 34167, 40634, 40635, 40636, 45653, 45654, 45655, 40637, 40638, 40639, 45656, 45657, 45658, 34170, 34192, 29763, 29764, 29762,
+            31101, 31103, 31102, 30248, 30249, 30250, 47557, 47558, 47559, 34233, 34234, 34202, 34195, 34209, 40622, 40623, 40624, 34193, 45659, 45660,
+            45661, 34212, 34351, 34215
         ),
-        66 => array(                                        // profession specialization
-             1 => -1,
-             2 => [ 9788,  9787, 17041, 17040, 17039                                                        ],
-             3 => -1,
-             4 => -1,
-             5 => [20219, 20222                                                                             ],
-             6 => -1,
-             7 => -1,
-             8 => [10656, 10658, 10660                                                                      ],
-             9 => -1,
-            10 => [26798, 26801, 26797                                                                      ],
-            11 => [ 9788,  9787, 17041, 17040, 17039, 20219, 20222, 10656, 10658, 10660, 26798, 26801, 26797],  // i know, i know .. lazy as fuck
-            12 => false,
-            13 => -1,
-            14 => -1,
-            15 => -1
+        163 => array(                                       // enchantment mats
+            34057, 22445, 11176, 34052, 11082, 34055, 16203, 10939, 11135, 11175, 22446, 16204, 34054, 14344, 11084, 11139, 22449, 11178, 10998, 34056,
+            16202, 10938, 11134, 11174, 22447, 20725, 14343, 34053, 10978, 11138, 22448, 11177, 11083, 10940, 11137, 22450
         ),
-        152 => array(                                       // class-specific
-            null, 1, 2, 3, 4, 5, 6, 7, 8, 9, null, 11, true, false
+         91 => array(                                       // tool
+                3,    14,   162,   168,   141,     2,     4,   169,   161,    15,   167,    81,    21,   165,    12,    62,    10,   101,   189,     6,
+               63,    41,     8,     7,   190,     9,   166,   121,     5
         ),
-        153 => array(                                       // race-specific
-            null, 1, 2, 3, 4, 5, 6, 7, 8, null, 10, 11, true, false
-        ),
-        158 => array(                                       // currency
-            32572, 32569, 29736, 44128, 20560, 20559, 29434, 37829, 23247, 44990, 24368, 52027, 52030, 43016, 41596, 34052, 45624, 49426, 40752, 47241, 40753, 29024,
-            24245, 26045, 26044, 38425, 29735, 24579, 24581, 32897, 22484, 52026, 52029,  4291, 28558, 43228, 34664, 47242, 52025, 52028, 37836, 20558, 34597, 43589
-        ),
-        118 => array(                                       // tokens
-            34853, 34854, 34855, 34856, 34857, 34858, 34848, 34851, 34852, 40625, 40626, 40627, 45632, 45633, 45634, 34169, 34186, 29754, 29753, 29755, 31089, 31091, 31090,
-            40610, 40611, 40612, 30236, 30237, 30238, 45635, 45636, 45637, 34245, 34332, 34339, 34345, 40631, 40632, 40633, 45638, 45639, 45640, 34244, 34208, 34180, 34229,
-            34350, 40628, 40629, 40630, 45641, 45642, 45643, 29757, 29758, 29756, 31092, 31094, 31093, 40613, 40614, 40615, 30239, 30240, 30241, 45644, 45645, 45646, 34342,
-            34211, 34243, 29760, 29761, 29759, 31097, 31095, 31096, 40616, 40617, 40618, 30242, 30243, 30244, 45647, 45648, 45649, 34216, 29766, 29767, 29765, 31098, 31100,
-            31099, 40619, 40620, 40621, 30245, 30246, 30247, 45650, 45651, 45652, 34167, 40634, 40635, 40636, 45653, 45654, 45655, 40637, 40638, 40639, 45656, 45657, 45658,
-            34170, 34192, 29763, 29764, 29762, 31101, 31103, 31102, 30248, 30249, 30250, 47557, 47558, 47559, 34233, 34234, 34202, 34195, 34209, 40622, 40623, 40624, 34193,
-            45659, 45660, 45661, 34212, 34351, 34215
-        ),
-        128 => array(                                       // source
+         66 => array(                                       // profession specialization
+            1 => -1,
+            2 => [ 9788,  9787, 17041, 17040, 17039                                                        ],
+            3 => -1,
+            4 => -1,
+            5 => [20219, 20222                                                                             ],
+            6 => -1,
+            7 => -1,
+            8 => [10656, 10658, 10660                                                                      ],
+            9 => -1,
+           10 => [26798, 26801, 26797                                                                      ],
+           11 => [ 9788,  9787, 17041, 17040, 17039, 20219, 20222, 10656, 10658, 10660, 26798, 26801, 26797],  // i know, i know .. lazy as fuck
+           12 => false,
+           13 => -1,
+           14 => -1,
+           15 => -1
+       ),
+       128 => array(                                        // source
              1 => true,                                     // Any
              2 => false,                                    // None
              3 => 1,                                        // Crafted
@@ -1808,232 +1831,217 @@ class ItemListFilter extends Filter
              7 => 5,                                        // Vendor
              9 => 10,                                       // Starter
             10 => 11,                                       // Event
-            11 => 12                                        // Achievement
-        ),
-        126 => array(                                       // Zones
-            4494,   36, 2597, 3358,   45,  331, 3790, 4277,   16, 3524,    3, 3959,  719, 1584,   25, 1583, 2677, 3702, 3522,    4, 3525, 3537,   46, 1941,
-            2918, 3905, 4024, 2817, 4395, 4378,  148,  393, 1657,   41, 2257,  405, 2557,   65, 4196,    1,   14,   10,   15,  139,   12, 3430, 3820,  361,
-             357, 3433,  721,  394, 3923, 4416, 2917, 4272, 4820, 4264, 3483, 3562,  267,  495, 4742, 3606,  210, 4812, 1537, 4710, 4080, 3457,   38, 4131,
-            3836, 3792, 2100, 2717,  493,  215, 3518, 3698, 3456, 3523, 2367, 2159, 1637, 4813, 4298, 2437,  722,  491,   44, 3429, 3968,  796, 2057,   51,
-            3607, 3791, 3789,  209, 3520, 3703, 3711, 1377, 3487,  130, 3679,  406, 1519, 4384,   33, 2017, 1477, 4075,    8,  440,  141, 3428, 3519, 3848,
-              17, 2366, 3840, 3713, 3847, 3775, 4100, 1581, 3557, 3845, 4500, 4809,   47, 3849, 4265, 4493, 4228, 3698, 4406, 3714, 3717, 3715,  717,   67,
-            3716,  457, 4415,  400, 1638, 1216,   85, 4723, 4722, 1337, 4273,  490, 1497,  206, 1196, 4603, 718, 3277,    28,   40,   11, 4197,  618, 3521,
-            3805,   66, 1176, 1977
-        ),
-        163 => array(                                       // enchantment mats
-            34057, 22445, 11176, 34052, 11082, 34055, 16203, 10939, 11135, 11175, 22446, 16204, 34054, 14344, 11084, 11139, 22449, 11178,
-            10998, 34056, 16202, 10938, 11134, 11174, 22447, 20725, 14343, 34053, 10978, 11138, 22448, 11177, 11083, 10940, 11137, 22450
+            11 => 12,                                       // Achievement
+            12 => 16                                        // Fished
         )
     );
 
-    // cr => [type, field, misc, extraCol]
-    protected $genericFilter = array(                       // misc (bool): _NUMERIC => useFloat; _STRING => localized; _FLAG => match Value; _BOOLEAN => stringSet
-          2 => [FILTER_CR_CALLBACK,  'cbFieldHasVal',          'bonding',               1             ], // bindonpickup [yn]
-          3 => [FILTER_CR_CALLBACK,  'cbFieldHasVal',          'bonding',               2             ], // bindonequip [yn]
-          4 => [FILTER_CR_CALLBACK,  'cbFieldHasVal',          'bonding',               3             ], // bindonuse [yn]
-          5 => [FILTER_CR_CALLBACK,  'cbFieldHasVal',          'bonding',               [4, 5]        ], // questitem [yn]
-          6 => [FILTER_CR_CALLBACK,  'cbQuestRelation',        null,                    null          ], // startsquest [side]
-          7 => [FILTER_CR_BOOLEAN,   'description_loc0',       true                                   ], // hasflavortext
-          8 => [FILTER_CR_BOOLEAN,   'requiredDisenchantSkill'                                        ], // disenchantable
-          9 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_CONJURED                     ], // conjureditem
-         10 => [FILTER_CR_BOOLEAN,   'lockId'                                                         ], // locked
-         11 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_OPENABLE                     ], // openable
-         12 => [FILTER_CR_BOOLEAN,   'itemset'                                                        ], // partofset
-         13 => [FILTER_CR_BOOLEAN,   'randomEnchant'                                                  ], // randomlyenchanted
-         14 => [FILTER_CR_BOOLEAN,   'pageTextId'                                                     ], // readable
-         15 => [FILTER_CR_CALLBACK,  'cbFieldHasVal',          'maxCount',              1             ], // unique [yn]
-         16 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // dropsin [zone]
-         17 => [FILTER_CR_ENUM,      'requiredFaction'                                                ], // requiresrepwith
-         18 => [FILTER_CR_CALLBACK,  'cbFactionQuestReward',   null,                    null          ], // rewardedbyfactionquest [side]
-         20 => [FILTER_CR_NUMERIC,   'is.str',                 NUM_CAST_INT,            true          ], // str
-         21 => [FILTER_CR_NUMERIC,   'is.agi',                 NUM_CAST_INT,            true          ], // agi
-         22 => [FILTER_CR_NUMERIC,   'is.sta',                 NUM_CAST_INT,            true          ], // sta
-         23 => [FILTER_CR_NUMERIC,   'is.int',                 NUM_CAST_INT,            true          ], // int
-         24 => [FILTER_CR_NUMERIC,   'is.spi',                 NUM_CAST_INT,            true          ], // spi
-         25 => [FILTER_CR_NUMERIC,   'is.arcres',              NUM_CAST_INT,            true          ], // arcres
-         26 => [FILTER_CR_NUMERIC,   'is.firres',              NUM_CAST_INT,            true          ], // firres
-         27 => [FILTER_CR_NUMERIC,   'is.natres',              NUM_CAST_INT,            true          ], // natres
-         28 => [FILTER_CR_NUMERIC,   'is.frores',              NUM_CAST_INT,            true          ], // frores
-         29 => [FILTER_CR_NUMERIC,   'is.shares',              NUM_CAST_INT,            true          ], // shares
-         30 => [FILTER_CR_NUMERIC,   'is.holres',              NUM_CAST_INT,            true          ], // holres
-         32 => [FILTER_CR_NUMERIC,   'is.dps',                 NUM_CAST_FLOAT,          true          ], // dps
-         33 => [FILTER_CR_NUMERIC,   'is.dmgmin1',             NUM_CAST_INT,            true          ], // dmgmin1
-         34 => [FILTER_CR_NUMERIC,   'is.dmgmax1',             NUM_CAST_INT,            true          ], // dmgmax1
-         35 => [FILTER_CR_CALLBACK,  'cbDamageType',           null,                    null          ], // damagetype [enum]
-         36 => [FILTER_CR_NUMERIC,   'is.speed',               NUM_CAST_FLOAT,          true          ], // speed
-         37 => [FILTER_CR_NUMERIC,   'is.mleatkpwr',           NUM_CAST_INT,            true          ], // mleatkpwr
-         38 => [FILTER_CR_NUMERIC,   'is.rgdatkpwr',           NUM_CAST_INT,            true          ], // rgdatkpwr
-         39 => [FILTER_CR_NUMERIC,   'is.rgdhitrtng',          NUM_CAST_INT,            true          ], // rgdhitrtng
-         40 => [FILTER_CR_NUMERIC,   'is.rgdcritstrkrtng',     NUM_CAST_INT,            true          ], // rgdcritstrkrtng
-         41 => [FILTER_CR_NUMERIC,   'is.armor',               NUM_CAST_INT,            true          ], // armor
-         42 => [FILTER_CR_NUMERIC,   'is.defrtng',             NUM_CAST_INT,            true          ], // defrtng
-         43 => [FILTER_CR_NUMERIC,   'is.block',               NUM_CAST_INT,            true          ], // block
-         44 => [FILTER_CR_NUMERIC,   'is.blockrtng',           NUM_CAST_INT,            true          ], // blockrtng
-         45 => [FILTER_CR_NUMERIC,   'is.dodgertng',           NUM_CAST_INT,            true          ], // dodgertng
-         46 => [FILTER_CR_NUMERIC,   'is.parryrtng',           NUM_CAST_INT,            true          ], // parryrtng
-         48 => [FILTER_CR_NUMERIC,   'is.splhitrtng',          NUM_CAST_INT,            true          ], // splhitrtng
-         49 => [FILTER_CR_NUMERIC,   'is.splcritstrkrtng',     NUM_CAST_INT,            true          ], // splcritstrkrtng
-         50 => [FILTER_CR_NUMERIC,   'is.splheal',             NUM_CAST_INT,            true          ], // splheal
-         51 => [FILTER_CR_NUMERIC,   'is.spldmg',              NUM_CAST_INT,            true          ], // spldmg
-         52 => [FILTER_CR_NUMERIC,   'is.arcsplpwr',           NUM_CAST_INT,            true          ], // arcsplpwr
-         53 => [FILTER_CR_NUMERIC,   'is.firsplpwr',           NUM_CAST_INT,            true          ], // firsplpwr
-         54 => [FILTER_CR_NUMERIC,   'is.frosplpwr',           NUM_CAST_INT,            true          ], // frosplpwr
-         55 => [FILTER_CR_NUMERIC,   'is.holsplpwr',           NUM_CAST_INT,            true          ], // holsplpwr
-         56 => [FILTER_CR_NUMERIC,   'is.natsplpwr',           NUM_CAST_INT,            true          ], // natsplpwr
-         57 => [FILTER_CR_NUMERIC,   'is.shasplpwr',           NUM_CAST_INT,            true          ], // shasplpwr
-         59 => [FILTER_CR_NUMERIC,   'durability',             NUM_CAST_INT,            true          ], // dura
-         60 => [FILTER_CR_NUMERIC,   'is.healthrgn',           NUM_CAST_INT,            true          ], // healthrgn
-         61 => [FILTER_CR_NUMERIC,   'is.manargn',             NUM_CAST_INT,            true          ], // manargn
-         62 => [FILTER_CR_CALLBACK,  'cbCooldown',             null,                    null          ], // cooldown [op] [int]
-         63 => [FILTER_CR_NUMERIC,   'buyPrice',               NUM_CAST_INT,            true          ], // buyprice
-         64 => [FILTER_CR_NUMERIC,   'sellPrice',              NUM_CAST_INT,            true          ], // sellprice
-         65 => [FILTER_CR_CALLBACK,  'cbAvgMoneyContent',      null,                    null          ], // avgmoney [op] [int]
-         66 => [FILTER_CR_ENUM,      'requiredSpell'                                                  ], // requiresprofspec
-         68 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otdisenchanting [yn]
-         69 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otfishing [yn]
-         70 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otherbgathering [yn]
-         71 => [FILTER_CR_FLAG,      'cuFlags',                ITEM_CU_OT_ITEMLOOT                    ], // otitemopening [yn]
-         72 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otlooting [yn]
-         73 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otmining [yn]
-         74 => [FILTER_CR_FLAG,      'cuFlags',                ITEM_CU_OT_OBJECTLOOT                  ], // otobjectopening [yn]
-         75 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otpickpocketing [yn]
-         76 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otskinning [yn]
-         77 => [FILTER_CR_NUMERIC,   'is.atkpwr',              NUM_CAST_INT,            true          ], // atkpwr
-         78 => [FILTER_CR_NUMERIC,   'is.mlehastertng',        NUM_CAST_INT,            true          ], // mlehastertng
-         79 => [FILTER_CR_NUMERIC,   'is.resirtng',            NUM_CAST_INT,            true          ], // resirtng
-         80 => [FILTER_CR_CALLBACK,  'cbHasSockets',           null,                    null          ], // has sockets [enum]
-         81 => [FILTER_CR_CALLBACK,  'cbFitsGemSlot',          null,                    null          ], // fits gem slot [enum]
-         83 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_UNIQUEEQUIPPED               ], // uniqueequipped
-         84 => [FILTER_CR_NUMERIC,   'is.mlecritstrkrtng',     NUM_CAST_INT,            true          ], // mlecritstrkrtng
-         85 => [FILTER_CR_CALLBACK,  'cbObjectiveOfQuest',     null,                    null          ], // objectivequest [side]
-         86 => [FILTER_CR_CALLBACK,  'cbCraftedByProf',        null,                    null          ], // craftedprof [enum]
-         87 => [FILTER_CR_CALLBACK,  'cbReagentForAbility',    null,                    null          ], // reagentforability [enum]
-         88 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otprospecting [yn]
-         89 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_PROSPECTABLE                 ], // prospectable
-         90 => [FILTER_CR_CALLBACK,  'cbAvgBuyout',            null,                    null          ], // avgbuyout [op] [int]
-         91 => [FILTER_CR_ENUM,      'totemCategory'                                                  ], // tool
-         92 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // soldbyvendor [yn]
-         93 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otpvp [pvp]
-         94 => [FILTER_CR_NUMERIC,   'is.splpen',              NUM_CAST_INT,            true          ], // splpen
-         95 => [FILTER_CR_NUMERIC,   'is.mlehitrtng',          NUM_CAST_INT,            true          ], // mlehitrtng
-         96 => [FILTER_CR_NUMERIC,   'is.critstrkrtng',        NUM_CAST_INT,            true          ], // critstrkrtng
-         97 => [FILTER_CR_NUMERIC,   'is.feratkpwr',           NUM_CAST_INT,            true          ], // feratkpwr
-         98 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_PARTYLOOT                    ], // partyloot
-         99 => [FILTER_CR_ENUM,      'requiredSkill'                                                  ], // requiresprof
-        100 => [FILTER_CR_NUMERIC,   'is.nsockets',            NUM_CAST_INT                           ], // nsockets
-        101 => [FILTER_CR_NUMERIC,   'is.rgdhastertng',        NUM_CAST_INT,            true          ], // rgdhastertng
-        102 => [FILTER_CR_NUMERIC,   'is.splhastertng',        NUM_CAST_INT,            true          ], // splhastertng
-        103 => [FILTER_CR_NUMERIC,   'is.hastertng',           NUM_CAST_INT,            true          ], // hastertng
-        104 => [FILTER_CR_STRING,    'description',            STR_LOCALIZED                          ], // flavortext
-        105 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // dropsinnormal [heroicdungeon-any]
-        106 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // dropsinheroic [heroicdungeon-any]
-        107 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // effecttext [str]                 not yet parsed              ['effectsParsed_loc'.User::$localeId, $cr[2]]
-        109 => [FILTER_CR_CALLBACK,  'cbArmorBonus',           null,                    null          ], // armorbonus [op] [int]
-        111 => [FILTER_CR_NUMERIC,   'requiredSkillRank',      NUM_CAST_INT,            true          ], // reqskillrank
-        113 => [FILTER_CR_FLAG,      'cuFlags',                CUSTOM_HAS_SCREENSHOT                  ], // hasscreenshots
-        114 => [FILTER_CR_NUMERIC,   'is.armorpenrtng',        NUM_CAST_INT,            true          ], // armorpenrtng
-        115 => [FILTER_CR_NUMERIC,   'is.health',              NUM_CAST_INT,            true          ], // health
-        116 => [FILTER_CR_NUMERIC,   'is.mana',                NUM_CAST_INT,            true          ], // mana
-        117 => [FILTER_CR_NUMERIC,   'is.exprtng',             NUM_CAST_INT,            true          ], // exprtng
-        118 => [FILTER_CR_CALLBACK,  'cbPurchasableWith',      null,                    null          ], // purchasablewithitem [enum]
-        119 => [FILTER_CR_NUMERIC,   'is.hitrtng',             NUM_CAST_INT,            true          ], // hitrtng
-        123 => [FILTER_CR_NUMERIC,   'is.splpwr',              NUM_CAST_INT,            true          ], // splpwr
-        124 => [FILTER_CR_CALLBACK,  'cbHasRandEnchant',       null,                    null          ], // randomenchants [str]
-        125 => [FILTER_CR_CALLBACK,  'cbReqArenaRating',       null,                    null          ], // reqarenartng [op] [int]  todo (low): 'find out, why "IN (W, X, Y) AND IN (X, Y, Z)" doesn't result in "(X, Y)"
-        126 => [FILTER_CR_CALLBACK,  'cbQuestRewardIn',        null,                    null          ], // rewardedbyquestin [zone-any]
-        128 => [FILTER_CR_CALLBACK,  'cbSource',               null,                    null          ], // source [enum]
-        129 => [FILTER_CR_CALLBACK,  'cbSoldByNPC',            null,                    null          ], // soldbynpc [str-small]
-        130 => [FILTER_CR_FLAG,      'cuFlags',                CUSTOM_HAS_COMMENT                     ], // hascomments
-        132 => [FILTER_CR_CALLBACK,  'cbGlyphType',            null,                    null          ], // glyphtype [enum]
-        133 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_ACCOUNTBOUND                 ], // accountbound
-        134 => [FILTER_CR_NUMERIC,   'is.mledps',              NUM_CAST_FLOAT,          true          ], // mledps
-        135 => [FILTER_CR_NUMERIC,   'is.mledmgmin',           NUM_CAST_INT,            true          ], // mledmgmin
-        136 => [FILTER_CR_NUMERIC,   'is.mledmgmax',           NUM_CAST_INT,            true          ], // mledmgmax
-        137 => [FILTER_CR_NUMERIC,   'is.mlespeed',            NUM_CAST_FLOAT,          true          ], // mlespeed
-        138 => [FILTER_CR_NUMERIC,   'is.rgddps',              NUM_CAST_FLOAT,          true          ], // rgddps
-        139 => [FILTER_CR_NUMERIC,   'is.rgddmgmin',           NUM_CAST_INT,            true          ], // rgddmgmin
-        140 => [FILTER_CR_NUMERIC,   'is.rgddmgmax',           NUM_CAST_INT,            true          ], // rgddmgmax
-        141 => [FILTER_CR_NUMERIC,   'is.rgdspeed',            NUM_CAST_FLOAT,          true          ], // rgdspeed
-        142 => [FILTER_CR_STRING,    'ic.name'                                                        ], // icon
-        143 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otmilling [yn]
-        144 => [FILTER_CR_CALLBACK,  'cbPvpPurchasable',       'reqHonorPoints',        null          ], // purchasablewithhonor [yn]
-        145 => [FILTER_CR_CALLBACK,  'cbPvpPurchasable',       'reqHonorPoints',        null          ], // purchasablewitharena [yn]
-        146 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_HEROIC                       ], // heroic
-        147 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // dropsinnormal10 [multimoderaid-any]
-        148 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // dropsinnormal25 [multimoderaid-any]
-        149 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // dropsinheroic10 [heroicraid-any]
-        150 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // dropsinheroic25 [heroicraid-any]
-        151 => [FILTER_CR_NUMERIC,   'id',                     NUM_CAST_INT,            true          ], // id
-        152 => [FILTER_CR_CALLBACK,  'cbClassRaceSpec',        'requiredClass',         CLASS_MASK_ALL], // classspecific [enum]
-        153 => [FILTER_CR_CALLBACK,  'cbClassRaceSpec',        'requiredRace',          RACE_MASK_ALL ], // racespecific [enum]
-        154 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_REFUNDABLE                   ], // refundable
-        155 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_USABLE_ARENA                 ], // usableinarenas
-        156 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_USABLE_SHAPED                ], // usablewhenshapeshifted
-        157 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_SMARTLOOT                    ], // smartloot
-        158 => [FILTER_CR_CALLBACK,  'cbPurchasableWith',      null,                    null          ], // purchasablewithcurrency [enum]
-        159 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_MILLABLE                     ], // millable
-        160 => [FILTER_CR_NYI_PH,    null,                     1,                                     ], // relatedevent [enum]      like 169 .. crawl though npc_vendor and loot_templates of event-related spawns
-        161 => [FILTER_CR_CALLBACK,  'cbAvailable',            null,                    null          ], // availabletoplayers [yn]
-        162 => [FILTER_CR_FLAG,      'flags',                  ITEM_FLAG_DEPRECATED                   ], // deprecated
-        163 => [FILTER_CR_CALLBACK,  'cbDisenchantsInto',      null,                    null          ], // disenchantsinto [disenchanting]
-        165 => [FILTER_CR_NUMERIC,   'repairPrice',            NUM_CAST_INT,            true          ], // repaircost
-        167 => [FILTER_CR_FLAG,      'cuFlags',                CUSTOM_HAS_VIDEO                       ], // hasvideos
-        168 => [FILTER_CR_CALLBACK,  'cbFieldHasVal',          'spellId1',              [483, 55884]  ], // teachesspell [yn] - 483: learn recipe; 55884: learn mount/pet
-        169 => [FILTER_CR_ENUM,      'e.holidayId'                                                    ], // requiresevent
-        171 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // otredemption [yn]
-        172 => [FILTER_CR_CALLBACK,  'cbObtainedBy',           null,                    null          ], // rewardedbyachievement [yn]
-        176 => [FILTER_CR_STAFFFLAG, 'flags'                                                          ], // flags
-        177 => [FILTER_CR_STAFFFLAG, 'flagsExtra'                                                     ], // flags2
+    protected $genericFilter = array(
+          2 => [parent::CR_CALLBACK,  'cbFieldHasVal',          'bonding',               1                 ], // bindonpickup [yn]
+          3 => [parent::CR_CALLBACK,  'cbFieldHasVal',          'bonding',               2                 ], // bindonequip [yn]
+          4 => [parent::CR_CALLBACK,  'cbFieldHasVal',          'bonding',               3                 ], // bindonuse [yn]
+          5 => [parent::CR_CALLBACK,  'cbFieldHasVal',          'bonding',               [4, 5]            ], // questitem [yn]
+          6 => [parent::CR_CALLBACK,  'cbQuestRelation',        null,                    null              ], // startsquest [side]
+          7 => [parent::CR_BOOLEAN,   'description_loc0',       true                                       ], // hasflavortext
+          8 => [parent::CR_BOOLEAN,   'requiredDisenchantSkill'                                            ], // disenchantable
+          9 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_CONJURED                         ], // conjureditem
+         10 => [parent::CR_BOOLEAN,   'lockId'                                                             ], // locked
+         11 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_OPENABLE                         ], // openable
+         12 => [parent::CR_BOOLEAN,   'itemset'                                                            ], // partofset
+         13 => [parent::CR_BOOLEAN,   'randomEnchant'                                                      ], // randomlyenchanted
+         14 => [parent::CR_BOOLEAN,   'pageTextId'                                                         ], // readable
+         15 => [parent::CR_CALLBACK,  'cbFieldHasVal',          'maxCount',              1                 ], // unique [yn]
+         16 => [parent::CR_CALLBACK,  'cbDropsInZone',          null,                    null              ], // dropsin [zone]
+         17 => [parent::CR_ENUM,      'requiredFaction',        true,                    true              ], // requiresrepwith
+         18 => [parent::CR_CALLBACK,  'cbFactionQuestReward',   null,                    null              ], // rewardedbyfactionquest [side]
+         20 => [parent::CR_NUMERIC,   'is.str',                 NUM_CAST_INT,            true              ], // str
+         21 => [parent::CR_NUMERIC,   'is.agi',                 NUM_CAST_INT,            true              ], // agi
+         22 => [parent::CR_NUMERIC,   'is.sta',                 NUM_CAST_INT,            true              ], // sta
+         23 => [parent::CR_NUMERIC,   'is.int',                 NUM_CAST_INT,            true              ], // int
+         24 => [parent::CR_NUMERIC,   'is.spi',                 NUM_CAST_INT,            true              ], // spi
+         25 => [parent::CR_NUMERIC,   'is.arcres',              NUM_CAST_INT,            true              ], // arcres
+         26 => [parent::CR_NUMERIC,   'is.firres',              NUM_CAST_INT,            true              ], // firres
+         27 => [parent::CR_NUMERIC,   'is.natres',              NUM_CAST_INT,            true              ], // natres
+         28 => [parent::CR_NUMERIC,   'is.frores',              NUM_CAST_INT,            true              ], // frores
+         29 => [parent::CR_NUMERIC,   'is.shares',              NUM_CAST_INT,            true              ], // shares
+         30 => [parent::CR_NUMERIC,   'is.holres',              NUM_CAST_INT,            true              ], // holres
+         32 => [parent::CR_NUMERIC,   'is.dps',                 NUM_CAST_FLOAT,          true              ], // dps
+         33 => [parent::CR_NUMERIC,   'is.dmgmin1',             NUM_CAST_INT,            true              ], // dmgmin1
+         34 => [parent::CR_NUMERIC,   'is.dmgmax1',             NUM_CAST_INT,            true              ], // dmgmax1
+         35 => [parent::CR_CALLBACK,  'cbDamageType',           null,                    null              ], // damagetype [enum]
+         36 => [parent::CR_NUMERIC,   'is.speed',               NUM_CAST_FLOAT,          true              ], // speed
+         37 => [parent::CR_NUMERIC,   'is.mleatkpwr',           NUM_CAST_INT,            true              ], // mleatkpwr
+         38 => [parent::CR_NUMERIC,   'is.rgdatkpwr',           NUM_CAST_INT,            true              ], // rgdatkpwr
+         39 => [parent::CR_NUMERIC,   'is.rgdhitrtng',          NUM_CAST_INT,            true              ], // rgdhitrtng
+         40 => [parent::CR_NUMERIC,   'is.rgdcritstrkrtng',     NUM_CAST_INT,            true              ], // rgdcritstrkrtng
+         41 => [parent::CR_NUMERIC,   'is.armor',               NUM_CAST_INT,            true              ], // armor
+         42 => [parent::CR_NUMERIC,   'is.defrtng',             NUM_CAST_INT,            true              ], // defrtng
+         43 => [parent::CR_NUMERIC,   'is.block',               NUM_CAST_INT,            true              ], // block
+         44 => [parent::CR_NUMERIC,   'is.blockrtng',           NUM_CAST_INT,            true              ], // blockrtng
+         45 => [parent::CR_NUMERIC,   'is.dodgertng',           NUM_CAST_INT,            true              ], // dodgertng
+         46 => [parent::CR_NUMERIC,   'is.parryrtng',           NUM_CAST_INT,            true              ], // parryrtng
+         48 => [parent::CR_NUMERIC,   'is.splhitrtng',          NUM_CAST_INT,            true              ], // splhitrtng
+         49 => [parent::CR_NUMERIC,   'is.splcritstrkrtng',     NUM_CAST_INT,            true              ], // splcritstrkrtng
+         50 => [parent::CR_NUMERIC,   'is.splheal',             NUM_CAST_INT,            true              ], // splheal
+         51 => [parent::CR_NUMERIC,   'is.spldmg',              NUM_CAST_INT,            true              ], // spldmg
+         52 => [parent::CR_NUMERIC,   'is.arcsplpwr',           NUM_CAST_INT,            true              ], // arcsplpwr
+         53 => [parent::CR_NUMERIC,   'is.firsplpwr',           NUM_CAST_INT,            true              ], // firsplpwr
+         54 => [parent::CR_NUMERIC,   'is.frosplpwr',           NUM_CAST_INT,            true              ], // frosplpwr
+         55 => [parent::CR_NUMERIC,   'is.holsplpwr',           NUM_CAST_INT,            true              ], // holsplpwr
+         56 => [parent::CR_NUMERIC,   'is.natsplpwr',           NUM_CAST_INT,            true              ], // natsplpwr
+         57 => [parent::CR_NUMERIC,   'is.shasplpwr',           NUM_CAST_INT,            true              ], // shasplpwr
+         59 => [parent::CR_NUMERIC,   'durability',             NUM_CAST_INT,            true              ], // dura
+         60 => [parent::CR_NUMERIC,   'is.healthrgn',           NUM_CAST_INT,            true              ], // healthrgn
+         61 => [parent::CR_NUMERIC,   'is.manargn',             NUM_CAST_INT,            true              ], // manargn
+         62 => [parent::CR_CALLBACK,  'cbCooldown',             null,                    null              ], // cooldown [op] [int]
+         63 => [parent::CR_NUMERIC,   'buyPrice',               NUM_CAST_INT,            true              ], // buyprice
+         64 => [parent::CR_NUMERIC,   'sellPrice',              NUM_CAST_INT,            true              ], // sellprice
+         65 => [parent::CR_CALLBACK,  'cbAvgMoneyContent',      null,                    null              ], // avgmoney [op] [int]
+         66 => [parent::CR_ENUM,      'requiredSpell'                                                      ], // requiresprofspec
+         68 => [parent::CR_CALLBACK,  'cbObtainedBy',           15,                      null              ], // otdisenchanting [yn]
+         69 => [parent::CR_CALLBACK,  'cbObtainedBy',           16,                      null              ], // otfishing [yn]
+         70 => [parent::CR_CALLBACK,  'cbObtainedBy',           17,                      null              ], // otherbgathering [yn]
+         71 => [parent::CR_FLAG,      'cuFlags',                ITEM_CU_OT_ITEMLOOT                        ], // otitemopening [yn]
+         72 => [parent::CR_CALLBACK,  'cbObtainedBy',           2,                       null              ], // otlooting [yn]
+         73 => [parent::CR_CALLBACK,  'cbObtainedBy',           19,                      null              ], // otmining [yn]
+         74 => [parent::CR_FLAG,      'cuFlags',                ITEM_CU_OT_OBJECTLOOT                      ], // otobjectopening [yn]
+         75 => [parent::CR_CALLBACK,  'cbObtainedBy',           21,                      null              ], // otpickpocketing [yn]
+         76 => [parent::CR_CALLBACK,  'cbObtainedBy',           23,                      null              ], // otskinning [yn]
+         77 => [parent::CR_NUMERIC,   'is.atkpwr',              NUM_CAST_INT,            true              ], // atkpwr
+         78 => [parent::CR_NUMERIC,   'is.mlehastertng',        NUM_CAST_INT,            true              ], // mlehastertng
+         79 => [parent::CR_NUMERIC,   'is.resirtng',            NUM_CAST_INT,            true              ], // resirtng
+         80 => [parent::CR_CALLBACK,  'cbHasSockets',           null,                    null              ], // has sockets [enum]
+         81 => [parent::CR_CALLBACK,  'cbFitsGemSlot',          null,                    null              ], // fits gem slot [enum]
+         83 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_UNIQUEEQUIPPED                   ], // uniqueequipped
+         84 => [parent::CR_NUMERIC,   'is.mlecritstrkrtng',     NUM_CAST_INT,            true              ], // mlecritstrkrtng
+         85 => [parent::CR_CALLBACK,  'cbObjectiveOfQuest',     null,                    null              ], // objectivequest [side]
+         86 => [parent::CR_CALLBACK,  'cbCraftedByProf',        null,                    null              ], // craftedprof [enum]
+         87 => [parent::CR_CALLBACK,  'cbReagentForAbility',    null,                    null              ], // reagentforability [enum]
+         88 => [parent::CR_CALLBACK,  'cbObtainedBy',           20,                      null              ], // otprospecting [yn]
+         89 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_PROSPECTABLE                     ], // prospectable
+         90 => [parent::CR_CALLBACK,  'cbAvgBuyout',            null,                    null              ], // avgbuyout [op] [int]
+         91 => [parent::CR_ENUM,      'totemCategory',          false,                   true              ], // tool
+         92 => [parent::CR_CALLBACK,  'cbObtainedBy',           5,                       null              ], // soldbyvendor [yn]
+         93 => [parent::CR_CALLBACK,  'cbObtainedBy',           3,                       null              ], // otpvp [pvp]
+         94 => [parent::CR_NUMERIC,   'is.splpen',              NUM_CAST_INT,            true              ], // splpen
+         95 => [parent::CR_NUMERIC,   'is.mlehitrtng',          NUM_CAST_INT,            true              ], // mlehitrtng
+         96 => [parent::CR_NUMERIC,   'is.critstrkrtng',        NUM_CAST_INT,            true              ], // critstrkrtng
+         97 => [parent::CR_NUMERIC,   'is.feratkpwr',           NUM_CAST_INT,            true              ], // feratkpwr
+         98 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_PARTYLOOT                        ], // partyloot
+         99 => [parent::CR_ENUM,      'requiredSkill'                                                      ], // requiresprof
+        100 => [parent::CR_NUMERIC,   'is.nsockets',            NUM_CAST_INT                               ], // nsockets
+        101 => [parent::CR_NUMERIC,   'is.rgdhastertng',        NUM_CAST_INT,            true              ], // rgdhastertng
+        102 => [parent::CR_NUMERIC,   'is.splhastertng',        NUM_CAST_INT,            true              ], // splhastertng
+        103 => [parent::CR_NUMERIC,   'is.hastertng',           NUM_CAST_INT,            true              ], // hastertng
+        104 => [parent::CR_STRING,    'description',            STR_LOCALIZED                              ], // flavortext
+        105 => [parent::CR_CALLBACK,  'cbDropsInInstance',      SRC_FLAG_DUNGEON_DROP,   1                 ], // dropsinnormal [heroicdungeon-any]
+        106 => [parent::CR_CALLBACK,  'cbDropsInInstance',      SRC_FLAG_DUNGEON_DROP,   2                 ], // dropsinheroic [heroicdungeon-any]
+        107 => [parent::CR_NYI_PH,    null,                     1,                                         ], // effecttext [str]                 not yet parsed              ['effectsParsed_loc'.Lang::getLocale()->value, $crv]
+        109 => [parent::CR_CALLBACK,  'cbArmorBonus',           null,                    null              ], // armorbonus [op] [int]
+        111 => [parent::CR_NUMERIC,   'requiredSkillRank',      NUM_CAST_INT,            true              ], // reqskillrank
+        113 => [parent::CR_FLAG,      'cuFlags',                CUSTOM_HAS_SCREENSHOT                      ], // hasscreenshots
+        114 => [parent::CR_NUMERIC,   'is.armorpenrtng',        NUM_CAST_INT,            true              ], // armorpenrtng
+        115 => [parent::CR_NUMERIC,   'is.health',              NUM_CAST_INT,            true              ], // health
+        116 => [parent::CR_NUMERIC,   'is.mana',                NUM_CAST_INT,            true              ], // mana
+        117 => [parent::CR_NUMERIC,   'is.exprtng',             NUM_CAST_INT,            true              ], // exprtng
+        118 => [parent::CR_CALLBACK,  'cbPurchasableWith',      null,                    null              ], // purchasablewithitem [enum]
+        119 => [parent::CR_NUMERIC,   'is.hitrtng',             NUM_CAST_INT,            true              ], // hitrtng
+        123 => [parent::CR_NUMERIC,   'is.splpwr',              NUM_CAST_INT,            true              ], // splpwr
+        124 => [parent::CR_CALLBACK,  'cbHasRandEnchant',       null,                    null              ], // randomenchants [str]
+        125 => [parent::CR_CALLBACK,  'cbReqArenaRating',       null,                    null              ], // reqarenartng [op] [int]  todo (low): 'find out, why "IN (W, X, Y) AND IN (X, Y, Z)" doesn't result in "(X, Y)"
+        126 => [parent::CR_CALLBACK,  'cbQuestRewardIn',        null,                    null              ], // rewardedbyquestin [zone-any]
+        128 => [parent::CR_CALLBACK,  'cbSource',               null,                    null              ], // source [enum]
+        129 => [parent::CR_CALLBACK,  'cbSoldByNPC',            null,                    null              ], // soldbynpc [str-small]
+        130 => [parent::CR_FLAG,      'cuFlags',                CUSTOM_HAS_COMMENT                         ], // hascomments
+        132 => [parent::CR_CALLBACK,  'cbGlyphType',            null,                    null              ], // glyphtype [enum]
+        133 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_ACCOUNTBOUND                     ], // accountbound
+        134 => [parent::CR_NUMERIC,   'is.mledps',              NUM_CAST_FLOAT,          true              ], // mledps
+        135 => [parent::CR_NUMERIC,   'is.mledmgmin',           NUM_CAST_INT,            true              ], // mledmgmin
+        136 => [parent::CR_NUMERIC,   'is.mledmgmax',           NUM_CAST_INT,            true              ], // mledmgmax
+        137 => [parent::CR_NUMERIC,   'is.mlespeed',            NUM_CAST_FLOAT,          true              ], // mlespeed
+        138 => [parent::CR_NUMERIC,   'is.rgddps',              NUM_CAST_FLOAT,          true              ], // rgddps
+        139 => [parent::CR_NUMERIC,   'is.rgddmgmin',           NUM_CAST_INT,            true              ], // rgddmgmin
+        140 => [parent::CR_NUMERIC,   'is.rgddmgmax',           NUM_CAST_INT,            true              ], // rgddmgmax
+        141 => [parent::CR_NUMERIC,   'is.rgdspeed',            NUM_CAST_FLOAT,          true              ], // rgdspeed
+        142 => [parent::CR_STRING,    'ic.name'                                                            ], // icon
+        143 => [parent::CR_CALLBACK,  'cbObtainedBy',           18,                      null              ], // otmilling [yn]
+        144 => [parent::CR_CALLBACK,  'cbPvpPurchasable',       'reqHonorPoints',        null              ], // purchasablewithhonor [yn]
+        145 => [parent::CR_CALLBACK,  'cbPvpPurchasable',       'reqArenaPoints',        null              ], // purchasablewitharena [yn]
+        146 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_HEROIC                           ], // heroic
+        147 => [parent::CR_CALLBACK,  'cbDropsInInstance',      SRC_FLAG_RAID_DROP,      1,                ], // dropsinnormal10 [multimoderaid-any]
+        148 => [parent::CR_CALLBACK,  'cbDropsInInstance',      SRC_FLAG_RAID_DROP,      2,                ], // dropsinnormal25 [multimoderaid-any]
+        149 => [parent::CR_CALLBACK,  'cbDropsInInstance',      SRC_FLAG_RAID_DROP,      4,                ], // dropsinheroic10 [heroicraid-any]
+        150 => [parent::CR_CALLBACK,  'cbDropsInInstance',      SRC_FLAG_RAID_DROP,      8,                ], // dropsinheroic25 [heroicraid-any]
+        151 => [parent::CR_NUMERIC,   'id',                     NUM_CAST_INT,            true              ], // id
+        152 => [parent::CR_CALLBACK,  'cbClassRaceSpec',        'requiredClass',         ChrClass::MASK_ALL], // classspecific [enum]
+        153 => [parent::CR_CALLBACK,  'cbClassRaceSpec',        'requiredRace',          ChrRace::MASK_ALL ], // racespecific [enum]
+        154 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_REFUNDABLE                       ], // refundable
+        155 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_USABLE_ARENA                     ], // usableinarenas
+        156 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_USABLE_SHAPED                    ], // usablewhenshapeshifted
+        157 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_SMARTLOOT                        ], // smartloot
+        158 => [parent::CR_CALLBACK,  'cbPurchasableWith',      null,                    null              ], // purchasablewithcurrency [enum]
+        159 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_MILLABLE                         ], // millable
+        160 => [parent::CR_NYI_PH,    null,                     1,                                         ], // relatedevent [enum]      like 169 .. crawl though npc_vendor and loot_templates of event-related spawns
+        161 => [parent::CR_CALLBACK,  'cbAvailable',            null,                    null              ], // availabletoplayers [yn]
+        162 => [parent::CR_FLAG,      'flags',                  ITEM_FLAG_DEPRECATED                       ], // deprecated
+        163 => [parent::CR_CALLBACK,  'cbDisenchantsInto',      null,                    null              ], // disenchantsinto [disenchanting]
+        165 => [parent::CR_NUMERIC,   'repairPrice',            NUM_CAST_INT,            true              ], // repaircost
+        167 => [parent::CR_FLAG,      'cuFlags',                CUSTOM_HAS_VIDEO                           ], // hasvideos
+        168 => [parent::CR_CALLBACK,  'cbFieldHasVal',          'spellId1',              LEARN_SPELLS      ], // teachesspell [yn]
+        169 => [parent::CR_ENUM,      'e.holidayId',            true,                    true              ], // requiresevent
+        171 => [parent::CR_CALLBACK,  'cbObtainedBy',           8,                       null              ], // otredemption [yn]
+        172 => [parent::CR_CALLBACK,  'cbObtainedBy',           12,                      null              ], // rewardedbyachievement [yn]
+        176 => [parent::CR_STAFFFLAG, 'flags'                                                              ], // flags
+        177 => [parent::CR_STAFFFLAG, 'flagsExtra'                                                         ], // flags2
     );
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
-    protected $inputFields = array(
-        'wt'    => [FILTER_V_CALLBACK, 'cbWeightKeyCheck',                              true ], // weight keys
-        'wtv'   => [FILTER_V_RANGE,    [1, 999],                                        true ], // weight values
-        'jc'    => [FILTER_V_LIST,     [1],                                             false], // use jewelcrafter gems for weight calculation
-        'gm'    => [FILTER_V_LIST,     [2, 3, 4],                                       false], // gem rarity for weight calculation
-        'cr'    => [FILTER_V_RANGE,    [1, 177],                                        true ], // criteria ids
-        'crs'   => [FILTER_V_LIST,     [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 99999]], true ], // criteria operators
-        'crv'   => [FILTER_V_REGEX,    '/[\p{C};:%\\\\]/ui',                            true ], // criteria values - only printable chars, no delimiters
-        'upg'   => [FILTER_V_RANGE,    [1, 999999],                                     true ], // upgrade item ids
-        'gb'    => [FILTER_V_LIST,     [0, 1, 2, 3],                                    false], // search result grouping
-        'na'    => [FILTER_V_REGEX,    '/[\p{C};%\\\\]/ui',                             false], // name - only printable chars, no delimiter
-        'ma'    => [FILTER_V_EQUAL,    1,                                               false], // match any / all filter
-        'ub'    => [FILTER_V_LIST,     [[1, 9], 11],                                    false], // usable by classId
-        'qu'    => [FILTER_V_RANGE,    [0, 7],                                          true ], // quality ids
-        'ty'    => [FILTER_V_CALLBACK, 'cbTypeCheck',                                   true ], // item type - dynamic by current group
-        'sl'    => [FILTER_V_CALLBACK, 'cbSlotCheck',                                   true ], // item slot - dynamic by current group
-        'si'    => [FILTER_V_LIST,     [1, 2, 3, -1, -2],                               false], // side
-        'minle' => [FILTER_V_RANGE,    [1, 999],                                        false], // item level min
-        'maxle' => [FILTER_V_RANGE,    [1, 999],                                        false], // item level max
-        'minrl' => [FILTER_V_RANGE,    [1, MAX_LEVEL],                                  false], // required level min
-        'maxrl' => [FILTER_V_RANGE,    [1, MAX_LEVEL],                                  false]  // required level max
+    protected $inputFields   = array(
+        'wt'    => [parent::V_CALLBACK, 'cbWeightKeyCheck',                              true ], // weight keys
+        'wtv'   => [parent::V_RANGE,    [1, 999],                                        true ], // weight values
+        'jc'    => [parent::V_LIST,     [1],                                             false], // use jewelcrafter gems for weight calculation
+        'gm'    => [parent::V_LIST,     [2, 3, 4],                                       false], // gem rarity for weight calculation
+        'cr'    => [parent::V_RANGE,    [1, 177],                                        true ], // criteria ids
+        'crs'   => [parent::V_LIST,     [parent::ENUM_NONE, parent::ENUM_ANY, [0, 99999]], true ], // criteria operators
+        'crv'   => [parent::V_REGEX,    parent::PATTERN_CRV,                             true ], // criteria values - only printable chars, no delimiters
+        'upg'   => [parent::V_REGEX,    '/[^\d:]/ui',                                    false], // upgrade item ids
+        'gb'    => [parent::V_LIST,     [0, 1, 2, 3],                                    false], // search result grouping
+        'na'    => [parent::V_REGEX,    parent::PATTERN_NAME,                            false], // name - only printable chars, no delimiter
+        'ma'    => [parent::V_EQUAL,    1,                                               false], // match any / all filter
+        'ub'    => [parent::V_LIST,     [[1, 9], 11],                                    false], // usable by classId
+        'qu'    => [parent::V_RANGE,    [0, 7],                                          true ], // quality ids
+        'ty'    => [parent::V_CALLBACK, 'cbTypeCheck',                                   true ], // item type - dynamic by current group
+        'sl'    => [parent::V_CALLBACK, 'cbSlotCheck',                                   true ], // item slot - dynamic by current group
+        'si'    => [parent::V_LIST,     [1, 2, 3, -1, -2],                               false], // side
+        'minle' => [parent::V_RANGE,    [1, 999],                                        false], // item level min
+        'maxle' => [parent::V_RANGE,    [1, 999],                                        false], // item level max
+        'minrl' => [parent::V_RANGE,    [1, MAX_LEVEL],                                  false], // required level min
+        'maxrl' => [parent::V_RANGE,    [1, MAX_LEVEL],                                  false]  // required level max
     );
 
     public function __construct($fromPOST = false, $opts = [])
     {
-        $classes = new CharClassList();
-        foreach ($classes->iterate() as $cId => $_tpl)
+        $classes = DB::Aowow()->select('SELECT `id` AS ARRAY_KEY, `weaponTypeMask` AS "0", `armorTypeMask` AS "1" FROM ?_classes');
+        foreach ($classes as $cId => [$weaponTypeMask, $armorTypeMask])
         {
             // preselect misc subclasses
-            $this->ubFilter[$cId] = [ITEM_CLASS_WEAPON => [14], ITEM_CLASS_ARMOR => [0]];
+            $this->ubFilter[$cId] = [ITEM_CLASS_WEAPON => [ITEM_SUBCLASS_MISC_WEAPON], ITEM_CLASS_ARMOR => [ITEM_SUBCLASS_MISC_ARMOR]];
 
             for ($i = 0; $i < 21; $i++)
-                if ($_tpl['weaponTypeMask'] & (1 << $i))
+                if ($weaponTypeMask & (1 << $i))
                     $this->ubFilter[$cId][ITEM_CLASS_WEAPON][] = $i;
 
             for ($i = 0; $i < 11; $i++)
-                if ($_tpl['armorTypeMask'] & (1 << $i))
+                if ($armorTypeMask & (1 << $i))
                     $this->ubFilter[$cId][ITEM_CLASS_ARMOR][] = $i;
         }
 
         parent::__construct($fromPOST, $opts);
     }
 
-    public function createConditionsForWeights()
+    public function createConditionsForWeights() : array
     {
         if (empty($this->fiData['v']['wt']))
-            return null;
+            return [];
 
         $this->wtCnd = [];
         $select = [];
@@ -2041,18 +2049,15 @@ class ItemListFilter extends Filter
 
         foreach ($this->fiData['v']['wt'] as $k => $v)
         {
-            $str = Util::$itemFilter[$v];
-            $qty = intVal($this->fiData['v']['wtv'][$k]);
+            if ($idx = Stat::getIndexFrom(Stat::IDX_FILTER_CR_ID, $v))
+            {
+                $str = Stat::getJsonString($idx);
+                $qty = intVal($this->fiData['v']['wtv'][$k]);
 
-            if ($str == 'rgdspeed')                     // dont need no duplicate column
-                $str = 'speed';
-
-            if ($str == 'mledps')                       // todo (med): unify rngdps and mledps to dps
-                $str = 'dps';
-
-            $select[]      = '(`is`.`'.$str.'` * '.$qty.')';
-            $this->wtCnd[] = ['is.'.$str, 0, '>'];
-            $wtSum        += $qty;
+                $select[]      = '(IFNULL(`is`.`'.$str.'`, 0) * '.$qty.')';
+                $this->wtCnd[] = ['is.'.$str, 0, '>'];
+                $wtSum        += $qty;
+            }
         }
 
         if (count($this->wtCnd) > 1)
@@ -2072,18 +2077,12 @@ class ItemListFilter extends Filter
         return $this->wtCnd;
     }
 
-    protected function createSQLForCriterium(&$cr)
+    public function isCurrencyFor(int $itemId) : bool
     {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCr = $this->genericCriterion($cr))
-                return $genCr;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
+        return in_array($itemId, self::ENUM_CURRENCY);
     }
 
-    protected function createSQLForValues()
+    protected function createSQLForValues() : array
     {
         $parts = [];
         $_v    = $this->fiData['v'];
@@ -2091,10 +2090,11 @@ class ItemListFilter extends Filter
         // weights
         if (!empty($_v['wt']) && !empty($_v['wtv']))
         {
-            // gm  - gem quality (qualityId)
-            // jc  - jc-gems included (bool)
+            // gm - gem quality (qualityId)
+            // jc - jc-gems included (bool)
 
-            $parts[] = $this->createConditionsForWeights();
+            if ($_ = $this->createConditionsForWeights())
+                $parts[] = $_;
 
             foreach ($_v['wt'] as $_)
                 $this->formData['extraCols'][] = $_;
@@ -2103,7 +2103,7 @@ class ItemListFilter extends Filter
         // upgrade for [form only]
         if (isset($_v['upg']))
         {
-            $_ = DB::Aowow()->selectCol('SELECT id as ARRAY_KEY, slot FROM ?_items WHERE class IN (2, 3, 4) AND id IN (?a)', (array)$_v['upg']);
+            $_ = DB::Aowow()->selectCol('SELECT `id` AS ARRAY_KEY, `slot` FROM ?_items WHERE `class` IN (?a) AND `id` IN (?a)', [ITEM_CLASS_WEAPON, ITEM_CLASS_GEM, ITEM_CLASS_ARMOR], explode(':', $_v['upg']));
             if ($_ === null)
             {
                 unset($_v['upg']);
@@ -2123,7 +2123,7 @@ class ItemListFilter extends Filter
 
         // name
         if (isset($_v['na']))
-            if ($_ = $this->modularizeString(['name_loc'.User::$localeId]))
+            if ($_ = $this->modularizeString(['name_loc'.Lang::getLocale()->value]))
                 $parts[] = $_;
 
         // usable-by (not excluded by requiredClass && armor or weapons match mask from ?_classes)
@@ -2134,9 +2134,9 @@ class ItemListFilter extends Filter
                 ['OR', ['requiredClass', 0], ['requiredClass', $this->list2Mask((array)$_v['ub']), '&']],
                 [
                     'OR',
-                    ['class', [2, 4], '!'],
-                    ['AND', ['class', 2], ['subclassbak', $this->ubFilter[$_v['ub']][ITEM_CLASS_WEAPON]]],
-                    ['AND', ['class', 4], ['subclassbak', $this->ubFilter[$_v['ub']][ITEM_CLASS_ARMOR]]]
+                    ['class', [ITEM_CLASS_WEAPON, ITEM_CLASS_ARMOR], '!'],
+                    ['AND', ['class', ITEM_CLASS_WEAPON], ['subclassbak', $this->ubFilter[$_v['ub']][ITEM_CLASS_WEAPON]]],
+                    ['AND', ['class', ITEM_CLASS_ARMOR],  ['subclassbak', $this->ubFilter[$_v['ub']][ITEM_CLASS_ARMOR]]]
                 ]
             );
         }
@@ -2156,25 +2156,25 @@ class ItemListFilter extends Filter
         // side
         if (isset($_v['si']))
         {
-            $ex    = [['requiredRace', RACE_MASK_ALL, '&'], RACE_MASK_ALL, '!'];
-            $notEx = ['OR', ['requiredRace', 0], [['requiredRace', RACE_MASK_ALL, '&'], RACE_MASK_ALL]];
+            $ex    = [['requiredRace', ChrRace::MASK_ALL, '&'], ChrRace::MASK_ALL, '!'];
+            $notEx = ['OR', ['requiredRace', 0], [['requiredRace', ChrRace::MASK_ALL, '&'], ChrRace::MASK_ALL]];
 
             switch ($_v['si'])
             {
-                case  3:
-                    $parts[] = $notEx;
+                case  SIDE_BOTH:
+                    $parts[] = ['OR',  [['flagsExtra', 0x3, '&'], [0, 3]], ['requiredRace', ChrRace::MASK_ALL], ['requiredRace', 0]];
                     break;
-                case  2:
-                    $parts[] = ['AND', [['flagsExtra', 0x3, '&'], [0, 1]],  ['OR', $notEx, ['requiredRace', RACE_MASK_HORDE, '&']]];
+                case  SIDE_HORDE:
+                    $parts[] = ['AND', [['flagsExtra', 0x3, '&'], [0, 1]],  ['OR', $notEx, ['requiredRace', ChrRace::MASK_HORDE, '&']]];
                     break;
-                case -2:
-                    $parts[] = ['OR',  [['flagsExtra', 0x3, '&'], 1],       ['AND', $ex,   ['requiredRace', RACE_MASK_HORDE, '&']]];
+                case -SIDE_HORDE:
+                    $parts[] = ['OR',  [['flagsExtra', 0x3, '&'], 1],       ['AND', $ex,   ['requiredRace', ChrRace::MASK_HORDE, '&']]];
                     break;
-                case  1:
-                    $parts[] = ['AND', [['flagsExtra', 0x3, '&'], [0, 2]],  ['OR', $notEx, ['requiredRace', RACE_MASK_ALLIANCE, '&']]];
+                case  SIDE_ALLIANCE:
+                    $parts[] = ['AND', [['flagsExtra', 0x3, '&'], [0, 2]],  ['OR', $notEx, ['requiredRace', ChrRace::MASK_ALLIANCE, '&']]];
                     break;
-                case -1:
-                    $parts[] = ['OR',  [['flagsExtra', 0x3, '&'], 2],       ['AND', $ex,   ['requiredRace', RACE_MASK_ALLIANCE, '&']]];
+                case -SIDE_ALLIANCE:
+                    $parts[] = ['OR',  [['flagsExtra', 0x3, '&'], 2],       ['AND', $ex,   ['requiredRace', ChrRace::MASK_ALLIANCE, '&']]];
                     break;
             }
         }
@@ -2198,88 +2198,67 @@ class ItemListFilter extends Filter
         return $parts;
     }
 
-    protected function cbFactionQuestReward($cr)
+    protected function cbFactionQuestReward(int $cr, int $crs, string $crv) : ?array
     {
-        if (!isset($this->otFields[$cr[0]]))
-            return false;
-
-        $field = 'src.src'.$this->otFields[$cr[0]];
-        switch ($cr[1])
+        return match ($crs)
         {
-            case 1:                                         // Yes
-                return [$field, null, '!'];
-            case 2:                                         // Alliance
-                return [$field, 1];
-            case 3:                                         // Horde
-                return [$field, 2];
-            case 4:                                         // Both
-                return [$field, 3];
-            case 5:                                         // No
-                return [$field, null];
-        }
-
-        return false;
+            1 => ['src.src4', null, '!'],                   // Yes
+            2 => ['src.src4', SIDE_ALLIANCE],               // Alliance
+            3 => ['src.src4', SIDE_HORDE],                  // Horde
+            4 => ['src.src4', SIDE_BOTH],                   // Both
+            5 => ['src.src4', null],                        // No
+            default => null
+        };
     }
 
-    protected function cbAvailable($cr)
+    protected function cbAvailable(int $cr, int $crs, string $crv) : ?array
     {
-        if ($this->int2Bool($cr[1]))
-            return [['cuFlags', CUSTOM_UNAVAILABLE, '&'], 0, $cr[1] ? null : '!'];
+        if ($this->int2Bool($crs))
+            return [['cuFlags', CUSTOM_UNAVAILABLE, '&'], 0, $crs ? null : '!'];
 
-        return false;
+        return null;
     }
 
-    protected function cbHasSockets($cr)
+    protected function cbHasSockets(int $cr, int $crs, string $crv) : ?array
     {
-        switch ($cr[1])
+        return match ($crs)
         {
-            case 5:                                         // Yes
-                return ['is.nsockets', 0, '!'];
-            case 6:                                         // No
-                return ['is.nsockets', 0];
-            case 1:                                         // Meta
-            case 2:                                         // Red
-            case 3:                                         // Yellow
-            case 4:                                         // Blue
-                $mask = 1 << ($cr[1] - 1);
-                return ['OR', ['socketColor1', $mask], ['socketColor2', $mask], ['socketColor3', $mask]];
-        }
-
-        return false;
+            // Meta, Red, Yellow, Blue
+            1, 2, 3, 4 => ['OR', ['socketColor1', 1 << ($crs - 1)], ['socketColor2', 1 << ($crs - 1)], ['socketColor3', 1 << ($crs - 1)]],
+            5 => ['is.nsockets', 0, '!'],                   // Yes
+            6 => ['is.nsockets', 0],                        // No
+            default => null
+        };
     }
 
-    protected function cbFitsGemSlot($cr)
+    protected function cbFitsGemSlot(int $cr, int $crs, string $crv) : ?array
     {
-        switch ($cr[1])
+        return match ($crs)
         {
-            case 5:                                         // Yes
-                return ['gemEnchantmentId', 0, '!'];
-            case 6:                                         // No
-                return ['gemEnchantmentId', 0];
-            case 1:                                         // Meta
-            case 2:                                         // Red
-            case 3:                                         // Yellow
-            case 4:                                         // Blue
-                $mask = 1 << ($cr[1] - 1);
-                return ['AND', ['gemEnchantmentId', 0, '!'], ['gemColorMask', $mask, '&']];
-        }
+            // Meta, Red, Yellow, Blue
+            1, 2, 3, 4 => ['AND', ['gemEnchantmentId', 0, '!'], ['gemColorMask', 1 << ($crs - 1), '&']],
+            5 => ['gemEnchantmentId', 0, '!'],              // Yes
+            6 => ['gemEnchantmentId', 0],                   // No
+            default => null
+        };
     }
 
-    protected function cbGlyphType($cr)
+    protected function cbGlyphType(int $cr, int $crs, string $crv) : ?array
     {
-        switch ($cr[1])
+        return match ($crs)
         {
-            case 1:                                         // Major
-            case 2:                                         // Minor
-                return ['AND', ['class', 16], ['subSubClass', $cr[1]]];
-        }
-
-        return false;
+            // major, minor
+            1, 2 => ['AND', ['class', ITEM_CLASS_GLYPH], ['subSubClass', $crs]],
+            default => null
+        };
     }
 
-    protected function cbHasRandEnchant($cr)
+    protected function cbHasRandEnchant(int $cr, int $crs, string $crv) : ?array
     {
-        $randIds = DB::Aowow()->select('SELECT id AS ARRAY_KEY, ABS(id) AS `id`, name_loc?d, name_loc0 FROM ?_itemrandomenchant WHERE name_loc?d LIKE ?', User::$localeId, User::$localeId, '%'.$cr[2].'%');
+        $n = preg_replace(parent::PATTERN_NAME, '', $crv);
+        $n = $this->transformString($n, false);
+
+        $randIds = DB::Aowow()->select('SELECT `id` AS ARRAY_KEY, ABS(`id`) AS `id`, name_loc?d, `name_loc0` FROM ?_itemrandomenchant WHERE name_loc?d LIKE ?', Lang::getLocale()->value, Lang::getLocale()->value, $n);
         $tplIds  = $randIds ? DB::World()->select('SELECT `entry`, `ench` FROM item_enchantment_template WHERE `ench` IN (?a)', array_column($randIds, 'id')) : [];
         foreach ($tplIds as &$set)
         {
@@ -2294,7 +2273,7 @@ class ItemListFilter extends Filter
             $set['name'] = Util::localizedString($randIds[$set['ench']], 'name', true);
         }
 
-        // only enhance search results if enchantment by name is unique (implies only one enchantment per item is availabel)
+        // only enhance search results if enchantment by name is unique (implies only one enchantment per item is available)
         if (count(array_unique(array_column($randIds, 'name_loc0'))) == 1)
             $this->extraOpts['relEnchant'] = $tplIds;
 
@@ -2304,113 +2283,135 @@ class ItemListFilter extends Filter
             return [0];                                     // no results aren't really input errors
     }
 
-    protected function cbReqArenaRating($cr)
+    protected function cbReqArenaRating(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
-        $this->formData['extraCols'][] = $cr[0];
+        $this->formData['extraCols'][] = $cr;
 
         $items = [0];
-        if ($costs = DB::Aowow()->selectCol('SELECT id FROM ?_itemextendedcost WHERE reqPersonalrating '.$cr[1].' '.$cr[2]))
+        if ($costs = DB::Aowow()->selectCol('SELECT `id` FROM ?_itemextendedcost WHERE `reqPersonalrating` '.$crs.' '.$crv))
             $items = DB::World()->selectCol($this->extCostQuery, $costs, $costs);
 
         return ['id', $items];
     }
 
-    protected function cbClassRaceSpec($cr, $field, $mask)
+    protected function cbClassRaceSpec(int $cr, int $crs, string $crv, string $field, int $mask) : ?array
     {
-        if (!isset($this->enums[$cr[0]][$cr[1]]))
-            return false;
+        if (!isset($this->enums[$cr][$crs]))
+            return null;
 
-        $_ = $this->enums[$cr[0]][$cr[1]];
+        $_ = $this->enums[$cr][$crs];
         if (is_bool($_))
             return $_ ? ['AND', [[$field, $mask, '&'], $mask, '!'], [$field, 0, '>']] : ['OR', [[$field, $mask, '&'], $mask], [$field, 0]];
         else if (is_int($_))
             return ['AND', [[$field, $mask, '&'], $mask, '!'], [$field, 1 << ($_ - 1), '&']];
 
-        return false;
+        return null;
     }
 
-    protected function cbDamageType($cr)
+    protected function cbDamageType(int $cr, int $crs, string $crv) : ?array
     {
-        if (!$this->checkInput(FILTER_V_RANGE, [0, 6], $cr[1]))
-            return false;
+        if (!$this->checkInput(parent::V_RANGE, [SPELL_SCHOOL_NORMAL, SPELL_SCHOOL_ARCANE], $crs))
+            return null;
 
-        return ['OR', ['dmgType1', $cr[1]], ['dmgType2', $cr[1]]];
+        return ['OR', ['dmgType1', $crs], ['dmgType2', $crs]];
     }
 
-    protected function cbArmorBonus($cr)
+    protected function cbArmorBonus(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_FLOAT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_FLOAT) || !$this->int2Op($crs))
+            return null;
 
-        $this->formData['extraCols'][] = $cr[0];
-        return ['AND', ['armordamagemodifier', $cr[2], $cr[1]], ['class', ITEM_CLASS_ARMOR]];
+        $this->formData['extraCols'][] = $cr;
+        return ['AND', ['armordamagemodifier', $crv, $crs], ['class', ITEM_CLASS_ARMOR]];
     }
 
-    protected function cbCraftedByProf($cr)
+    protected function cbCraftedByProf(int $cr, int $crs, string $crv) : ?array
     {
-        if (!isset($this->enums[99][$cr[1]]))
-            return false;
+        if (!isset($this->enums[$cr][$crs]))
+            return null;
 
-        $_ = $this->enums[99][$cr[1]];
+        $_ = $this->enums[$cr][$crs];
         if (is_bool($_))
             return ['src.src1', null, $_ ? '!' : null];
         else if (is_int($_))
             return ['s.skillLine1', $_];
 
-        return false;
+        return null;
     }
 
-    protected function cbQuestRewardIn($cr)
+    protected function cbQuestRewardIn(int $cr, int $crs, string $crv) : ?array
     {
-        if (in_array($cr[1], $this->enums[$cr[0]]))
-            return ['AND', ['src.src4', null, '!'], ['src.moreZoneId', $cr[1]]];
-        else if ($cr[1] == FILTER_ENUM_ANY)
+        if (in_array($crs, $this->enums[$cr]))
+            return ['AND', ['src.src4', null, '!'], ['src.moreZoneId', $crs]];
+        else if ($crs == parent::ENUM_ANY)
             return ['src.src4', null, '!'];                 // well, this seems a bit redundant..
 
-        return false;
+        return null;
     }
 
-    protected function cbPurchasableWith($cr)
+    protected function cbDropsInZone(int $cr, int $crs, string $crv) : ?array
     {
-        if (in_array($cr[1], $this->enums[$cr[0]]))
-            $_ = (array)$cr[1];
-        else if ($cr[1] == FILTER_ENUM_ANY)
-            $_ = $this->enums[$cr[0]];
+        if (in_array($crs, $this->enums[$cr]))
+            return ['AND', ['src.src2', null, '!'], ['src.moreZoneId', $crs]];
+        else if ($crs == parent::ENUM_ANY)
+            return ['src.src2', null, '!'];                 // well, this seems a bit redundant..
+
+        return null;
+    }
+
+    protected function cbDropsInInstance(int $cr, int $crs, string $crv, int $moreFlag, int $modeBit) : ?array
+    {
+        if (in_array($crs, $this->enums[$cr]))
+            return ['AND', ['src.src2', $modeBit, '&'], ['src.moreMask', $moreFlag, '&'], ['src.moreZoneId', $crs]];
+        else if ($crs == parent::ENUM_ANY)
+            return ['AND', ['src.src2', $modeBit, '&'], ['src.moreMask', $moreFlag, '&']];
+
+        return null;
+    }
+
+    protected function cbPurchasableWith(int $cr, int $crs, string $crv) : ?array
+    {
+        if (in_array($crs, $this->enums[$cr]))
+            $_ = (array)$crs;
+        else if ($crs == parent::ENUM_ANY)
+            $_ = $this->enums[$cr];
         else
-            return false;
+            return null;
 
         $costs = DB::Aowow()->selectCol(
-            'SELECT id FROM ?_itemextendedcost WHERE reqItemId1 IN (?a) OR reqItemId2 IN (?a) OR reqItemId3 IN (?a) OR reqItemId4 IN (?a) OR reqItemId5 IN (?a)',
+            'SELECT `id` FROM ?_itemextendedcost WHERE `reqItemId1` IN (?a) OR `reqItemId2` IN (?a) OR `reqItemId3` IN (?a) OR `reqItemId4` IN (?a) OR `reqItemId5` IN (?a)',
             $_, $_, $_, $_, $_
         );
         if ($items = DB::World()->selectCol($this->extCostQuery, $costs, $costs))
             return ['id', $items];
+
+        return null;
     }
 
-    protected function cbSoldByNPC($cr)
+    protected function cbSoldByNPC(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT))
+            return null;
 
-        if ($iIds = DB::World()->selectCol('SELECT item FROM npc_vendor WHERE entry = ?d UNION SELECT item FROM game_event_npc_vendor v JOIN creature c ON c.guid = v.guid WHERE c.id1 = ?d', $cr[2], $cr[2]))
+        if ($iIds = DB::World()->selectCol('SELECT `item` FROM npc_vendor WHERE `entry` = ?d UNION SELECT `item` FROM game_event_npc_vendor v JOIN creature c ON c.`guid` = v.`guid` WHERE c.`id` = ?d', $crv, $crv))
             return ['i.id', $iIds];
         else
             return [0];
     }
 
-    protected function cbAvgBuyout($cr)
+    protected function cbAvgBuyout(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
         foreach (Profiler::getRealms() as $rId => $__)
         {
             // todo: do something sensible..
             // // todo (med): get the avgbuyout into the listview
-            // if ($_ = DB::Characters()->select('SELECT ii.itemEntry AS ARRAY_KEY, AVG(ah.buyoutprice / ii.count) AS buyout FROM auctionhouse ah JOIN item_instance ii ON ah.itemguid = ii.guid GROUP BY ii.itemEntry HAVING buyout '.$cr[1].' ?f', $c[1]))
+            // if ($_ = DB::Characters()->select('SELECT ii.itemEntry AS ARRAY_KEY, AVG(ah.buyoutprice / ii.count) AS buyout FROM auctionhouse ah JOIN item_instance ii ON ah.itemguid = ii.guid GROUP BY ii.itemEntry HAVING buyout '.$crs.' ?f', $c[1]))
                 // return ['i.id', array_keys($_)];
             // else
                 // return [0];
@@ -2420,153 +2421,152 @@ class ItemListFilter extends Filter
         return [0];
     }
 
-    protected function cbAvgMoneyContent($cr)
+    protected function cbAvgMoneyContent(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
-        $this->formData['extraCols'][] = $cr[0];
-        return ['AND', ['flags', ITEM_FLAG_OPENABLE, '&'], ['((minMoneyLoot + maxMoneyLoot) / 2)', $cr[2], $cr[1]]];
+        $this->formData['extraCols'][] = $cr;
+        return ['AND', ['flags', ITEM_FLAG_OPENABLE, '&'], ['((minMoneyLoot + maxMoneyLoot) / 2)', $crv, $crs]];
     }
 
-    protected function cbCooldown($cr)
+    protected function cbCooldown(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
-        $cr[2] *= 1000;                                     // field supplied in milliseconds
+        $crv *= 1000;                                       // field supplied in milliseconds
 
-        $this->formData['extraCols'][] = $cr[0];
-        $this->extraOpts['is']['s'][]  = ', IF(spellCooldown1 > 1, spellCooldown1, IF(spellCooldown2 > 1, spellCooldown2, IF(spellCooldown3 > 1, spellCooldown3, IF(spellCooldown4 > 1, spellCooldown4, IF(spellCooldown5 > 1, spellCooldown5,))))) AS cooldown';
+        $this->formData['extraCols'][] = $cr;
+        $this->extraOpts['is']['s'][]  = ', GREATEST(`spellCooldown1`, `spellCooldown2`, `spellCooldown3`, `spellCooldown4`, `spellCooldown5`) AS "cooldown"';
 
         return [
             'OR',
-            ['AND', ['spellTrigger1', 0], ['spellId1', 0, '!'], ['spellCooldown1', 0, '>'], ['spellCooldown1', $cr[2], $cr[1]]],
-            ['AND', ['spellTrigger2', 0], ['spellId2', 0, '!'], ['spellCooldown2', 0, '>'], ['spellCooldown2', $cr[2], $cr[1]]],
-            ['AND', ['spellTrigger3', 0], ['spellId3', 0, '!'], ['spellCooldown3', 0, '>'], ['spellCooldown3', $cr[2], $cr[1]]],
-            ['AND', ['spellTrigger4', 0], ['spellId4', 0, '!'], ['spellCooldown4', 0, '>'], ['spellCooldown4', $cr[2], $cr[1]]],
-            ['AND', ['spellTrigger5', 0], ['spellId5', 0, '!'], ['spellCooldown5', 0, '>'], ['spellCooldown5', $cr[2], $cr[1]]],
+            ['AND', ['spellTrigger1', SPELL_TRIGGER_USE], ['spellId1', 0, '!'], ['spellCooldown1', 0, '>'], ['spellCooldown1', $crv, $crs]],
+            ['AND', ['spellTrigger2', SPELL_TRIGGER_USE], ['spellId2', 0, '!'], ['spellCooldown2', 0, '>'], ['spellCooldown2', $crv, $crs]],
+            ['AND', ['spellTrigger3', SPELL_TRIGGER_USE], ['spellId3', 0, '!'], ['spellCooldown3', 0, '>'], ['spellCooldown3', $crv, $crs]],
+            ['AND', ['spellTrigger4', SPELL_TRIGGER_USE], ['spellId4', 0, '!'], ['spellCooldown4', 0, '>'], ['spellCooldown4', $crv, $crs]],
+            ['AND', ['spellTrigger5', SPELL_TRIGGER_USE], ['spellId5', 0, '!'], ['spellCooldown5', 0, '>'], ['spellCooldown5', $crv, $crs]],
         ];
     }
 
-    protected function cbQuestRelation($cr)
+    protected function cbQuestRelation(int $cr, int $crs, string $crv) : ?array
     {
-        switch ($cr[1])
+        return match ($crs)
         {
-            case 1:                                         // any
-                return ['startQuest', 0, '>'];
-            case 2:                                         // exclude horde only
-                return ['AND', ['startQuest', 0, '>'], [['flagsExtra', 0x3, '&'], 2]];
-            case 3:                                         // exclude alliance only
-                return ['AND', ['startQuest', 0, '>'], [['flagsExtra', 0x3, '&'], 1]];
-            case 4:                                         // both
-                return ['AND', ['startQuest', 0, '>'], [['flagsExtra', 0x3, '&'], 0]];
-            case 5:                                         // none
-                return ['startQuest', 0];
-        }
-
-        return false;
+            // any
+            1 => ['startQuest', 0, '>'],
+            // exclude horde only
+            2 => ['AND', ['startQuest', 0, '>'], [['flagsExtra', 0x3, '&'], SIDE_HORDE]],
+            // exclude alliance only
+            3 => ['AND', ['startQuest', 0, '>'], [['flagsExtra', 0x3, '&'], SIDE_ALLIANCE]],
+            // both
+            4 => ['AND', ['startQuest', 0, '>'], [['flagsExtra', 0x3, '&'], 0]],
+            // none
+            5 => ['startQuest', 0],
+            default => null
+        };
     }
 
-    protected function cbFieldHasVal($cr, $field, $val)
+    protected function cbFieldHasVal(int $cr, int $crs, string $crv, string $field, mixed $val) : ?array
     {
-        if ($this->int2Bool($cr[1]))
-            return [$field, $val, $cr[1] ? null : '!'];
+        if ($this->int2Bool($crs))
+            return [$field, $val, $crs ? null : '!'];
 
-        return false;
+        return null;
     }
 
-    protected function cbObtainedBy($cr, $field)
+    protected function cbObtainedBy(int $cr, int $crs, string $crv, string $field) : ?array
     {
-        if ($this->int2Bool($cr[1]))
-            return ['src.src'.$this->otFields[$cr[0]], null, $cr[1] ? '!' : null];
+        if ($this->int2Bool($crs))
+            return ['src.src'.$field, null, $crs ? '!' : null];
 
-        return false;
+        return null;
     }
 
-    protected function cbPvpPurchasable($cr, $field)
+    protected function cbPvpPurchasable(int $cr, int $crs, string $crv, string $field) : ?array
     {
-        if (!$this->int2Bool($cr[1]))
-            return false;
+        if (!$this->int2Bool($crs))
+            return null;
 
-        $costs = DB::Aowow()->selectCol('SELECT id FROM ?_itemextendedcost WHERE ?# > 0', $field);
+        $costs = DB::Aowow()->selectCol('SELECT `id` FROM ?_itemextendedcost WHERE ?# > 0', $field);
         if ($items = DB::World()->selectCol($this->extCostQuery, $costs, $costs))
-            return ['id', $items, $cr[1] ? null : '!'];
+            return ['id', $items, $crs ? null : '!'];
 
-        return false;
+        return null;
     }
 
-    protected function cbDisenchantsInto($cr)
+    protected function cbDisenchantsInto(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[1], NUM_REQ_INT))
-            return false;
+        if (!Util::checkNumeric($crs, NUM_CAST_INT))
+            return null;
 
-        if (!in_array($cr[1], $this->enums[$cr[0]]))
-            return false;
+        if (!in_array($crs, $this->enums[$cr]))
+            return null;
 
         $refResults = [];
-        $newRefs = DB::World()->selectCol('SELECT entry FROM ?# WHERE item = ?d AND reference = 0', LOOT_REFERENCE, $cr[1]);
+        $newRefs = DB::World()->selectCol('SELECT `entry` FROM ?# WHERE `item` = ?d AND `reference` = 0', LOOT_REFERENCE, $crs);
         while ($newRefs)
         {
             $refResults += $newRefs;
-            $newRefs     = DB::World()->selectCol('SELECT entry FROM ?# WHERE reference IN (?a)', LOOT_REFERENCE, $newRefs);
+            $newRefs     = DB::World()->selectCol('SELECT `entry` FROM ?# WHERE `reference` IN (?a)', LOOT_REFERENCE, $newRefs);
         }
 
-        $lootIds = DB::World()->selectCol('SELECT entry FROM ?# WHERE {reference IN (?a) OR }(reference = 0 AND item = ?d)', LOOT_DISENCHANT, $refResults ?: DBSIMPLE_SKIP, $cr[1]);
+        $lootIds = DB::World()->selectCol('SELECT `entry` FROM ?# WHERE {`reference` IN (?a) OR }(`reference` = 0 AND `item` = ?d)', LOOT_DISENCHANT, $refResults ?: DBSIMPLE_SKIP, $crs);
 
         return $lootIds ? ['disenchantId', $lootIds] : [0];
     }
 
-    protected function cbObjectiveOfQuest($cr)
+    protected function cbObjectiveOfQuest(int $cr, int $crs, string $crv) : ?array
     {
         $w = '';
-        switch ($cr[1])
+        switch ($crs)
         {
-            case 1:                                 // Yes
-            case 5:                                 // No
+            case 1:                                         // Yes
+            case 5:                                         // No
                 $w = 1;
                 break;
-            case 2:                                 // Alliance
-                $w = 'reqRaceMask & '.RACE_MASK_ALLIANCE.' AND (reqRaceMask & '.RACE_MASK_HORDE.') = 0';
+            case 2:                                         // Alliance
+                $w = '`reqRaceMask` & '.ChrRace::MASK_ALLIANCE.' AND (`reqRaceMask` & '.ChrRace::MASK_HORDE.') = 0';
                 break;
-            case 3:                                 // Horde
-                $w = 'reqRaceMask & '.RACE_MASK_HORDE.' AND (reqRaceMask & '.RACE_MASK_ALLIANCE.') = 0';
+            case 3:                                         // Horde
+                $w = '`reqRaceMask` & '.ChrRace::MASK_HORDE.' AND (`reqRaceMask` & '.ChrRace::MASK_ALLIANCE.') = 0';
                 break;
-            case 4:                                 // Both
-                $w = '(reqRaceMask & '.RACE_MASK_ALLIANCE.' AND reqRaceMask & '.RACE_MASK_HORDE.') OR reqRaceMask = 0';
+            case 4:                                         // Both
+                $w = '(`reqRaceMask` & '.ChrRace::MASK_ALLIANCE.' AND `reqRaceMask` & '.ChrRace::MASK_HORDE.') OR `reqRaceMask` = 0';
                 break;
             default:
-                return false;
+                return null;
         }
 
-        $itemIds = DB::Aowow()->selectCol(sprintf('
-            SELECT reqItemId1 FROM ?_quests WHERE %1$s UNION SELECT reqItemId2 FROM ?_quests WHERE %1$s UNION
-            SELECT reqItemId3 FROM ?_quests WHERE %1$s UNION SELECT reqItemId4 FROM ?_quests WHERE %1$s UNION
-            SELECT reqItemId5 FROM ?_quests WHERE %1$s UNION SELECT reqItemId6 FROM ?_quests WHERE %1$s',
+        $itemIds = DB::Aowow()->selectCol(sprintf(
+           'SELECT `reqItemId1` FROM ?_quests WHERE %1$s UNION SELECT `reqItemId2` FROM ?_quests WHERE %1$s UNION
+            SELECT `reqItemId3` FROM ?_quests WHERE %1$s UNION SELECT `reqItemId4` FROM ?_quests WHERE %1$s UNION
+            SELECT `reqItemId5` FROM ?_quests WHERE %1$s UNION SELECT `reqItemId6` FROM ?_quests WHERE %1$s',
             $w
         ));
 
         if ($itemIds)
-            return ['id', $itemIds, $cr[1] == 5 ? '!' : null];
+            return ['id', $itemIds, $crs == 5 ? '!' : null];
 
         return [0];
     }
 
-    protected function cbReagentForAbility($cr)
+    protected function cbReagentForAbility(int $cr, int $crs, string $crv) : ?array
     {
-        if (!isset($this->enums[99][$cr[1]]))
-            return false;
+        if (!isset($this->enums[$cr][$crs]))
+            return null;
 
-        $_ =  $this->enums[99][$cr[1]];
+        $_ = $this->enums[$cr][$crs];
         if ($_ === null)
-            return false;
+            return null;
 
         $ids    = [];
         $spells = DB::Aowow()->select(          // todo (med): hmm, selecting all using SpellList would exhaust 128MB of memory :x .. see, that we only select the fields that are really needed
-            'SELECT reagent1, reagent2, reagent3, reagent4, reagent5, reagent6, reagent7, reagent8,
-                    reagentCount1, reagentCount2, reagentCount3, reagentCount4, reagentCount5, reagentCount6, reagentCount7, reagentCount8
-            FROM    ?_spell
-            WHERE   skillLine1 IN (?a)',
+           'SELECT `reagent1`, `reagent2`, `reagent3`, `reagent4`, `reagent5`, `reagent6`, `reagent7`, `reagent8`,
+                   `reagentCount1`, `reagentCount2`, `reagentCount3`, `reagentCount4`, `reagentCount5`, `reagentCount6`, `reagentCount7`, `reagentCount8`
+            FROM   ?_spell
+            WHERE  `skillLine1` IN (?a)',
             is_bool($_) ? array_filter($this->enums[99], "is_numeric") : $_
         );
         foreach ($spells as $spell)
@@ -2582,40 +2582,33 @@ class ItemListFilter extends Filter
             return ['id', $ids, '!'];
     }
 
-    protected function cbSource($cr)
+    protected function cbSource(int $cr, int $crs, string $crv) : ?array
     {
-        if (!isset($this->enums[$cr[0]][$cr[1]]))
-            return false;
+        if (!isset($this->enums[$cr][$crs]))
+            return null;
 
-        $_ = $this->enums[$cr[0]][$cr[1]];
+        $_ = $this->enums[$cr][$crs];
         if (is_int($_))                                     // specific
             return ['src.src'.$_, null, '!'];
         else if ($_)                                        // any
         {
             $foo = ['OR'];
-            foreach ($this->enums[$cr[0]] as $bar)
+            foreach ($this->enums[$cr] as $bar)
                 if (is_int($bar))
                     $foo[] = ['src.src'.$bar, null, '!'];
 
             return $foo;
         }
         else                                                // none
-        {
-            $foo = ['AND'];
-            foreach ($this->enums[$cr[0]] as $bar)
-                if (is_int($bar))
-                    $foo[] = ['src.src'.$bar, null];
-
-            return $foo;
-        }
+            return ['src.typeId', null];
     }
 
-    protected function cbTypeCheck(&$v)
+    protected function cbTypeCheck(string &$v) : bool
     {
         if (!$this->parentCats)
             return false;
 
-        if (!Util::checkNumeric($v, NUM_REQ_INT))
+        if (!Util::checkNumeric($v, NUM_CAST_INT))
             return false;
 
         $c = $this->parentCats;
@@ -2628,24 +2621,24 @@ class ItemListFilter extends Filter
             $catList = Lang::item('cat', $c[0]);
 
         // consumables - always
-        if ($c[0] == 0)
+        if ($c[0] == ITEM_CLASS_CONSUMABLE)
             return in_array($v, array_keys(Lang::item('cat', 0, 1)));
         // weapons - only if parent
-        else if ($c[0] == 2 && !isset($c[1]))
+        else if ($c[0] == ITEM_CLASS_WEAPON && !isset($c[1]))
             return in_array($v, array_keys(Lang::spell('weaponSubClass')));
         // armor - only if parent
-        else if ($c[0] == 4 && !isset($c[1]))
-            return in_array($v, array_keys(Lang::item('cat', 4, 1)));
+        else if ($c[0] == ITEM_CLASS_ARMOR && !isset($c[1]))
+            return in_array($v, array_keys(Lang::item('cat', ITEM_CLASS_ARMOR, 1)));
         // uh ... other stuff...
-        else if (in_array($c[0], [1, 3, 7, 9, 15]) && !isset($c[1]))
+        else if (!isset($c[1]) && in_array($c[0], [ITEM_CLASS_CONTAINER, ITEM_CLASS_GEM, ITEM_CLASS_TRADEGOOD, ITEM_CLASS_RECIPE, ITEM_CLASS_MISC]))
             return in_array($v, array_keys($catList[1]));
 
         return false;
     }
 
-    protected function cbSlotCheck(&$v)
+    protected function cbSlotCheck(string &$v) : bool
     {
-        if (!Util::checkNumeric($v, NUM_REQ_INT))
+        if (!Util::checkNumeric($v, NUM_CAST_INT))
             return false;
 
         // todo (low): limit to concrete slots
@@ -2657,26 +2650,26 @@ class ItemListFilter extends Filter
             return in_array($v, $sl);
 
         // consumables - any; perm / temp item enhancements
-        else if ($c[0] == 0 && (!isset($c[1]) || in_array($c[1], [-3, 6])))
+        else if ($c[0] == ITEM_CLASS_CONSUMABLE && (!isset($c[1]) || in_array($c[1], [-3, 6])))
             return in_array($v, $sl);
 
         // weapons - always
-        else if ($c[0] == 2)
+        else if ($c[0] == ITEM_CLASS_WEAPON)
             return in_array($v, $sl);
 
         // armor - any; any armor
-        else if ($c[0] == 4 && (!isset($c[1]) || in_array($c[1], [1, 2, 3, 4])))
+        else if ($c[0] == ITEM_CLASS_ARMOR && (!isset($c[1]) || in_array($c[1], [ITEM_SUBCLASS_CLOTH_ARMOR, ITEM_SUBCLASS_LETHER_ARMOR, ITEM_SUBCLASS_MAIL_ARMOR, ITEM_SUBCLASS_PLATE_ARMOR])))
             return in_array($v, $sl);
 
         return false;
     }
 
-    protected function cbWeightKeyCheck(&$v)
+    protected function cbWeightKeyCheck(string &$v) : bool
     {
         if (preg_match('/\W/i', $v))
             return false;
 
-        return isset(Util::$itemFilter[$v]);
+        return Stat::getIndexFrom(Stat::IDX_FILTER_CR_ID, $v) > 0;
     }
 }
 

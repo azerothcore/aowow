@@ -18,6 +18,14 @@ class SimpleXML extends SimpleXMLElement
 
 trait TrRequestData
 {
+    // const in trait supported in php8.2+
+    public const PATTERN_TEXT_LINE = '/[\p{Cc}\p{Cf}\p{Co}\p{Cs}\p{Cn}]/ui';
+    public const PATTERN_TEXT_BLOB = '/[\x00-\x09\x0B-\x1F\p{Cf}\p{Co}\p{Cs}\p{Cn}]/ui';
+
+    protected $_get    = [];                                // fill with variables you that are going to be used; eg:
+    protected $_post   = [];                                // 'id' => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkIdList']
+    protected $_cookie = [];
+
     private $filtered = false;
 
     private function initRequestData() : void
@@ -29,7 +37,7 @@ trait TrRequestData
         // only really relevant for INPUT_POST
         // manuall set everything null in this case
 
-        if (isset($this->_post) && gettype($this->_post) == 'array')
+        if ($this->_post)
         {
             if ($_POST)
                 $this->_post = filter_input_array(INPUT_POST, $this->_post);
@@ -37,7 +45,7 @@ trait TrRequestData
                 $this->_post = array_fill_keys(array_keys($this->_post), null);
         }
 
-        if (isset($this->_get) && gettype($this->_get) == 'array')
+        if ($this->_get)
         {
             if ($_GET)
                 $this->_get = filter_input_array(INPUT_GET, $this->_get);
@@ -45,7 +53,7 @@ trait TrRequestData
                 $this->_get = array_fill_keys(array_keys($this->_get), null);
         }
 
-        if (isset($this->_cookie) && gettype($this->_cookie) == 'array')
+        if ($this->_cookie)
         {
             if ($_COOKIE)
                 $this->_cookie = filter_input_array(INPUT_COOKIE, $this->_cookie);
@@ -61,28 +69,12 @@ trait TrRequestData
         return $val === '';                                 // parameter is expected to be empty
     }
 
-    public static function checkInt(string $val) : int
+    private static function checkInt(string $val) : int
     {
         if (preg_match('/^-?\d+$/', $val))
             return intVal($val);
 
         return 0;
-    }
-
-    private static function checkLocale(string $val) : int
-    {
-        if (preg_match('/^'.implode('|', array_keys(array_filter(Util::$localeStrings))).'$/', $val))
-            return intVal($val);
-
-        return -1;
-    }
-
-    private static function checkDomain(string $val) : string
-    {
-        if (preg_match('/^'.implode('|', array_filter(Util::$subDomains)).'$/i', $val))
-            return strtolower($val);
-
-        return '';
     }
 
     private static function checkIdList(string $val) : array
@@ -109,38 +101,46 @@ trait TrRequestData
         return [];
     }
 
-    private static function checkFulltext(string $val) : string
+    private static function checkTextLine(string $val) : string
     {
         // trim non-printable chars
-        return preg_replace('/[\p{Cf}\p{Co}\p{Cs}\p{Cn}]/ui', '', $val);
+        return preg_replace(self::PATTERN_TEXT_LINE, '', $val);
+    }
+
+    private static function checkTextBlob(string $val) : string
+    {
+        // trim non-printable chars
+        return preg_replace(self::PATTERN_TEXT_BLOB, '', $val);
     }
 }
 
 abstract class CLI
 {
-    const CHR_BELL      = 7;
-    const CHR_BACK      = 8;
-    const CHR_TAB       = 9;
-    const CHR_LF        = 10;
-    const CHR_CR        = 13;
-    const CHR_ESC       = 27;
-    const CHR_BACKSPACE = 127;
+    private const CHR_BELL      = 7;
+    private const CHR_BACK      = 8;
+    private const CHR_TAB       = 9;
+    private const CHR_LF        = 10;
+    private const CHR_CR        = 13;
+    private const CHR_ESC       = 27;
+    private const CHR_BACKSPACE = 127;
 
-    const LOG_BLANK     = 0;
-    const LOG_OK        = 1;
-    const LOG_WARN      = 2;
-    const LOG_ERROR     = 3;
-    const LOG_INFO      = 4;
+    public const LOG_NONE       = -1;
+    public const LOG_BLANK      = 0;
+    public const LOG_ERROR      = 1;
+    public const LOG_WARN       = 2;
+    public const LOG_INFO       = 3;
+    public const LOG_OK         = 4;
 
     private static $logHandle   = null;
     private static $hasReadline = null;
 
+    private static $overwriteLast = false;
 
     /********************/
     /* formatted output */
     /********************/
 
-    public static function writeTable(array $out, bool $timestamp = false) : void
+    public static function writeTable(array $out, bool $timestamp = false, bool $headless = false) : void
     {
         if (!$out)
             return;
@@ -156,21 +156,32 @@ abstract class CLI
                 continue;
             }
 
-            if (!$nCols)
-                $nCols = count($row);
+            $nCols = max($nCols, count($row));
 
-            for ($j = 0; $j < $nCols - 1; $j++)             // don't pad last column
-                $pads[$j] = max($pads[$j], mb_strlen($row[$j]));
+            for ($j = 0; $j < $nCols; $j++)
+                $pads[$j] = max($pads[$j] ?? 0, mb_strlen(self::purgeEscapes($row[$j] ?? '')));
         }
-        self::write();
 
-        foreach ($out as $row)
+        foreach ($out as $i => $row)
         {
-            for ($i = 0; $i < $nCols - 1; $i++)             // don't pad last column
-                $row[$i] = str_pad($row[$i], $pads[$i] + 2);
+            for ($j = 0; $j < $nCols; $j++)
+            {
+                if (!isset($row[$j]))
+                    break;
 
-            self::write('  '.implode($row), -1, $timestamp);
+                $len = ($pads[$j] - mb_strlen(self::purgeEscapes($row[$j])));
+                for ($k = 0; $k < $len; $k++)               // can't use str_pad(). it counts invisible chars.
+                    $row[$j] .= ' ';
+            }
+
+            if ($i || $headless)
+                self::write(' '.implode(' ' . self::tblDelim(' ') . ' ', $row), CLI::LOG_NONE, $timestamp);
+            else
+                self::write(self::tblHead(' '.implode('   ', $row)), CLI::LOG_NONE, $timestamp);
         }
+
+        if (!$headless)
+            self::write(self::tblHead(str_pad('', array_sum($pads) + count($pads) * 3 - 2)), CLI::LOG_NONE, $timestamp);
 
         self::write();
     }
@@ -201,32 +212,47 @@ abstract class CLI
         }
     }
 
+    private static function tblHead(string $str) : string
+    {
+        return CLI_HAS_E ? "\e[1;48;5;236m".$str."\e[0m" : $str;
+    }
+
+    private static function tblDelim(string $str) : string
+    {
+        return CLI_HAS_E ? "\e[48;5;236m".$str."\e[0m" : $str;
+    }
+
+    public static function grey(string $str) : string
+    {
+        return CLI_HAS_E ? "\e[90m".$str."\e[0m" : $str;
+    }
+
     public static function red(string $str) : string
     {
-        return OS_WIN ? $str : "\e[31m".$str."\e[0m";
+        return CLI_HAS_E ? "\e[31m".$str."\e[0m" : $str;
     }
 
     public static function green(string $str) : string
     {
-        return OS_WIN ? $str : "\e[32m".$str."\e[0m";
+        return CLI_HAS_E ? "\e[32m".$str."\e[0m" : $str;
     }
 
     public static function yellow(string $str) : string
     {
-        return OS_WIN ? $str : "\e[33m".$str."\e[0m";
+        return CLI_HAS_E ? "\e[33m".$str."\e[0m" : $str;
     }
 
     public static function blue(string $str) : string
     {
-        return OS_WIN ? $str : "\e[36m".$str."\e[0m";
+        return CLI_HAS_E ? "\e[36m".$str."\e[0m" : $str;
     }
 
     public static function bold(string $str) : string
     {
-        return OS_WIN ? $str : "\e[1m".$str."\e[0m";
+        return CLI_HAS_E ? "\e[1m".$str."\e[0m" : $str;
     }
 
-    public static function write(string $txt = '', int $lvl = self::LOG_BLANK, bool $timestamp = true) : void
+    public static function write(string $txt = '', int $lvl = self::LOG_BLANK, bool $timestamp = true, bool $tmpRow = false) : void
     {
         $msg = '';
         if ($txt)
@@ -253,17 +279,38 @@ abstract class CLI
                     break;
             }
 
-            $msg .= $txt."\n";
+            $msg .= $txt;
         }
-        else
-            $msg = "\n";
 
-        echo $msg;
+        // https://shiroyasha.svbtle.com/escape-sequences-a-quick-guide-1#movement_1
+        $msg = (self::$overwriteLast && CLI_HAS_E ? "\e[1G\e[0K" : "\n") . $msg;
+        self::$overwriteLast = $tmpRow;
 
-        if (self::$logHandle)                               // remove highlights for logging
-            fwrite(self::$logHandle, preg_replace(["/\e\[\d+m/", "/\e\[0m/"], '', $msg));
+        fwrite($lvl == self::LOG_ERROR ? STDERR : STDOUT, $msg);
+
+        if (self::$logHandle)                               // remove control sequences from log
+            fwrite(self::$logHandle, self::purgeEscapes($msg));
 
         flush();
+    }
+
+    public static function logLevelFromE(int $phpError) : int
+    {
+        if ($phpError & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR))
+            return self::LOG_ERROR;
+
+        if ($phpError & (E_WARNING | E_USER_WARNING | E_NOTICE | E_USER_NOTICE | E_CORE_WARNING | E_COMPILE_WARNING))
+            return self::LOG_WARN;
+
+        if ($phpError & (E_STRICT | E_NOTICE | E_USER_NOTICE | E_DEPRECATED | E_USER_DEPRECATED))
+            return self::LOG_INFO;
+
+        return self::LOG_BLANK;
+    }
+
+    private static function purgeEscapes(string $msg) : string
+    {
+        return preg_replace(["/\e\[[\d;]+[mK]/", "/\e\[\d+G/"], ['', "\n"], $msg);
     }
 
     public static function nicePath(string $fileOrPath, string ...$pathParts) : string
@@ -280,8 +327,9 @@ abstract class CLI
 
         $path .= ($path ? DIRECTORY_SEPARATOR : '').trim($fileOrPath);
 
-        // remove quotes (from erronous user input)
-        $path = str_replace(['"', "'"], ['', ''], $path);
+        // remove double quotes (from erronous user input), single quotes are
+        // valid chars for filenames and removing those mutilates several wow icons
+        $path = str_replace('"', '', $path);
 
         if (!$path)                                         // empty strings given. (faulty dbc data?)
             return '';
@@ -325,7 +373,7 @@ abstract class CLI
         this also means, you can't hide input at all, least process it
     */
 
-    public static function read(array &$fields, bool $singleChar = false) : bool
+    public static function read(array $fields, ?array &$userInput = []) : bool
     {
         // first time set
         if (self::$hasReadline === null)
@@ -335,119 +383,147 @@ abstract class CLI
         if (self::$hasReadline)
             readline_callback_handler_install('', function() { });
 
-        foreach ($fields as $name => $data)
-        {
-            $vars = ['desc', 'isHidden', 'validPattern'];
-            foreach ($vars as $idx => $v)
-                $$v = isset($data[$idx]) ? $data[$idx] : false;
+        if (!STDIN)
+            return false;
 
+        stream_set_blocking(STDIN, false);
+
+        // pad default values onto $fields
+        array_walk($fields, function(&$val, $_, $pad) { $val += $pad; }, ['', false, false, '']);
+
+        foreach ($fields as $name => [$desc, $isHidden, $singleChar, $validPattern])
+        {
             $charBuff = '';
 
             if ($desc)
-                echo "\n".$desc.": ";
+                fwrite(STDOUT, "\n".$desc.": ");
 
             while (true) {
+                if (feof(STDIN))
+                    return false;
+
                 $r = [STDIN];
                 $w = $e = null;
                 $n = stream_select($r, $w, $e, 200000);
 
-                if ($n && in_array(STDIN, $r)) {
-                    $char  = stream_get_contents(STDIN, 1);
-                    $keyId = ord($char);
+                if (!$n || !in_array(STDIN, $r))
+                    continue;
 
-                    // ignore this one
-                    if ($keyId == self::CHR_TAB)
-                        continue;
+                // stream_get_contents is always blocking under WIN - fgets should work similary as php always receives a terminated line of text
+                $chars    = str_split(OS_WIN ? fgets(STDIN) : stream_get_contents(STDIN));
+                $ordinals = array_map('ord', $chars);
 
-                    // WIN sends \r\n as sequence, ignore one
-                    if ($keyId == self::CHR_CR && OS_WIN)
-                        continue;
-
-                    // will not be send on WIN .. other ways of returning from setup? (besides ctrl + c)
-                    if ($keyId == self::CHR_ESC)
+                if ($ordinals[0] == self::CHR_ESC)
+                {
+                    if (count($ordinals) == 1)
                     {
-                        echo chr(self::CHR_BELL);
+                        fwrite(STDOUT, chr(self::CHR_BELL));
                         return false;
                     }
-                    else if ($keyId == self::CHR_BACKSPACE)
+                    else
+                        continue;
+                }
+
+                foreach ($chars as $idx => $char)
+                {
+                    $keyId = $ordinals[$idx];
+
+                    // skip char if horizontal tab or \r if followed by \n
+                    if ($keyId == self::CHR_TAB || ($keyId == self::CHR_CR && ($ordinals[$idx + 1] ?? '') == self::CHR_LF))
+                        continue;
+
+                    if ($keyId == self::CHR_BACKSPACE)
                     {
                         if (!$charBuff)
-                            continue;
+                            continue 2;
 
                         $charBuff = mb_substr($charBuff, 0, -1);
                         if (!$isHidden && self::$hasReadline)
-                            echo chr(self::CHR_BACK)." ".chr(self::CHR_BACK);
+                            fwrite(STDOUT, chr(self::CHR_BACK)." ".chr(self::CHR_BACK));
                     }
-                    else if ($keyId == self::CHR_LF)
+                    // standalone \n or \r
+                    else if ($keyId == self::CHR_LF || $keyId == self::CHR_CR)
                     {
-                        $fields[$name] = $charBuff;
-                        break;
+                        $userInput[$name] = $charBuff;
+                        break 2;
                     }
                     else if (!$validPattern || preg_match($validPattern, $char))
                     {
                         $charBuff .= $char;
                         if (!$isHidden && self::$hasReadline)
-                            echo $char;
+                            fwrite(STDOUT, $char);
 
                         if ($singleChar && self::$hasReadline)
                         {
-                            $fields[$name] = $charBuff;
-                            break;
+                            $userInput[$name] = $charBuff;
+                            break 2;
                         }
                     }
                 }
             }
         }
 
-        echo chr(self::CHR_BELL);
+        fwrite(STDOUT, chr(self::CHR_BELL));
 
-        foreach ($fields as $f)
-            if (strlen($f))
+        foreach ($userInput as $ui)
+            if (strlen($ui))
                 return true;
 
-        $fields = null;
+        $userInput = null;
         return true;
+    }
+}
+
+
+class Timer
+{
+    private $t_cur = 0;
+    private $t_new = 0;
+    private $intv  = 0;
+
+    public function __construct(int $intervall)
+    {
+        $this->intv  = $intervall / 1000;                   // in msec
+        $this->t_cur = microtime(true);
+    }
+
+    public function update() : bool
+    {
+        $this->t_new = microtime(true);
+        if ($this->t_new > $this->t_cur + $this->intv)
+        {
+            $this->t_cur = $this->t_cur + $this->intv;
+            return true;
+        }
+
+        return false;
+    }
+
+    public function reset() : void
+    {
+        $this->t_cur = microtime(true) - $this->intv;
     }
 }
 
 
 abstract class Util
 {
-    const FILE_ACCESS = 0777;
+    /* NOTE!
+     * FILE_ACCESS should be 0755 or less, but CLI and web interface both access the same files. While in CLI php is executed with the current users perms,
+     * while the web interface is always executed by www-data (or whoever runs the web server) who does not own the files previously created via CLI.
+     * And thus web interface actions fail with permission denied, unless the files are flagged +wx for everyone.
+     * This probably has to be solved on the system level by having www-data and the CLI user share a group or something.
+     */
+    public const FILE_ACCESS = 0777;
+    public const DIR_ACCESS  = 0777;
 
-    const GEM_SCORE_BASE_WOTLK = 16;                        // rare quality wotlk gem score
-    const GEM_SCORE_BASE_BC    = 8;                         // rare quality bc gem score
+    private const GEM_SCORE_BASE_WOTLK = 16;                // rare quality wotlk gem score
+    private const GEM_SCORE_BASE_BC    = 8;                 // rare quality bc gem score
 
     private static $perfectGems             = null;
 
-    public static $localeStrings            = array(        // zero-indexed
-        'enus',         null,           'frfr',         'dede',         'zhcn',         null,           'eses',         null,           'ruru'
-    );
-
-    public static $subDomains               = array(
-        'www',          null,           'fr',           'de',           'cn',           null,           'es',           null,           'ru'
-    );
-
     public static $regions                   = array(
-        'us',           'eu',           'kr',           'tw',           'cn'
-    );
-
-    # todo (high): find a sensible way to write data here on setup
-    private static $gtCombatRatings         = array(
-        12 => 1.5,      13 => 13.8,     14 => 13.8,     15 => 5,        16 => 10,       17 => 10,       18 => 8,        19 => 14,       20 => 14,
-        21 => 14,       22 => 10,       23 => 10,       24 => 8,        25 => 0,        26 => 0,        27 => 0,        28 => 10,       29 => 10,
-        30 => 10,       31 => 10,       32 => 14,       33 => 0,        34 => 0,        35 => 28.75,    36 => 10,       37 => 2.5,      44 => 4.268292513760655
-    );
-
-    public static $itemFilter               = array(
-         20 => 'str',                21 => 'agi',                23 => 'int',                22 => 'sta',                24 => 'spi',                25 => 'arcres',             26 => 'firres',             27 => 'natres',
-         28 => 'frores',             29 => 'shares',             30 => 'holres',             37 => 'mleatkpwr',          32 => 'dps',                35 => 'damagetype',         33 => 'dmgmin1',            34 => 'dmgmax1',
-         36 => 'speed',              38 => 'rgdatkpwr',          39 => 'rgdhitrtng',         40 => 'rgdcritstrkrtng',    41 => 'armor',              44 => 'blockrtng',          43 => 'block',              42 => 'defrtng',
-         45 => 'dodgertng',          46 => 'parryrtng',          48 => 'splhitrtng',         49 => 'splcritstrkrtng',    50 => 'splheal',            51 => 'spldmg',             52 => 'arcsplpwr',          53 => 'firsplpwr',
-         54 => 'frosplpwr',          55 => 'holsplpwr',          56 => 'natsplpwr',          60 => 'healthrgn',          61 => 'manargn',            57 => 'shasplpwr',          77 => 'atkpwr',             78 => 'mlehastertng',
-         79 => 'resirtng',           84 => 'mlecritstrkrtng',    94 => 'splpen',             95 => 'mlehitrtng',         96 => 'critstrkrtng',       97 => 'feratkpwr',         100 => 'nsockets',          101 => 'rgdhastertng',
-        102 => 'splhastertng',      103 => 'hastertng',         114 => 'armorpenrtng',      115 => 'health',            116 => 'mana',              117 => 'exprtng',           119 => 'hitrtng',           123 => 'splpwr',
-        134 => 'mledps',            135 => 'mledmgmin',         136 => 'mledmgmax',         137 => 'mlespeed',          138 => 'rgddps',            139 => 'rgddmgmin',         140 => 'rgddmgmax',         141 => 'rgdspeed'
+        'us',           'eu',           'kr',           'tw',           'cn',           'dev'
     );
 
     public static $ssdMaskFields            = array(
@@ -474,8 +550,8 @@ abstract class Util
     public static $dateFormatInternal       = "Y/m/d H:i:s";
 
     public static $changeLevelString        = '<a href="javascript:;" onmousedown="return false" class="tip" style="color: white; cursor: pointer" onclick="$WH.g_staticTooltipLevelClick(this, null, 0)" onmouseover="$WH.Tooltip.showAtCursor(event, \'<span class=\\\'q2\\\'>\' + LANG.tooltip_changelevel + \'</span>\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()"><!--lvl-->%s</a>';
-
     public static $setRatingLevelString     = '<a href="javascript:;" onmousedown="return false" class="tip" style="color: white; cursor: pointer" onclick="$WH.g_setRatingLevel(this, %s, %s, %s)" onmouseover="$WH.Tooltip.showAtCursor(event, \'<span class=\\\'q2\\\'>\' + LANG.tooltip_changelevel + \'</span>\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()">%s</a>';
+    public static $lvTabNoteString          = '<b class="tip" onmouseover="$WH.Tooltip.showAtCursor(event, \'%s\', 0, 0, \'q\')" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()">%s</b>';
 
     public static $filterResultString       = '$$WH.sprintf(LANG.lvnote_filterresults, \'%s\')';
     public static $tryFilteringString       = '$$WH.sprintf(%s, %s, %s) + LANG.dash + LANG.lvnote_tryfiltering.replace(\'<a>\', \'<a href="javascript:;" onclick="fi_toggle()">\')';
@@ -492,35 +568,30 @@ abstract class Util
         null,           'bc',           'wotlk',            'cata',                'mop'
     );
 
-    public static $bgImagePath              = array (
-        'tiny'   => 'style="background-image: url(%s/images/wow/icons/tiny/%s.gif)"',
-        'small'  => 'style="background-image: url(%s/images/wow/icons/small/%s.jpg)"',
-        'medium' => 'style="background-image: url(%s/images/wow/icons/medium/%s.jpg)"',
-        'large'  => 'style="background-image: url(%s/images/wow/icons/large/%s.jpg)"',
-    );
-
-    public static $configCats               = array(        // don't mind the ordering ... please?
-        1 => 'Site', 'Caching', 'Account', 'Session', 'Site Reputation', 'Google Analytics', 'Profiler', 0 => 'Other'
-    );
-
     public static $tcEncoding               = '0zMcmVokRsaqbdrfwihuGINALpTjnyxtgevElBCDFHJKOPQSUWXYZ123456789';
-    public static $wowheadLink              = '';
     private static $notes                   = [];
 
-    public static function addNote(int $uGroupMask, string $str) : void
+    public static function addNote(string $note, int $uGroupMask = U_GROUP_EMPLOYEE, int $level = CLI::LOG_ERROR) : void
     {
-        self::$notes[] = [$uGroupMask, $str];
+        self::$notes[] = [$note, $uGroupMask, $level];
     }
 
     public static function getNotes() : array
     {
         $notes = [];
+        $severity = CLI::LOG_INFO;
+        foreach (self::$notes as [$note, $uGroup, $level])
+        {
+            if ($uGroup && !User::isInGroup($uGroup))
+                continue;
 
-        foreach (self::$notes as $data)
-            if (!$data[0] || User::isInGroup($data[0]))
-                $notes[] = $data[1];
+            if ($level < $severity)
+                $severity = $level;
 
-        return $notes;
+            $notes[] = $note;
+        }
+
+        return [$notes, $severity];
     }
 
     private static $execTime = 0.0;
@@ -567,7 +638,7 @@ abstract class Util
         return $money;
     }
 
-    private static function parseTime(int $msec) : array
+    public static function parseTime(int $msec) : array
     {
         $time = [0, 0, 0, 0, 0];
 
@@ -665,13 +736,13 @@ abstract class Util
         else if ($h)                                        // hours, minutes ago
             return Lang::main('timeAgo', [$h . ' ' . Lang::timeUnits('ab', 4) . ' ' . $m . ' ' . Lang::timeUnits('ab', 5)]);
         else if ($m)                                        // minutes, seconds ago
-            return Lang::main('timeAgo', [$m . ' ' . Lang::timeUnits('ab', 5) . ' ' . $m . ' ' . Lang::timeUnits('ab', 6)]);
+            return Lang::main('timeAgo', [$m . ' ' . Lang::timeUnits('ab', 5) . ' ' . $s . ' ' . Lang::timeUnits('ab', 6)]);
         else                                                // seconds ago
             return Lang::main('timeAgo', [$s . ' ' . Lang::timeUnits($s == 1 ? 'sg' : 'pl', 6)]);
     }
 
-    // pageText for Books (Item or GO) and questText
-    public static function parseHtmlText(/*string|array*/ $text, bool $markdown = false) // : /*string|array*/
+    // pageTexts, questTexts and mails
+    public static function parseHtmlText(string|array $text, bool $markdown = false) : string|array
     {
         if (is_array($text))
         {
@@ -694,59 +765,52 @@ abstract class Util
             // html may contain 'Pictures' and FlavorImages and "stuff"
             $text = preg_replace_callback(
                 '/src="([^"]+)"/i',
-                function ($m) { return 'src="'.STATIC_URL.'/images/wow/'.strtr($m[1], ['\\' => '/']).'.png"'; },
+                function ($m) { return sprintf('src="%s/images/wow/%s.png"', Cfg::get('STATIC_URL'), strtr($m[1], ['\\' => '/'])); },
                 strtr($text, $pairs)
             );
         }
         else
             $text = strtr($text, ["\n" => $markdown ? '[br]' : '<br />', "\r" => '']);
 
+        // escape fake html-ish tags the browser skipsh dishplaying ...<hic>!
+        $text = preg_replace('/<([^\s\/]+)>/iu', '&lt;\1&gt;', $text);
+
         $from = array(
-            '/\|T([\w]+\\\)*([^\.]+)\.blp:\d+\|t/ui',       // images (force size to tiny)                      |T<fullPath>:<size>|t
-            '/\|c(\w{6})\w{2}([^\|]+)\|r/ui',               // color                                            |c<RRGGBBAA><text>|r
-            '/\$g\s*([^:;]+)\s*:\s*([^:;]+)\s*(:?[^:;]*);/ui',// directed gender-reference                      $g:<male>:<female>:<refVariable>
+            '/\$g\s*([^:;]*)\s*:\s*([^:;]*)\s*(:?[^:;]*);/ui',// directed gender-reference                      $g<male>:<female>:<refVariable>
             '/\$t([^;]+);/ui',                              // nonsense, that the client apparently ignores
-            '/\|\d\-?\d?\((\$\w)\)/ui',                     // and another modifier for something russian       |3-6($r)
             '/<([^\"=\/>]+\s[^\"=\/>]+)>/ui',               // emotes (workaround: at least one whitespace and never " or = between brackets)
             '/\$(\d+)w/ui',                                 // worldState(?)-ref found on some pageTexts        $1234w
             '/\$c/i',                                       // class-ref
             '/\$r/i',                                       // race-ref
             '/\$n/i',                                       // name-ref
-            '/\$b/i',                                       // line break
-            '/\|n/i'                                        // what .. the fuck .. another type of line terminator? (only in spanish though)
+            '/\$b/i'                                        // line break
         );
 
         $toMD = array(
-            '[icon name=\2]',
-            '[span color=#\1>\2[/span]',
             '<\1/\2>',
             '',
-            '\1',
             '<\1>',
             '[span class=q0>WorldState #\1[/span]',
             '<'.Lang::game('class').'>',
             '<'.Lang::game('race').'>',
             '<'.Lang::main('name').'>',
-            '[br]',
-            ''
+            '[br]'
         );
 
         $toHTML = array(
-            '<span class="icontiny" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/\2.gif)">',
-            '<span style="color: #\1">\2</span>',
             '&lt;\1/\2&gt;',
             '',
-            '\1',
             '&lt;\1&gt;',
             '<span class="q0">WorldState #\1</span>',
             '&lt;'.Lang::game('class').'&gt;',
             '&lt;'.Lang::game('race').'&gt;',
             '&lt;'.Lang::main('name').'&gt;',
-            '<br />',
-            ''
+            '<br />'
         );
 
-        return preg_replace($from, $markdown ? $toMD : $toHTML, $text);
+        $text = preg_replace($from, $markdown ? $toMD : $toHTML, $text);
+
+        return Lang::unescapeUISequences($text, $markdown ? Lang::FMT_MARKUP : Lang::FMT_HTML);
     }
 
     public static function asHex($val) : string
@@ -777,7 +841,7 @@ abstract class Util
             return $data;
         }
 
-        return htmlspecialchars($data, ENT_QUOTES, 'utf-8');
+        return htmlspecialchars($data, ENT_QUOTES | ENT_DISALLOWED | ENT_HTML5, 'utf-8');
     }
 
     public static function jsEscape($data)
@@ -812,8 +876,8 @@ abstract class Util
         return strtr($data, array(
             '<script'    => '<scr"+"ipt',
             'script>'    => 'scr"+"ipt>',
-            'HOST_URL'   => HOST_URL,
-            'STATIC_URL' => STATIC_URL
+            'HOST_URL'   => Cfg::get('HOST_URL'),
+            'STATIC_URL' => Cfg::get('STATIC_URL')
         ));
     }
 
@@ -825,19 +889,19 @@ abstract class Util
             $silent = true;
 
         // default case: selected locale available
-        if (!empty($data[$field.'_loc'.User::$localeId]))
-            return $data[$field.'_loc'.User::$localeId];
+        if (!empty($data[$field.'_loc'.Lang::getLocale()->value]))
+            return $data[$field.'_loc'.Lang::getLocale()->value];
 
         // locale not enUS; aowow-type localization available; add brackets if not silent
-        else if (User::$localeId != LOCALE_EN && !empty($data[$field.'_loc0']))
+        else if (Lang::getLocale() != Locale::EN && !empty($data[$field.'_loc0']))
             return $silent ? $data[$field.'_loc0'] : '['.$data[$field.'_loc0'].']';
 
         // locale not enUS; TC localization; add brackets if not silent
-        else if (User::$localeId != LOCALE_EN && !empty($data[$field]))
+        else if (Lang::getLocale() != Locale::EN && !empty($data[$field]))
             return $silent ? $data[$field] : '['.$data[$field].']';
 
         // locale enUS; TC localization; return normal
-        else if (User::$localeId == LOCALE_EN && !empty($data[$field]))
+        else if (Lang::getLocale() == Locale::EN && !empty($data[$field]))
             return $data[$field];
 
         // nothing to find; be empty
@@ -846,12 +910,13 @@ abstract class Util
     }
 
     // for item and spells
-    public static function setRatingLevel(int $level, int $type, int $val) : string
+    public static function setRatingLevel(int $level, int $statId, int $val) : string
     {
-        if (in_array($type, [ITEM_MOD_DEFENSE_SKILL_RATING, ITEM_MOD_DODGE_RATING, ITEM_MOD_PARRY_RATING, ITEM_MOD_BLOCK_RATING, ITEM_MOD_RESILIENCE_RATING]) && $level < 34)
+        if (in_array($statId, [Stat::DEFENSE_RTG, Stat::DODGE_RTG, Stat::PARRY_RTG, Stat::BLOCK_RTG, Stat::RESILIENCE_RTG]) && $level < 34)
             $level = 34;
 
-        if (!isset(self::$gtCombatRatings[$type]))
+        $factor = Stat::getRatingPctFactor($statId);
+        if (!$factor)
             $result = 0;
         else
         {
@@ -865,32 +930,13 @@ abstract class Util
                 $c = 2 / 52;
 
             // do not use localized number format here!
-            $result = number_format($val / self::$gtCombatRatings[$type] / $c, 2);
+            $result = number_format($val / $factor / $c, 2);
         }
 
-        if (!in_array($type, array(ITEM_MOD_DEFENSE_SKILL_RATING, ITEM_MOD_EXPERTISE_RATING)))
+        if (!in_array($statId, [Stat::DEFENSE_RTG, Stat::EXPERTISE_RTG]))
             $result .= '%';
 
-        return sprintf(Lang::item('ratingString'), '<!--rtg%'.$type.'-->'.$result, '<!--lvl-->'.$level);
-    }
-
-    public static function powerUseLocale($domain = 'www')
-    {
-        foreach (Util::$localeStrings as $k => $v)
-        {
-            if (strstr($v, $domain))
-            {
-                User::useLocale($k);
-                Lang::load(User::$localeString);
-                return;
-            }
-        }
-
-        if ($domain == 'www')
-        {
-            User::useLocale(LOCALE_EN);
-            Lang::load(User::$localeString);
-        }
+        return Lang::item('ratingString', [$statId, $result, $level]);
     }
 
     // default ucFirst doesn't convert UTF-8 chars
@@ -913,43 +959,59 @@ abstract class Util
         return mb_strtolower($str);
     }
 
-    // note: valid integer > 32bit are returned as float
-    public static function checkNumeric(&$data, $typeCast = NUM_ANY)
+    // doesn't handle scientific notation .. why would you input 3e3 for 3000..?
+    public static function checkNumeric(mixed &$data, int $typeCast = NUM_ANY) : bool
     {
         if ($data === null)
             return false;
-        else if (!is_array($data))
+
+        if (is_array($data))
         {
-            $rawData = $data;                               // do not transform strings
-
-            $data = trim($data);
-            if (preg_match('/^-?\d*,\d+$/', $data))
-                $data = strtr($data, ',', '.');
-
-            if (is_numeric($data))
-            {
-                $data += 0;                                 // becomes float or int
-
-                if ((is_float($data) && $typeCast == NUM_REQ_INT) ||
-                    (is_int($data) && $typeCast == NUM_REQ_FLOAT))
-                    return false;
-
-                if (is_float($data) && $typeCast == NUM_CAST_INT)
-                    $data = intval($data);
-
-                if (is_int($data) && $typeCast == NUM_CAST_FLOAT)
-                    $data = floatval($data);
-
-                return true;
-            }
-
-            $data = $rawData;
-            return false;
+            array_walk($data, function(&$x) use($typeCast) { self::checkNumeric($x, $typeCast); });
+            return false;                                   // always false for passed arrays
         }
 
-        array_walk($data, function(&$x) use($typeCast) { self::checkNumeric($x, $typeCast); });
+        // already in required state
+        if ((is_float($data) && $typeCast == NUM_REQ_FLOAT) ||
+            (is_int($data) && $typeCast == NUM_REQ_INT))
+            return true;
 
-        return false;                                       // always false for passed arrays
+        // irreconcilable state
+        if ((!is_int($data) && $typeCast == NUM_REQ_INT) ||
+            (!is_float($data) && $typeCast == NUM_REQ_FLOAT))
+            return false;
+
+        $number   = $data;                                  // do not transform strings, store state
+        $nMatches = 0;
+
+        $number = trim($number);
+        $number = preg_replace('/^(-?\d*)[.,](\d+)$/', '$1.$2', $number, -1, $nMatches);
+
+        // is float string
+        if ($nMatches)
+        {
+            if ($typeCast == NUM_CAST_INT)
+                $data = intVal($number);
+            else                                            // NUM_CAST_FLOAT || NUM_ANY
+                $data = floatVal($number);
+
+            return true;
+        }
+
+        // is int string (is_numeric can only handle strings in base 10)
+        if (is_numeric($number) || preg_match('/^0[xb]?\d+/', $number))
+        {
+            $number = intVal($number, 0);                   // 'base 0' auto-detects base
+            if ($typeCast == NUM_CAST_FLOAT)
+                $data = floatVal($number);
+            else                                            // NUM_CAST_INT || NUM_ANY
+                $data = $number;
+
+            return true;
+        }
+
+        // is string string
+        return false;
     }
 
     public static function arraySumByKey(array &$ref, array ...$adds) : void
@@ -962,9 +1024,19 @@ abstract class Util
             foreach ($arr as $k => $v)
             {
                 if (!isset($ref[$k]))
-                    $ref[$k] = 0;
+                {
+                    if (is_array($v))
+                        $ref[$k] = [];
+                    else if (Util::checkNumeric($v))
+                        $ref[$k] = 0;
+                    else
+                        continue;
+                }
 
-                $ref[$k] += $v;
+                if (is_array($ref[$k]) && is_array($v))
+                    Util::arraySumByKey($ref[$k], $v);
+                else if (Util::checkNumeric($ref[$k]) && Util::checkNumeric($v))
+                    $ref[$k] += $v;
             }
         }
     }
@@ -979,8 +1051,8 @@ abstract class Util
         $success = true;
         if ($localized)
         {
-            if (file_exists('datasets/'.User::$localeString.'/'.$file))
-                $result .= file_get_contents('datasets/'.User::$localeString.'/'.$file);
+            if (file_exists('datasets/'.Lang::getLocale()->json().'/'.$file))
+                $result .= file_get_contents('datasets/'.Lang::getLocale()->json().'/'.$file);
             else if (file_exists('datasets/enus/'.$file))
                 $result .= file_get_contents('datasets/enus/'.$file);
             else
@@ -997,7 +1069,7 @@ abstract class Util
         return $success;
     }
 
-    public static function createHash($length = 40)         // just some random numbers for unsafe identifictaion purpose
+    public static function createHash($length = 40)         // just some random numbers for unsafe identification purpose
     {
         static $seed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         $hash = '';
@@ -1048,18 +1120,18 @@ abstract class Util
         switch ($action)
         {
             case SITEREP_ACTION_REGISTER:
-                $x['amount'] = CFG_REP_REWARD_REGISTER;
+                $x['amount'] = Cfg::get('REP_REWARD_REGISTER');
                 break;
             case SITEREP_ACTION_DAILYVISIT:
                 $x['sourceA'] = time();
-                $x['amount']  = CFG_REP_REWARD_DAILYVISIT;
+                $x['amount']  = Cfg::get('REP_REWARD_DAILYVISIT');
                 break;
             case SITEREP_ACTION_COMMENT:
                 if (empty($miscData['id']))
                     return false;
 
                 $x['sourceA'] = $miscData['id'];            // commentId
-                $x['amount']  = CFG_REP_REWARD_COMMENT;
+                $x['amount']  = Cfg::get('REP_REWARD_COMMENT');
                 break;
             case SITEREP_ACTION_UPVOTED:
             case SITEREP_ACTION_DOWNVOTED:
@@ -1076,7 +1148,7 @@ abstract class Util
 
                 $x['sourceA'] = $miscData['id'];            // commentId
                 $x['sourceB'] = $miscData['voterId'];
-                $x['amount']  = $action == SITEREP_ACTION_UPVOTED ? CFG_REP_REWARD_UPVOTED : CFG_REP_REWARD_DOWNVOTED;
+                $x['amount']  = $action == SITEREP_ACTION_UPVOTED ? Cfg::get('REP_REWARD_UPVOTED') : Cfg::get('REP_REWARD_DOWNVOTED');
                 break;
             case SITEREP_ACTION_UPLOAD:
                 if (empty($miscData['id']) || empty($miscData['what']))
@@ -1084,7 +1156,7 @@ abstract class Util
 
                 $x['sourceA'] = $miscData['id'];            // screenshotId or videoId
                 $x['sourceB'] = $miscData['what'];          // screenshot:1 or video:NYD
-                $x['amount']  = CFG_REP_REWARD_UPLOAD;
+                $x['amount']  = Cfg::get('REP_REWARD_UPLOAD');
                 break;
             case SITEREP_ACTION_GOOD_REPORT:                // NYI
             case SITEREP_ACTION_BAD_REPORT:
@@ -1092,14 +1164,14 @@ abstract class Util
                     return false;
 
                 $x['sourceA'] = $miscData['id'];
-                $x['amount']  = $action == SITEREP_ACTION_GOOD_REPORT ? CFG_REP_REWARD_GOOD_REPORT : CFG_REP_REWARD_BAD_REPORT;
+                $x['amount']  = $action == SITEREP_ACTION_GOOD_REPORT ? Cfg::get('REP_REWARD_GOOD_REPORT') : Cfg::get('REP_REWARD_BAD_REPORT');
                 break;
             case SITEREP_ACTION_ARTICLE:
                 if (empty($miscData['id']))                 // guideId
                     return false;
 
                 $x['sourceA'] = $miscData['id'];
-                $x['amount']  = CFG_REP_REWARD_ARTICLE;
+                $x['amount']  = Cfg::get('REP_REWARD_ARTICLE');
                 break;
             case SITEREP_ACTION_USER_WARNED:                // NYI
             case SITEREP_ACTION_USER_SUSPENDED:
@@ -1107,7 +1179,7 @@ abstract class Util
                     return false;
 
                 $x['sourceA'] = $miscData['id'];
-                $x['amount']  = $action == SITEREP_ACTION_USER_WARNED ? CFG_REP_REWARD_USER_WARNED : CFG_REP_REWARD_USER_SUSPENDED;
+                $x['amount']  = $action == SITEREP_ACTION_USER_WARNED ? Cfg::get('REP_REWARD_USER_WARNED') : Cfg::get('REP_REWARD_USER_SUSPENDED');
                 break;
         }
 
@@ -1118,149 +1190,6 @@ abstract class Util
         ));
 
         return DB::Aowow()->query('INSERT IGNORE INTO ?_account_reputation (?#) VALUES (?a)', array_keys($x), array_values($x));
-    }
-
-    public static function getServerConditions($srcType, $srcGroup = null, $srcEntry = null)
-    {
-        if (!$srcGroup && !$srcEntry)
-            return [];
-
-        $result    = [];
-        $jsGlobals = [];
-
-        $conditions = DB::World()->select(
-            'SELECT  SourceTypeOrReferenceId, SourceEntry, SourceGroup, ElseGroup,
-                     ConditionTypeOrReference, ConditionTarget, ConditionValue1, ConditionValue2, ConditionValue3, NegativeCondition
-            FROM     conditions
-            WHERE    SourceTypeOrReferenceId IN (?a) AND ?# = ?d
-            ORDER BY SourceTypeOrReferenceId, SourceEntry, SourceGroup, ElseGroup ASC',
-            is_array($srcType) ? $srcType : [$srcType],
-            $srcGroup ? 'SourceGroup' : 'SourceEntry',
-            $srcGroup ?: $srcEntry
-        );
-
-        foreach ($conditions as $c)
-        {
-            switch ($c['SourceTypeOrReferenceId'])
-            {
-                case CND_SRC_SPELL_CLICK_EVENT:             // 18
-                case CND_SRC_VEHICLE_SPELL:                 // 21
-                case CND_SRC_NPC_VENDOR:                    // 23
-                    $jsGlobals[Type::NPC][] = $c['SourceGroup'];
-                    break;
-            }
-
-            switch ($c['ConditionTypeOrReference'])
-            {
-                case CND_AURA:                              // 1
-                    $c['ConditionValue2'] = null;           // do not use his param
-                case CND_SPELL:                             // 25
-                    $jsGlobals[Type::SPELL][] = $c['ConditionValue1'];
-                    break;
-                case CND_ITEM:                              // 2
-                    $c['ConditionValue3'] = null;           // do not use his param
-                case CND_ITEM_EQUIPPED:                     // 3
-                    $jsGlobals[Type::ITEM][] = $c['ConditionValue1'];
-                    break;
-                case CND_MAPID:                             // 22 - break down to area or remap for use with g_zone_categories
-                    switch ($c['ConditionValue1'])
-                    {
-                        case 530:                           // outland
-                            $c['ConditionValue1'] = 8;
-                            break;
-                        case 571:                           // northrend
-                            $c['ConditionValue1'] = 10;
-                            break;
-                        case 0:                             // old world is fine
-                        case 1:
-                            break;
-                        default:                            // remap for area
-                            $cnd = array(
-                                ['mapId', (int)$c['ConditionValue1']],
-                                ['parentArea', 0],          // not child zones
-                                [['cuFlags', CUSTOM_EXCLUDE_FOR_LISTVIEW, '&'], 0],
-                                1                           // only one result
-                            );
-                            $zone = new ZoneList($cnd);
-                            if (!$zone->error)
-                            {
-                                $jsGlobals[Type::ZONE][] = $zone->getField('id');
-                                $c['ConditionTypeOrReference'] = CND_ZONEID;
-                                $c['ConditionValue1'] = $zone->getField('id');
-                                break;
-                            }
-                            else
-                                continue 3;
-                    }
-                case CND_ZONEID:                            // 4
-                case CND_AREAID:                            // 23
-                    $jsGlobals[Type::ZONE][] = $c['ConditionValue1'];
-                    break;
-                case CND_REPUTATION_RANK:                   // 5
-                    $jsGlobals[Type::FACTION][] = $c['ConditionValue1'];
-                    break;
-                case CND_SKILL:                             // 7
-                    $jsGlobals[Type::SKILL][] = $c['ConditionValue1'];
-                    break;
-                case CND_QUESTREWARDED:                     // 8
-                case CND_QUESTTAKEN:                        // 9
-                case CND_QUEST_NONE:                        // 14
-                case CND_QUEST_COMPLETE:                    // 28
-                    $jsGlobals[Type::QUEST][] = $c['ConditionValue1'];
-                    break;
-                case CND_ACTIVE_EVENT:                      // 12
-                    $jsGlobals[Type::WORLDEVENT][] = $c['ConditionValue1'];
-                    break;
-                case CND_ACHIEVEMENT:                       // 17
-                    $jsGlobals[Type::ACHIEVEMENT][] = $c['ConditionValue1'];
-                    break;
-                case CND_TITLE:                             // 18
-                    $jsGlobals[Type::TITLE][] = $c['ConditionValue1'];
-                    break;
-                case CND_NEAR_CREATURE:                     // 29
-                    $jsGlobals[Type::NPC][] = $c['ConditionValue1'];
-                    break;
-                case CND_NEAR_GAMEOBJECT:                   // 30
-                    $jsGlobals[Type::OBJECT][] = $c['ConditionValue1'];
-                    break;
-                case CND_CLASS:                             // 15
-                    for ($i = 0; $i < 11; $i++)
-                        if ($c['ConditionValue1'] & (1 << $i))
-                            $jsGlobals[Type::CHR_CLASS][] = $i + 1;
-                    break;
-                case CND_RACE:                              // 16
-                    for ($i = 0; $i < 11; $i++)
-                        if ($c['ConditionValue1'] & (1 << $i))
-                            $jsGlobals[Type::CHR_RACE][] = $i + 1;
-                    break;
-                case CND_OBJECT_ENTRY:                      // 31
-                    if ($c['ConditionValue1'] == 3)
-                        $jsGlobals[Type::NPC][] = $c['ConditionValue2'];
-                    else if ($c['ConditionValue1'] == 5)
-                        $jsGlobals[Type::OBJECT][] = $c['ConditionValue2'];
-                    break;
-                case CND_TEAM:                              // 6
-                    if ($c['ConditionValue1'] == 469)       // Alliance
-                        $c['ConditionValue1'] = 1;
-                    else if ($c['ConditionValue1'] == 67)   // Horde
-                        $c['ConditionValue1'] = 2;
-                    else
-                        continue 2;
-            }
-
-            $res = [$c['NegativeCondition'] ? -$c['ConditionTypeOrReference'] : $c['ConditionTypeOrReference']];
-            foreach ([1, 2, 3] as $i)
-                if (($_ = $c['ConditionValue'.$i]) || $c['ConditionTypeOrReference'] = CND_DISTANCE_TO)
-                    $res[] = $_;
-
-            $group = $c['SourceEntry'];
-            if (!in_array($c['SourceTypeOrReferenceId'], [CND_SRC_CREATURE_TEMPLATE_VEHICLE, CND_SRC_SPELL, CND_SRC_QUEST_ACCEPT, CND_SRC_QUEST_SHOW_MARK, CND_SRC_SPELL_PROC]))
-                $group = $c['SourceEntry'] . ':' . $c['SourceGroup'];
-
-            $result[$c['SourceTypeOrReferenceId']] [$group] [$c['ElseGroup']] [] = $res;
-        }
-
-        return [$result, $jsGlobals];
     }
 
     public static function sendNoCacheHeader()
@@ -1276,7 +1205,7 @@ abstract class Util
     {
         $flags = $forceFlags ?: (JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE);
 
-        if (CFG_DEBUG && !$forceFlags)
+        if (Cfg::get('DEBUG') && !$forceFlags)
             $flags |= JSON_PRETTY_PRINT;
 
         $json = json_encode($data, $flags);
@@ -1288,7 +1217,7 @@ abstract class Util
         return $json;
     }
 
-    public static function createSqlBatchInsert(array $data)
+    public static function createSqlBatchInsert(array $data) : array
     {
         $nRows  = 100;
         $nItems = count(reset($data));
@@ -1303,12 +1232,7 @@ abstract class Util
             if (count($d) != $nItems)
                 return [];
 
-            $d = array_map(function ($x) {
-                if ($x === null)
-                    return 'NULL';
-
-                return DB::Aowow()->escape($x);
-            }, $d);
+            $d = array_map(fn($x) => $x === null ? 'NULL' : DB::Aowow()->escape($x), $d);
 
             $buff[] = implode(',', $d);
 
@@ -1332,6 +1256,11 @@ abstract class Util
     public static function writeFile($file, $content)
     {
         $success = false;
+
+        $parentDir = mb_substr($file, 0, mb_strrpos($file, '/'));
+        if (!self::writeDir($parentDir))
+            return false;
+
         if ($handle = @fOpen($file, "w"))
         {
             if (fWrite($handle, $content))
@@ -1345,25 +1274,32 @@ abstract class Util
             trigger_error('could not create file', E_USER_ERROR);
 
         if ($success)
-            @chmod($file, Util::FILE_ACCESS);
+            @chmod($file, self::FILE_ACCESS);
 
         return $success;
     }
 
-    public static function writeDir($dir)
+    public static function writeDir(string $dir, bool &$exist = true) : bool
     {
-        // remove multiple slashes
-        $dir = preg_replace('|/+|', '/', $dir);
+        // remove multiple slashes; trailing slashes
+        $dir   = preg_replace(['/\/+/', '/\/$/'], ['/', ''], $dir) ?: '.';
+        $exist = is_dir($dir);
 
-        if (is_dir($dir))
+        if ($exist)
         {
-            if (!is_writable($dir) && !@chmod($dir, Util::FILE_ACCESS))
-                trigger_error('cannot write into directory', E_USER_ERROR);
+            if (fileperms($dir) != self::DIR_ACCESS && !@chmod($dir, self::DIR_ACCESS))
+                trigger_error(CLI::bold($dir) . ' may be inaccessible to the web service.', E_USER_WARNING);
 
             return is_writable($dir);
         }
 
-        if (@mkdir($dir, Util::FILE_ACCESS, true))
+        // apparently chmod can't edit a whole path at once
+        $path = '';
+        foreach(explode('/', $dir) as $segment)
+            if (is_dir($path .= $segment.'/') && fileperms($path) != self::DIR_ACCESS)
+                @chmod($path, self::DIR_ACCESS);
+
+        if (@mkdir($dir, self::DIR_ACCESS, true))
             return true;
 
         trigger_error('could not create directory', E_USER_ERROR);
@@ -1375,8 +1311,11 @@ abstract class Util
     /* Good Skill */
     /**************/
 
-    public static function getEquipmentScore($itemLevel, $quality, $slot, $nSockets = 0)
+    public static function getEquipmentScore(int $itemLevel, int $quality, int $slot, int $nSockets = 0) : float
     {
+        if ($itemLevel < 0)                                 // can this even happen?
+            $itemLevel = 0;
+
         $score = $itemLevel;
 
         // quality mod
@@ -1455,10 +1394,10 @@ abstract class Util
                 $score -= $nSockets * self::GEM_SCORE_BASE_BC;
         }
 
-        return round(max(0.0, $score), 4);
+        return round($score, 4);
     }
 
-    public static function getGemScore($itemLevel, $quality, $profSpec = false, $itemId = 0)
+    public static function getGemScore(int $itemLevel, int $quality, bool $profSpec = false, int $itemId = 0) : float
     {
         // prepare score-lookup
         if (empty(self::$perfectGems))
@@ -1502,8 +1441,11 @@ abstract class Util
         return 0.0;
     }
 
-    public static function getEnchantmentScore($itemLevel, $quality, $profSpec = false, $idOverride = 0)
+    public static function getEnchantmentScore(int $itemLevel, int $quality, bool $profSpec = false, int $idOverride = 0) : float
     {
+        if ($itemLevel < 0)                                 // can this even happen?
+            $itemLevel = 0;
+
         // some hardcoded values, that defy lookups (cheaper but not skillbound profession versions of spell threads, leg armor)
         if (in_array($idOverride, [3327, 3328, 3872, 3873]))
             return 20.0;
@@ -1512,25 +1454,27 @@ abstract class Util
             return 40.0;
 
         // other than the constraints (0 - 20 points; 40 for profession perks), everything in here is guesswork
-        $score = max(min($itemLevel, 80), 0);
+        $score = min($itemLevel, 80);
 
         switch ($quality)
         {
             case ITEM_QUALITY_HEIRLOOM:                 // because i say so!
-                $score = 80.0;
+                $score = 20.0;
                 break;
             case ITEM_QUALITY_RARE:
-                $score /= 1.2;
+                $score /= 4.8;
                 break;
             case ITEM_QUALITY_UNCOMMON:
-                $score /= 1.6;
+                $score /= 6.4;
                 break;
             case ITEM_QUALITY_NORMAL:
-                $score /= 2.5;
+                $score /= 10.0;
                 break;
+            default:
+                $score /= 4.0;
         }
 
-        return round(max(0.0, $score / 4), 4);
+        return round($score, 4);
     }
 
     public static function fixWeaponScores($class, $talents, $mainHand, $offHand)
@@ -1583,7 +1527,7 @@ abstract class Util
     }
 
     // orientation is 2*M_PI for a full circle, increasing counterclockwise
-    static function O2Deg($o)
+    public static function O2Deg($o)
     {
         // orientation values can exceed boundaries (for whatever reason)
         while ($o < 0)
@@ -1616,7 +1560,7 @@ abstract class Util
         return [(int)$deg, $desc];
     }
 
-    static function mask2bits($bitmask, $offset = 0)
+    public static function mask2bits(int $bitmask, int $offset = 0) : array
     {
         $bits = [];
         $i    = 0;
@@ -1632,7 +1576,48 @@ abstract class Util
 
         return $bits;
     }
+
+    public static function buildPosFixMenu(int $mapId, float $posX, float $posY, int $type, int $guid, int $parentArea = 0, int $parentFloor = 0) : array
+    {
+        $points = Game::worldPosToZonePos($mapId, $posX, $posY);
+        if (!$points || count($points) < 2)
+            return [];
+
+        $floors = [];
+        $menu   = [[null, "Move Location to..."]];
+        foreach ($points as $p)
+        {
+            if ($p['multifloor'])
+                $floors[$p['areaId']][] = $p['floor'];
+
+            if (isset($menu[$p['areaId']]))
+                continue;
+            else if ($p['areaId'] == $parentArea)
+                $menu[$p['areaId']] = [$p['areaId'], '$g_zones['.$p['areaId'].']', '', null, ['class' => 'checked q0']];
+            else
+                $menu[$p['areaId']] = [$p['areaId'], '$g_zones['.$p['areaId'].']', '$spawnposfix.bind(null, '.$type.', '.$guid.', '.$p['areaId'].', 0)', null, null];
+        }
+
+        foreach ($floors as $area => $f)
+        {
+            $menu[$area][MENU_IDX_URL] = null;
+            $menu[$area][MENU_IDX_SUB] = [];
+            if ($menu[$area][MENU_IDX_OPT])
+                $menu[$area][MENU_IDX_OPT]['class'] = 'checked';
+
+            foreach ($f as $n)
+            {
+                if ($n == $parentFloor)
+                    $menu[$area][MENU_IDX_SUB][] = [$n, '$g_zone_areas['.$area.']['.($n - 1).']', '', null, ['class' => 'checked q0']];
+                else
+                    $menu[$area][MENU_IDX_SUB][] = [$n, '$g_zone_areas['.$area.']['.($n - 1).']', '$spawnposfix.bind(null, '.$type.', '.$guid.', '.$area.', '.$n.')'];
+            }
+        }
+
+        return array_values($menu);
+    }
 }
+
 
 abstract class Type
 {
@@ -1733,7 +1718,7 @@ abstract class Type
         self::CHR_CLASS   => ['CharClassList',   'class',       'g_classes',           0x1],
         self::CHR_RACE    => ['CharRaceList',    'race',        'g_races',             0x1],
         self::SKILL       => ['SkillList',       'skill',       'g_skills',            0x1],
-        self::STATISTIC   => ['AchievementList', 'achievement', 'g_achievements',      0x1], // alias for achievements; exists only for Markup
+        self::STATISTIC   => ['AchievementList', 'achievement', 'g_achievements',      0x0], // alias for achievements; exists only for Markup
         self::CURRENCY    => ['CurrencyList',    'currency',    'g_gatheredcurrencies',0x1],
         self::SOUND       => ['SoundList',       'sound',       'g_sounds',            0x1],
         self::ICON        => ['IconList',        'icon',        'g_icons',             0x1],
@@ -1753,7 +1738,7 @@ abstract class Type
     /* Field Operations */
     /********************/
 
-    public static function newList(int $type, ?array $conditions = []) : ?BaseType
+    public static function newList(int $type, array $conditions = []) : ?BaseType
     {
         if (!self::exists($type))
             return null;
@@ -1779,7 +1764,7 @@ abstract class Type
 
     public static function getJSGlobalTemplate(int $type) : array
     {
-        if (!self::exists($type))
+        if (!self::exists($type) || !self::$data[$type][self::IDX_JSG_TPL])
             return [];
 
             // [key, [data], [extraData]]
@@ -1900,7 +1885,7 @@ class Report
     public const AR_OUT_OF_DATE       = 46;
     public const AR_MISCELLANEOUS     = 48;
 
-    private /* array */ $context = array(
+    private array $context = array(
         self::MODE_GENERAL => array(
             self::GEN_FEEDBACK         => true,
             self::GEN_BUG_REPORT       => true,
@@ -1963,39 +1948,33 @@ class Report
     public  const STATUS_CLOSED_WONTFIX = 2;
     public  const STATUS_CLOSED_SOLVED  = 3;
 
-    private /* int */    $mode      = 0;
-    private /* int */    $reason    = 0;
-    private /* int */    $subject   = 0;
-
-    public  /* readonly int */ $errorCode;
+    private int $errorCode = self::ERR_NONE;
 
 
-    public function __construct(int $mode, int $reason, int $subject = 0)
+    public function __construct(private int $mode, private int $reason, private ?int $subject = 0)
     {
-        if ($mode < 0 || $reason <= 0 || !$subject)
+        if ($mode < 0 || $reason <= 0)
         {
-            trigger_error('AjaxContactus::handleContactUs - malformed contact request received', E_USER_ERROR);
+            trigger_error('Report - malformed contact request received', E_USER_ERROR);
             $this->errorCode = self::ERR_MISCELLANEOUS;
             return;
         }
 
         if (!isset($this->context[$mode][$reason]))
         {
-            trigger_error('AjaxContactus::handleContactUs - report has invalid context (mode:'.$mode.' / reason:'.$reason.')', E_USER_ERROR);
+            trigger_error('Report - report has invalid context (mode:'.$mode.' / reason:'.$reason.')', E_USER_ERROR);
             $this->errorCode = self::ERR_MISCELLANEOUS;
             return;
         }
 
         if (!User::$id && !User::$ip)
         {
-            trigger_error('AjaxContactus::handleContactUs - could not determine IP for anonymous user', E_USER_ERROR);
+            trigger_error('Report - could not determine IP for anonymous user', E_USER_ERROR);
             $this->errorCode = self::ERR_MISCELLANEOUS;
             return;
         }
 
-        $this->mode    = $mode;
-        $this->reason  = $reason;
-        $this->subject = $subject;                          // 0 for utility, tools and misc pages?
+        $this->subject ??= 0;                               // 0 for utility, tools and misc pages?
     }
 
     private function checkTargetContext() : int
@@ -2117,6 +2096,11 @@ class Report
     {
         // assignedTo = 0 ? status = STATUS_OPEN : status = STATUS_ASSIGNED, userId = assignedTo
         return false;
+    }
+
+    public function getError() : int
+    {
+        return $this->errorCode;
     }
 }
 

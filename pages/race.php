@@ -16,7 +16,7 @@ class RacePage extends GenericPage
     protected $path          = [0, 13];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'swfobject.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/swfobject.js']];
 
     public function __construct($pageCall, $id)
     {
@@ -44,7 +44,7 @@ class RacePage extends GenericPage
     protected function generateContent()
     {
         $infobox      = [];
-        $_mask        = 1 << ($this->typeId - 1);
+        $ra           = ChrRace::from($this->typeId);
         $mountVendors = array(                              // race => [starter, argent tournament]
             null,           [384,   33307], [3362,  33553], [1261,  33310],
             [4730,  33653], [4731,  33555], [3685,  33556], [7955,  33650],
@@ -59,7 +59,7 @@ class RacePage extends GenericPage
 
         // side
         if ($_ = $this->subject->getField('side'))
-            $infobox[] = Lang::main('side').Lang::main('colon').'[span class=icon-'.($_ == 2 ? 'horde' : 'alliance').']'.Lang::game('si', $_).'[/span]';
+            $infobox[] = Lang::main('side').Lang::main('colon').'[span class=icon-'.($_ == SIDE_HORDE ? 'horde' : 'alliance').']'.Lang::game('si', $_).'[/span]';
 
         // faction
         if ($_ = $this->subject->getField('factionId'))
@@ -90,10 +90,7 @@ class RacePage extends GenericPage
 
         $this->infobox    = '[ul][li]'.implode('[/li][li]', $infobox).'[/li][/ul]';
         $this->expansion  = Util::$expansionString[$this->subject->getField('expansion')];
-        $this->headIcons  = array(
-            'race_'.strtolower($this->subject->getField('fileString')).'_male',
-            'race_'.strtolower($this->subject->getField('fileString')).'_female'
-        );
+        $this->headIcons  = ['race_'.$ra->json().'_male', 'race_'.$ra->json().'_female'];
         $this->redButtons = array(
             BUTTON_WOWHEAD => true,
             BUTTON_LINKS   => ['type' => $this->type, 'typeId' => $this->typeId]
@@ -105,24 +102,24 @@ class RacePage extends GenericPage
         /**************/
 
         // Classes
-        $classes = new CharClassList(array(['racemask', $_mask, '&']));
+        $classes = new CharClassList(array(['racemask', $ra->toMask(), '&']));
         if (!$classes->error)
         {
             $this->extendGlobalData($classes->getJSGlobals());
-            $this->lvTabs[] = ['class', ['data' => array_values($classes->getListviewData())]];
+            $this->lvTabs[] = [CharClassList::$brickFile, ['data' => array_values($classes->getListviewData())]];
         }
 
         // Tongues
         $conditions = array(
             ['typeCat', -11],                               // proficiencies
-            ['reqRaceMask', $_mask, '&']                    // only languages are race-restricted
+            ['reqRaceMask', $ra->toMask(), '&']             // only languages are race-restricted
         );
 
         $tongues = new SpellList($conditions);
         if (!$tongues->error)
         {
             $this->extendGlobalData($tongues->getJSGlobals());
-            $this->lvTabs[] = ['spell', array(
+            $this->lvTabs[] = [SpellList::$brickFile, array(
                 'data'       => array_values($tongues->getListviewData()),
                 'id'         => 'languages',
                 'name'       => '$LANG.tab_languages',
@@ -133,14 +130,14 @@ class RacePage extends GenericPage
         // Racials
         $conditions = array(
             ['typeCat', -4],                               // racial traits
-            ['reqRaceMask', $_mask, '&']
+            ['reqRaceMask', $ra->toMask(), '&']
         );
 
         $racials = new SpellList($conditions);
         if (!$racials->error)
         {
             $this->extendGlobalData($racials->getJSGlobals());
-            $this->lvTabs[] = ['spell', array(
+            $this->lvTabs[] = [SpellList::$brickFile, array(
                 'data'       => array_values($racials->getListviewData()),
                 'id'         => 'racial-traits',
                 'name'       => '$LANG.tab_racialtraits',
@@ -150,21 +147,21 @@ class RacePage extends GenericPage
 
         // Quests
         $conditions = array(
-            ['reqRaceMask', $_mask, '&'],
-            [['reqRaceMask', RACE_MASK_HORDE, '&'], RACE_MASK_HORDE, '!'],
-            [['reqRaceMask', RACE_MASK_ALLIANCE, '&'], RACE_MASK_ALLIANCE, '!']
+            ['reqRaceMask', $ra->toMask(), '&'],
+            [['reqRaceMask', ChrRace::MASK_HORDE, '&'], ChrRace::MASK_HORDE, '!'],
+            [['reqRaceMask', ChrRace::MASK_ALLIANCE, '&'], ChrRace::MASK_ALLIANCE, '!']
         );
 
         $quests = new QuestList($conditions);
         if (!$quests->error)
         {
             $this->extendGlobalData($quests->getJSGlobals());
-            $this->lvTabs[] = ['quest', ['data' => array_values($quests->getListviewData())]];
+            $this->lvTabs[] = [QuestList::$brickFile, ['data' => array_values($quests->getListviewData())]];
         }
 
         // Mounts
         // ok, this sucks, but i rather hardcode the trainer, than fetch items by namepart
-        $items = isset($mountVendors[$this->typeId]) ? DB::World()->selectCol('SELECT item FROM npc_vendor WHERE entry IN (?a)', $mountVendors[$this->typeId]) : 0;
+        $items = isset($mountVendors[$this->typeId]) ? DB::World()->selectCol('SELECT `item` FROM npc_vendor WHERE `entry` IN (?a)', $mountVendors[$this->typeId]) : 0;
 
         $conditions = array(
             ['i.id', $items],
@@ -176,7 +173,7 @@ class RacePage extends GenericPage
         if (!$mounts->error)
         {
             $this->extendGlobalData($mounts->getJSGlobals());
-            $this->lvTabs[] = ['item', array(
+            $this->lvTabs[] = [ItemList::$brickFile, array(
                 'data'       => array_values($mounts->getListviewData()),
                 'id'         => 'mounts',
                 'name'       => '$LANG.tab_mounts',
@@ -185,7 +182,7 @@ class RacePage extends GenericPage
         }
 
         // Sounds
-        if ($vo = DB::Aowow()->selectCol('SELECT soundId AS ARRAY_KEY, gender FROM ?_races_sounds WHERE raceId = ?d', $this->typeId))
+        if ($vo = DB::Aowow()->selectCol('SELECT `soundId` AS ARRAY_KEY, `gender` FROM ?_races_sounds WHERE `raceId` = ?d', $this->typeId))
         {
             $sounds = new SoundList(array(['id', array_keys($vo)]));
             if (!$sounds->error)
@@ -195,14 +192,22 @@ class RacePage extends GenericPage
                 foreach ($data as $id => &$d)
                     $d['gender'] = $vo[$id];
 
-                $this->lvTabs[] = ['sound', array(
+                $this->lvTabs[] = [SoundList::$brickFile, array(
                     'data' => array_values($data),
                     'extraCols' => ['$Listview.templates.title.columns[1]']
                 )];
             }
         }
+
+        // tab: condition-for
+        $cnd = new Conditions();
+        $cnd->getByCondition(Type::CHR_RACE, $this->typeId)->prepare();
+        if ($tab = $cnd->toListviewTab('condition-for', '$LANG.tab_condition_for'))
+        {
+            $this->extendGlobalData($cnd->getJsGlobals());
+            $this->lvTabs[] = $tab;
+        }
     }
 }
-
 
 ?>

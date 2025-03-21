@@ -15,7 +15,7 @@ class QuestsPage extends GenericPage
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
     protected $validCats     = [];
-    protected $js            = [[JS_FILE, 'filters.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/filters.js']];
 
     protected $_get          = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
@@ -47,7 +47,7 @@ class QuestsPage extends GenericPage
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
-        $quests = new QuestList($conditions, ['extraOpts' => $this->filterObj->extraOpts]);
+        $quests = new QuestList($conditions, ['extraOpts' => $this->filterObj->extraOpts, 'calcTotal' => true]);
 
         $this->extendGlobalData($quests->getJSGlobals());
 
@@ -75,9 +75,9 @@ class QuestsPage extends GenericPage
             $tabData['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
 
         // create note if search limit was exceeded
-        if ($quests->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+        if ($quests->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
         {
-            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_questsfound', $quests->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_questsfound', $quests->getMatches(), Cfg::get('SQL_LIMIT_DEFAULT'));
             $tabData['_truncated'] = 1;
         }
         else if (isset($this->category[1]) && $this->category[1] > 0)
@@ -86,7 +86,7 @@ class QuestsPage extends GenericPage
         if ($this->filterObj->error)
             $tabData['_errors'] = 1;
 
-        $this->lvTabs[] = ['quest', $tabData];
+        $this->lvTabs[] = [QuestList::$brickFile, $tabData];
     }
 
     protected function generateTitle()

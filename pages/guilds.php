@@ -10,18 +10,26 @@ class GuildsPage extends GenericPage
 {
     use TrProfiler;
 
+    private $filterObj  = null;
+
+    protected $subCat   = '';
+    protected $filter   = [];
+    protected $lvTabs   = [];
+
     protected $type     = Type::GUILD;
 
     protected $tabId    = 1;
     protected $path     = [1, 5, 2];
     protected $tpl      = 'guilds';
-    protected $js       = [[JS_FILE, 'filters.js'], [JS_FILE, 'profile_all.js'], [JS_FILE, 'profile.js']];
+    protected $scripts  = [[SC_JS_FILE, 'js/filters.js'], [SC_JS_FILE, 'js/profile_all.js'], [SC_JS_FILE, 'js/profile.js']];
 
     protected $_get     = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
     public function __construct($pageCall, $pageParam)
     {
-        if (!CFG_PROFILER_ENABLE)
+        parent::__construct($pageCall, $pageParam);
+
+        if (!Cfg::get('PROFILER_ENABLE'))
             $this->error();
 
         $this->getSubjectFromUrl($pageParam);
@@ -39,8 +47,6 @@ class GuildsPage extends GenericPage
             $this->sumSubjects += DB::Characters($idx)->selectCell('SELECT COUNT(*) FROM guild');
         }
 
-        parent::__construct($pageCall, $pageParam);
-
         $this->name   = Lang::profiler('guilds');
         $this->subCat = $pageParam ? '='.$pageParam : '';
     }
@@ -48,7 +54,7 @@ class GuildsPage extends GenericPage
     protected function generateTitle()
     {
         if ($this->realm)
-            array_unshift($this->title, $this->realm,/* CFG_BATTLEGROUP,*/ Lang::profiler('regions', $this->region), Lang::profiler('guilds'));
+            array_unshift($this->title, $this->realm,/* Cfg::get('BATTLEGROUP'),*/ Lang::profiler('regions', $this->region), Lang::profiler('guilds'));
         else if ($this->region)
             array_unshift($this->title, Lang::profiler('regions', $this->region), Lang::profiler('guilds'));
         else
@@ -57,7 +63,7 @@ class GuildsPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=realms&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=realms']);
 
         $conditions = array(
             ['c.deleteInfos_Account', null],
@@ -80,7 +86,7 @@ class GuildsPage extends GenericPage
             'hiddenCols'  => ['guild'],
         );
 
-        $miscParams = [];
+        $miscParams = ['calcTotal' => true];
         if ($this->realm)
             $miscParams['sv'] = $this->realm;
         if ($this->region)
@@ -91,7 +97,7 @@ class GuildsPage extends GenericPage
         {
             $guilds->initializeLocalEntries();
 
-            $dFields = $guilds->hasDiffFields(['faction', 'type']);
+            $dFields = $guilds->hasDiffFields('faction', 'type');
             if (!($dFields & 0x1))
                 $tabData['hiddenCols'][] = 'faction';
 
@@ -101,20 +107,24 @@ class GuildsPage extends GenericPage
             $tabData['data'] = array_values($guilds->getListviewData());
 
             // create note if search limit was exceeded
-            if ($this->filter['query'] && $guilds->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+            if ($this->filter['query'] && $guilds->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
             {
                 $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_guildsfound2', $this->sumSubjects, $guilds->getMatches());
                 $tabData['_truncated'] = 1;
             }
-            else if ($guilds->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+            else if ($guilds->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
                 $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_guildsfound', $this->sumSubjects, 0);
 
             if ($this->filterObj->error)
                 $tabData['_errors'] = 1;
         }
 
-        $this->lvTabs[] = ['profile', $tabData, 'membersCol'];
+        $this->lvTabs[] = [GuildList::$brickFile, $tabData, 'membersCol'];
+    }
 
+    protected function postCache()
+    {
+        // sort for dropdown-menus
         Lang::sort('game', 'cl');
         Lang::sort('game', 'ra');
     }

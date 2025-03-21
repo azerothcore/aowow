@@ -10,19 +10,28 @@ class ArenaTeamPage extends GenericPage
 {
     use TrProfiler;
 
-    protected $lvTabs   = [];
+    protected $lvTabs     = [];
 
-    protected $type     = Type::ARENA_TEAM;
+    protected $type       = Type::ARENA_TEAM;
 
-    protected $tabId    = 1;
-    protected $path     = [1, 5, 3];
-    protected $tpl      = 'roster';
-    protected $js       = [[JS_FILE, 'profile_all.js'], [JS_FILE, 'profile.js']];
-    protected $css      = [[CSS_FILE, 'Profiler.css']];
+    protected $subject    = null;
+    protected $redButtons = [];
+    protected $extraHTML  = null;
+
+    protected $tabId      = 1;
+    protected $path       = [1, 5, 3];
+    protected $tpl        = 'roster';
+    protected $scripts    = array(
+        [SC_JS_FILE,  'js/profile_all.js'],
+        [SC_JS_FILE,  'js/profile.js'],
+        [SC_CSS_FILE, 'css/Profiler.css']
+    );
 
     public function __construct($pageCall, $pageParam)
     {
-        if (!CFG_PROFILER_ENABLE)
+        parent::__construct($pageCall, $pageParam);
+
+        if (!Cfg::get('PROFILER_ENABLE'))
             $this->error();
 
         $params = array_map('urldecode', explode('.', $pageParam));
@@ -30,8 +39,6 @@ class ArenaTeamPage extends GenericPage
             $params[0] = Profiler::urlize($params[0]);
         if (isset($params[1]))
             $params[1] = Profiler::urlize($params[1]);
-
-        parent::__construct($pageCall, $pageParam);
 
         if (count($params) == 1 && intval($params[0]))
         {
@@ -62,7 +69,6 @@ class ArenaTeamPage extends GenericPage
                 if ($this->subject->error)
                     $this->notFound();
 
-                $this->profile = $params;
                 $this->name = sprintf(Lang::profiler('arenaRoster'), $this->subject->getField('name'));
             }
             // 2) not yet synced but exists on realm (wont work if we get passed an urlized name, but there is nothing we can do about it)
@@ -97,7 +103,7 @@ class ArenaTeamPage extends GenericPage
         if ($this->doResync)
             return;
 
-        $this->addScript([JS_FILE, '?data=realms.weight-presets&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=realms.weight-presets']);
 
         $this->redButtons[BUTTON_RESYNC] = [$this->subjectGUID, 'arena-team'];
 
@@ -117,7 +123,7 @@ class ArenaTeamPage extends GenericPage
         $member = new LocalProfileList(array(['atm.arenaTeamId', $this->subjectGUID]));
         if (!$member->error)
         {
-            $this->lvTabs[] = ['profile', array(
+            $this->lvTabs[] = [ProfileList::$brickFile, array(
                 'data'        => array_values($member->getListviewData(PROFILEINFO_CHARACTER | PROFILEINFO_ARENA)),
                 'sort'        => [-15],
                 'visibleCols' => ['race', 'classs', 'level', 'talents', 'gearscore', 'rating', 'wins', 'losses'],
@@ -126,7 +132,7 @@ class ArenaTeamPage extends GenericPage
         }
     }
 
-    public function notFound(string $title = '', string $msg = '') : void
+    public function notFound(string $title = '', string $msg = '') : never
     {
         parent::notFound($title ?: Util::ucFirst(Lang::profiler('profiler')), $msg ?: Lang::profiler('notFound', 'arenateam'));
     }

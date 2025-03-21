@@ -44,7 +44,7 @@ endforeach;
 <?php
 $idx = 0;
 foreach ($this->pieces as $iId => $piece):
-    echo '                    <tr><th align="right" id="iconlist-icon'.(++$idx).'"></th><td><span class="q'.$piece['quality'].'"><a href="?item='.$iId.'">'.$piece['name_'.User::$localeString]."</a></span></td></tr>\n";
+    echo '                    <tr><th align="right" id="iconlist-icon'.(++$idx).'"></th><td><span class="q'.$piece['quality'].'"><a href="?item='.$iId.'">'.$piece['name_'.Lang::getLocale()->json()]."</a></span></td></tr>\n";
 endforeach;
 ?>
                 </table>
@@ -68,6 +68,9 @@ foreach ($this->spells as $i => $s):
 endforeach;
 ?>
                 </ul>
+<?php
+if ($this->summary):
+?>
 
                 <h2 class="clear"><?=Lang::itemset('summary'); ?></h2>
 
@@ -75,6 +78,9 @@ endforeach;
                 <script type="text/javascript">//<![CDATA[
                     new Summary(<?=Util::toJSON($this->summary); ?>);
                 //]]></script>
+<?php
+endif;
+?>
 
                 <h2 class="clear"><?=Lang::main('related'); ?></h2>
             </div>

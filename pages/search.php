@@ -30,7 +30,7 @@ class SearchPage extends GenericPage
     protected $tpl           = 'search';
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_SEARCH;
-    protected $js            = [[JS_FILE, 'swfobject.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/swfobject.js']];
     protected $lvTabs        = [];                          // [file, data, extraInclude, osInfo]       // osInfo:[type, appendix, nMatches, param1, param2]
     protected $forceTabs     = true;
     protected $search        = '';                          // output
@@ -45,7 +45,7 @@ class SearchPage extends GenericPage
         'opensearch' => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkEmptySet']
     );
 
-    private   $maxResults    = CFG_SQL_LIMIT_SEARCH;
+    private   $maxResults    = 500;
     private   $searchMask    = 0x0;
     private   $query         = '';                          // lookup
     private   $included      = [];
@@ -62,10 +62,6 @@ class SearchPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        // restricted access
-        if ($this->reqUGroup && !User::isInGroup($this->reqUGroup))
-            $this->error();
-
         parent::__construct($pageCall, $pageParam);         // just to set g_user and g_locale
 
         $this->search =
@@ -88,6 +84,9 @@ class SearchPage extends GenericPage
                 $this->statWeights = [$wt, $wtv];
         }
 
+        if ($limit = Cfg::get('SQL_LIMIT_SEARCH'))
+            $this->maxResults = $limit;
+
         // select search mode
         if ($this->_get['json'])
         {
@@ -103,21 +102,21 @@ class SearchPage extends GenericPage
         }
         else if ($this->_get['opensearch'])
         {
-            $this->maxResults = CFG_SQL_LIMIT_QUICKSEARCH;
+            $this->maxResults = Cfg::get('SQL_LIMIT_QUICKSEARCH');
             $this->searchMask |= SEARCH_TYPE_OPEN | SEARCH_MASK_OPEN;
         }
         else
             $this->searchMask |= SEARCH_TYPE_REGULAR | SEARCH_MASK_ALL;
 
         // handle maintenance status for js-cases
-        if (CFG_MAINTENANCE && !User::isInGroup(U_GROUP_EMPLOYEE) && !($this->searchMask & SEARCH_TYPE_REGULAR))
+        if (Cfg::get('MAINTENANCE') && !User::isInGroup(U_GROUP_EMPLOYEE) && !($this->searchMask & SEARCH_TYPE_REGULAR))
             $this->notFound();
 
         // fill include, exclude and ignore
         $this->tokenizeQuery();
 
         // invalid conditions: not enough characters to search OR no types to search
-        if ((CFG_MAINTENANCE && !User::isInGroup(U_GROUP_EMPLOYEE)) ||
+        if ((Cfg::get('MAINTENANCE') && !User::isInGroup(U_GROUP_EMPLOYEE)) ||
             (!$this->included && ($this->searchMask & (SEARCH_TYPE_OPEN | SEARCH_TYPE_REGULAR))) ||
             (($this->searchMask & SEARCH_TYPE_JSON) && !$this->included && !$this->statWeights))
         {
@@ -139,14 +138,14 @@ class SearchPage extends GenericPage
                 continue;
             else if ($clean[0] == '-')
             {
-                if (mb_strlen($clean) < 4)
+                if (mb_strlen($clean) < 4 && !Lang::getLocale()->isLogographic())
                     $this->invalid[] = mb_substr($raw, 1);
                 else
                     $this->excluded[] = mb_substr(str_replace('_', '\\_', $clean), 1);
             }
             else if ($clean !== '')
             {
-                if (mb_strlen($clean) < 3)
+                if (mb_strlen($clean) < 3 && !Lang::getLocale()->isLogographic())
                     $this->invalid[] = $raw;
                 else
                     $this->included[] = str_replace('_', '\\_', $clean);
@@ -158,7 +157,7 @@ class SearchPage extends GenericPage
     {
         $staff = intVal($withStaff && User::isInGroup(U_GROUP_EMPLOYEE));
 
-        $key = [$this->mode, $this->searchMask, md5($this->query), $staff, User::$localeId];
+        $key = [$this->mode, $this->searchMask, md5($this->query), $staff, Lang::getLocale()->value];
 
         return implode('_', $key);
     }
@@ -181,7 +180,7 @@ class SearchPage extends GenericPage
         if ($this->searchMask & SEARCH_TYPE_REGULAR)
         {
             $foundTotal = 0;
-            foreach ($this->lvTabs as [$file, $tabData, , $osInfo])
+            foreach ($this->lvTabs as [, $tabData])
                 $foundTotal += count($tabData['data']);
 
             if ($foundTotal == 1)                           // only one match -> redirect to find
@@ -208,12 +207,12 @@ class SearchPage extends GenericPage
         if ($this->mode == CACHE_TYPE_NONE)                 // search is invalid
             return;
 
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         $this->performSearch();
     }
 
-    public function notFound(string $title = '', string $msg = '') : void
+    public function notFound(string $title = '', string $msg = '') : never
     {
         if ($this->searchMask & SEARCH_TYPE_REGULAR)
         {
@@ -227,20 +226,23 @@ class SearchPage extends GenericPage
             parent::display();                              // errors are handled in the search-template itself
         }
         else if ($this->searchMask & SEARCH_TYPE_OPEN)
-            $result = [$this->search, []];
+        {
+            header(MIME_TYPE_OPENSEARCH);
+            exit(Util::toJSON([$this->search, []]));
+        }
         else if ($this->searchMask & SEARCH_TYPE_JSON)
-            $result = [$this->search, [], []];
-
-        header(MIME_TYPE_JSON);
-        exit(Util::toJSON($result));
+        {
+            header(MIME_TYPE_JSON);
+            exit(Util::toJSON([$this->search, [], []]));
+        }
     }
 
-    public function display(string $override = '') : void
+    public function display(string $override = '') : never
     {
         if ($override || ($this->searchMask & SEARCH_TYPE_REGULAR))
             parent::display($override);
         else if ($this->searchMask & SEARCH_TYPE_OPEN)
-            $this->displayExtra([$this, 'generateOpenSearch']);
+            $this->displayExtra([$this, 'generateOpenSearch'], MIME_TYPE_OPENSEARCH);
         else if ($this->searchMask & SEARCH_TYPE_JSON)
             $this->displayExtra([$this, 'generateJsonSearch']);
     }
@@ -285,13 +287,13 @@ class SearchPage extends GenericPage
 
         $this->performSearch();
 
-        foreach ($this->lvTabs as [ , , , $osInfo])
+        foreach ($this->lvTabs as [, , , $osInfo])
             $foundTotal += $osInfo[2];
 
         if (!$foundTotal)
             return Util::toJSON([$this->search, []]);
 
-        foreach ($this->lvTabs as [ , $tabData, , $osInfo])
+        foreach ($this->lvTabs as [, $tabData, , $osInfo])
         {
             $max = max(1, intVal($limit * $osInfo[2] / $foundTotal));
             $limit -= $max;
@@ -304,7 +306,7 @@ class SearchPage extends GenericPage
 
                 $hasQ        = is_numeric($data['name'][0]) || $data['name'][0] == '@';
                 $result[1][] = ($hasQ ? mb_substr($data['name'], 1) : $data['name']).$osInfo[1];
-                $result[3][] = HOST_URL.'/?'.Type::getFileString($osInfo[0]).'='.$data['id'];
+                $result[3][] = Cfg::get('HOST_URL').'/?'.Type::getFileString($osInfo[0]).'='.$data['id'];
 
                 $extra       = [$osInfo[0], $data['id']];   // type, typeId
 
@@ -328,7 +330,7 @@ class SearchPage extends GenericPage
     {
         // default to name-field
         if (!$fields)
-            $fields[] = 'name_loc'.User::$localeId;
+            $fields[] = 'name_loc'.Lang::getLocale()->value;
 
         $qry = [];
         foreach ($fields as $f)
@@ -376,7 +378,7 @@ class SearchPage extends GenericPage
     private function _searchCharClass($cndBase)             // 0 Classes: $searchMask & 0x00000001
     {
         $cnd     = array_merge($cndBase, [$this->createLookup()]);
-        $classes = new CharClassList($cnd);
+        $classes = new CharClassList($cnd, ['calcTotal' => true]);
 
         if ($data = $classes->getListviewData())
         {
@@ -393,7 +395,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['class', $result, null, $osInfo];
+            return [CharClassList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -402,7 +404,7 @@ class SearchPage extends GenericPage
     private function _searchCharRace($cndBase)              // 1 Races: $searchMask & 0x00000002
     {
         $cnd   = array_merge($cndBase, [$this->createLookup()]);
-        $races = new CharRaceList($cnd);
+        $races = new CharRaceList($cnd, ['calcTotal' => true]);
 
         if ($data = $races->getListviewData())
         {
@@ -419,7 +421,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['race', $result, null, $osInfo];
+            return [CharRaceList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -427,8 +429,8 @@ class SearchPage extends GenericPage
 
     private function _searchTitle($cndBase)                 // 2 Titles: $searchMask & 0x00000004
     {
-        $cnd    = array_merge($cndBase, [$this->createLookup(['male_loc'.User::$localeId, 'female_loc'.User::$localeId])]);
-        $titles = new TitleList($cnd);
+        $cnd    = array_merge($cndBase, [$this->createLookup(['male_loc'.Lang::getLocale()->value, 'female_loc'.Lang::getLocale()->value])]);
+        $titles = new TitleList($cnd, ['calcTotal' => true]);
 
         if ($data = $titles->getListviewData())
         {
@@ -445,7 +447,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['title', $result, null, $osInfo];
+            return [TitleList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -456,11 +458,11 @@ class SearchPage extends GenericPage
         $cnd     = array_merge($cndBase, array(
             array(
                 'OR',
-                $this->createLookup(['h.name_loc'.User::$localeId]),
+                $this->createLookup(['h.name_loc'.Lang::getLocale()->value]),
                 ['AND', $this->createLookup(['e.description']), ['e.holidayId', 0]]
             )
         ));
-        $wEvents = new WorldEventList($cnd);
+        $wEvents = new WorldEventList($cnd, ['calcTotal' => true]);
 
         if ($data = $wEvents->getListviewData())
         {
@@ -478,7 +480,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['event', $result, null, $osInfo];
+            return [WorldEventList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -487,7 +489,7 @@ class SearchPage extends GenericPage
     private function _searchCurrency($cndBase)              // 4 Currencies $searchMask & 0x0000010
     {
         $cnd   = array_merge($cndBase, [$this->createLookup()]);
-        $money = new CurrencyList($cnd);
+        $money = new CurrencyList($cnd, ['calcTotal' => true]);
 
         if ($data = $money->getListviewData())
         {
@@ -504,7 +506,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['currency', $result, null, $osInfo];
+            return [CurrencyList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -513,7 +515,7 @@ class SearchPage extends GenericPage
     private function _searchItemset($cndBase, &$shared)     // 5 Itemsets $searchMask & 0x0000020
     {
         $cnd  = array_merge($cndBase, [is_int($this->query) ? ['id', $this->query] : $this->createLookup()]);
-        $sets = new ItemsetList($cnd);
+        $sets = new ItemsetList($cnd, ['calcTotal' => true]);
 
         if ($data = $sets->getListviewData())
         {
@@ -540,7 +542,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?itemsets&filter=na='.urlencode($this->search).'\')';
 
-            return ['itemset', $result, null, $osInfo];
+            return [ItemsetList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -548,12 +550,12 @@ class SearchPage extends GenericPage
 
     private function _searchItem($cndBase, &$shared)        // 6 Items $searchMask & 0x0000040
     {
-        $miscData = [];
+        $miscData = ['calcTotal' => true];
         $cndAdd   = empty($this->query) ? [] : (is_int($this->query) ? ['id', $this->query] : $this->createLookup());
 
         if (($this->searchMask & SEARCH_TYPE_JSON) && ($this->searchMask & 0x20) && !empty($shared['pcsToSet']))
         {
-            $cnd      = [['i.id', array_keys($shared['pcsToSet'])], CFG_SQL_LIMIT_NONE];
+            $cnd      = [['i.id', array_keys($shared['pcsToSet'])], Cfg::get('SQL_LIMIT_NONE')];
             $miscData = ['pcsToSet' => $shared['pcsToSet']];
         }
         else if (($this->searchMask & SEARCH_TYPE_JSON) && ($this->searchMask & 0x40))
@@ -614,7 +616,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?items&filter=na='.urlencode($this->search).'\')';
 
-            return ['item', $result, null, $osInfo];
+            return [ItemList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -628,30 +630,18 @@ class SearchPage extends GenericPage
             [['s.attributes0', 0x80, '&'], 0],
             $this->createLookup()
         ));
-        $abilities = new SpellList($cnd);
+        $abilities = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $abilities->getListviewData())
         {
             if ($this->searchMask & SEARCH_TYPE_REGULAR)
                 $this->extendGlobalData($abilities->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
-            $multiClass = 0;
-            foreach ($data as $d)
-            {
-                $multiClass = 0;
-                for ($i = 1; $i <= 10; $i++)
-                    if (isset($d['reqclass']) && ($d['reqclass'] & (1 << ($i - 1))))
-                        $multiClass++;
-
-                if ($multiClass > 1)
-                    break;
-            }
-
             $vis = ['level', 'schools'];
-            if ($abilities->hasSetFields(['reagent1']))
+            if ($abilities->hasSetFields('reagent1', 'reagent2', 'reagent3', 'reagent4', 'reagent5', 'reagent6', 'reagent7', 'reagent8'))
                 $vis[] = 'reagents';
 
-            $vis[] = $multiClass > 1 ? 'classes' : 'singleclass';
+            $vis[] = count(ChrClass::fromMask($d['reqclass'] ?? 0)) > 1 ? 'classes' : 'singleclass';
 
             $osInfo = [Type::SPELL, ' (Ability)', $abilities->getMatches(), [], []];
             $result = array(
@@ -681,7 +671,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=7&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -693,7 +683,7 @@ class SearchPage extends GenericPage
             ['s.typeCat', [-7, -2]],
             $this->createLookup()
         ));
-        $talents = new SpellList($cnd);
+        $talents = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $talents->getListviewData())
         {
@@ -701,7 +691,7 @@ class SearchPage extends GenericPage
                 $this->extendGlobalData($talents->getJSGlobals());
 
             $vis = ['level', 'singleclass', 'schools'];
-            if ($talents->hasSetFields(['reagent1']))
+            if ($talents->hasSetFields('reagent1', 'reagent2', 'reagent3', 'reagent4', 'reagent5', 'reagent6', 'reagent7', 'reagent8'))
                 $vis[] = 'reagents';
 
             $osInfo = [Type::SPELL, ' (Talent)', $talents->getMatches(), [], []];
@@ -732,7 +722,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=-2&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -744,7 +734,7 @@ class SearchPage extends GenericPage
             ['s.typeCat', -13],
             $this->createLookup()
         ));
-        $glyphs = new SpellList($cnd);
+        $glyphs = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $glyphs->getListviewData())
         {
@@ -774,7 +764,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=-13&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -786,7 +776,7 @@ class SearchPage extends GenericPage
             ['s.typeCat', -11],
             $this->createLookup()
         ));
-        $prof = new SpellList($cnd);
+        $prof = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $prof->getListviewData())
         {
@@ -816,7 +806,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=-11&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -828,7 +818,7 @@ class SearchPage extends GenericPage
             ['s.typeCat', [9, 11]],
             $this->createLookup()
         ));
-        $prof = new SpellList($cnd);
+        $prof = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $prof->getListviewData())
         {
@@ -858,7 +848,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=11&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -870,7 +860,7 @@ class SearchPage extends GenericPage
             ['s.typeCat', -6],
             $this->createLookup()
         ));
-        $vPets = new SpellList($cnd);
+        $vPets = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $vPets->getListviewData())
         {
@@ -900,7 +890,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=-6&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -912,7 +902,7 @@ class SearchPage extends GenericPage
             ['s.typeCat', -5],
             $this->createLookup()
         ));
-        $mounts = new SpellList($cnd);
+        $mounts = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $mounts->getListviewData())
         {
@@ -941,7 +931,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=-5&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -954,7 +944,7 @@ class SearchPage extends GenericPage
             [['cuFlags', NPC_CU_DIFFICULTY_DUMMY, '&'], 0], // exclude difficulty entries
             $this->createLookup()
         ));
-        $npcs = new CreatureList($cnd);
+        $npcs = new CreatureList($cnd, ['calcTotal' => true]);
 
         if ($data = $npcs->getListviewData())
         {
@@ -976,7 +966,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?npcs&filter=na='.urlencode($this->search).'\')';
 
-            return ['creature', $result, null, $osInfo];
+            return [CreatureList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -988,7 +978,7 @@ class SearchPage extends GenericPage
             [['flags', CUSTOM_UNAVAILABLE | CUSTOM_DISABLED, '&'], 0],
             $this->createLookup()
         ));
-        $quests = new QuestList($cnd);
+        $quests = new QuestList($cnd, ['calcTotal' => true]);
 
         if ($data = $quests->getListviewData())
         {
@@ -1009,7 +999,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?quests&filter=na='.urlencode($this->search).'\')';
 
-            return ['quest', $result, null, $osInfo];
+            return [QuestList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1021,7 +1011,7 @@ class SearchPage extends GenericPage
             [['flags', ACHIEVEMENT_FLAG_COUNTER, '&'], 0],  // not a statistic
             $this->createLookup()
         ));
-        $acvs = new AchievementList($cnd);
+        $acvs = new AchievementList($cnd, ['calcTotal' => true]);
 
         if ($data = $acvs->getListviewData())
         {
@@ -1049,7 +1039,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?achievements&filter=na='.urlencode($this->search).'\')';
 
-            return ['achievement', $result, null, $osInfo];
+            return [AchievementList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1061,7 +1051,7 @@ class SearchPage extends GenericPage
             ['flags', ACHIEVEMENT_FLAG_COUNTER, '&'],       // is a statistic
             $this->createLookup()
         ));
-        $stats = new AchievementList($cnd);
+        $stats = new AchievementList($cnd, ['calcTotal' => true]);
 
         if ($data = $stats->getListviewData())
         {
@@ -1088,7 +1078,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?achievements=1&filter=na='.urlencode($this->search).'\')';
 
-            return ['achievement', $result, null, $osInfo];
+            return [AchievementList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1097,7 +1087,7 @@ class SearchPage extends GenericPage
     private function _searchZone($cndBase)                  // 18 Zones $searchMask & 0x0040000
     {
         $cnd    = array_merge($cndBase, [$this->createLookup()]);
-        $zones  = new ZoneList($cnd);
+        $zones  = new ZoneList($cnd, ['calcTotal' => true]);
 
         if ($data = $zones->getListviewData())
         {
@@ -1113,7 +1103,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['zone', $result, null, $osInfo];
+            return [ZoneList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1122,7 +1112,7 @@ class SearchPage extends GenericPage
     private function _searchObject($cndBase)                // 19 Objects $searchMask & 0x0080000
     {
         $cnd     = array_merge($cndBase, [$this->createLookup()]);
-        $objects = new GameObjectList($cnd);
+        $objects = new GameObjectList($cnd, ['calcTotal' => true]);
 
         if ($data = $objects->getListviewData())
         {
@@ -1143,7 +1133,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?objects&filter=na='.urlencode($this->search).'\')';
 
-            return ['object', $result, null, $osInfo];
+            return [GameObjectList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1152,7 +1142,7 @@ class SearchPage extends GenericPage
     private function _searchFaction($cndBase)               // 20 Factions $searchMask & 0x0100000
     {
         $cnd      = array_merge($cndBase, [$this->createLookup()]);
-        $factions = new FactionList($cnd);
+        $factions = new FactionList($cnd, ['calcTotal' => true]);
 
         if ($data = $factions->getListviewData())
         {
@@ -1165,7 +1155,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['faction', $result, null, $osInfo];
+            return [FactionList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1174,7 +1164,7 @@ class SearchPage extends GenericPage
     private function _searchSkill($cndBase)                 // 21 Skills $searchMask & 0x0200000
     {
         $cnd    = array_merge($cndBase, [$this->createLookup()]);
-        $skills = new SkillList($cnd);
+        $skills = new SkillList($cnd, ['calcTotal' => true]);
 
         if ($data = $skills->getListviewData())
         {
@@ -1191,7 +1181,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['skill', $result, null, $osInfo];
+            return [SkillList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1200,7 +1190,7 @@ class SearchPage extends GenericPage
     private function _searchPet($cndBase)                   // 22 Pets $searchMask & 0x0400000
     {
         $cnd    = array_merge($cndBase, [$this->createLookup()]);
-        $pets   = new PetList($cnd);
+        $pets   = new PetList($cnd, ['calcTotal' => true]);
 
         if ($data = $pets->getListviewData())
         {
@@ -1220,7 +1210,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['pet', $result, 'petFoodCol', $osInfo];
+            return [PetList::$brickFile, $result, 'petFoodCol', $osInfo];
         }
 
         return false;
@@ -1232,7 +1222,7 @@ class SearchPage extends GenericPage
             ['s.typeCat', -8],
             $this->createLookup()
         ));
-        $npcAbilities = new SpellList($cnd);
+        $npcAbilities = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $npcAbilities->getListviewData())
         {
@@ -1263,7 +1253,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=-8&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1281,7 +1271,7 @@ class SearchPage extends GenericPage
             ],
             $this->createLookup()
         ));
-        $misc = new SpellList($cnd);
+        $misc = new SpellList($cnd, ['calcTotal' => true]);
 
         if ($data = $misc->getListviewData())
         {
@@ -1311,7 +1301,7 @@ class SearchPage extends GenericPage
             else
                 $result['note'] = '$$WH.sprintf(LANG.lvnote_filterresults, \'?spells=0&filter=na='.urlencode($this->search).'\')';
 
-            return ['spell', $result, null, $osInfo];
+            return [SpellList::$brickFile, $result, null, $osInfo];
         }
 
         return false;
@@ -1319,8 +1309,8 @@ class SearchPage extends GenericPage
 
     private function _searchEmote($cndBase)                 // 25 Emotes $searchMask & 0x2000000
     {
-        $cnd   = array_merge($cndBase, [$this->createLookup(['cmd', 'self_loc'.User::$localeId, 'target_loc'.User::$localeId, 'noTarget_loc'.User::$localeId])]);
-        $emote = new EmoteList($cnd);
+        $cnd   = array_merge($cndBase, [$this->createLookup(['cmd', 'meToExt_loc'.Lang::getLocale()->value, 'meToNone_loc'.Lang::getLocale()->value, 'extToMe_loc'.Lang::getLocale()->value, 'extToExt_loc'.Lang::getLocale()->value, 'extToNone_loc'.Lang::getLocale()->value])]);
+        $emote = new EmoteList($cnd, ['calcTotal' => true]);
 
         if ($data = $emote->getListviewData())
         {
@@ -1330,7 +1320,7 @@ class SearchPage extends GenericPage
                 'name' => Util::ucFirst(Lang::game('emotes'))
             );
 
-            return ['emote', $result, 'emote', $osInfo];
+            return [EmoteList::$brickFile, $result, 'emote', $osInfo];
         }
 
         return false;
@@ -1338,8 +1328,8 @@ class SearchPage extends GenericPage
 
     private function _searchEnchantment($cndBase)           // 26 Enchantments $searchMask & 0x4000000
     {
-        $cnd         = array_merge($cndBase, [$this->createLookup(['name_loc'.User::$localeId])]);
-        $enchantment = new EnchantmentList($cnd);
+        $cnd         = array_merge($cndBase, [$this->createLookup(['name_loc'.Lang::getLocale()->value])]);
+        $enchantment = new EnchantmentList($cnd, ['calcTotal' => true]);
 
         if ($data = $enchantment->getListviewData())
         {
@@ -1354,7 +1344,7 @@ class SearchPage extends GenericPage
             if (array_filter(array_column($result['data'], 'spells')))
                 $result['visibleCols'] = ['trigger'];
 
-            if (!$enchantment->hasSetFields(['skillLine']))
+            if (!$enchantment->hasSetFields('skillLine'))
                 $result['hiddenCols'] = ['skill'];
 
             if ($enchantment->getMatches() > $this->maxResults)
@@ -1363,7 +1353,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['enchantment', $result, 'enchantment', $osInfo];
+            return [EnchantmentList::$brickFile, $result, 'enchantment', $osInfo];
         }
 
         return false;
@@ -1372,7 +1362,7 @@ class SearchPage extends GenericPage
     private function _searchSound($cndBase)                 // 27 Sounds $searchMask & 0x8000000
     {
         $cnd    = array_merge($cndBase, [$this->createLookup(['name'])]);
-        $sounds = new SoundList($cnd);
+        $sounds = new SoundList($cnd, ['calcTotal' => true]);
 
         if ($data = $sounds->getListviewData())
         {
@@ -1388,7 +1378,7 @@ class SearchPage extends GenericPage
                 $result['_truncated'] = 1;
             }
 
-            return ['sound', $result, null, $osInfo];
+            return [SoundList::$brickFile, $result, null, $osInfo];
         }
 
         return false;

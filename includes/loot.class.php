@@ -137,20 +137,21 @@ class Loot
         return array_combine($retKeys, $retData);
     }
 
-    private function getByContainerRecursive(string $tableName, int $lootId, array &$handledRefs, int $groupId = 0, float $baseChance = 1.0) : ?array
+    private function getByContainerRecursive(string $tableName, int $lootId, array &$handledRefs, int $groupId = 0, float $baseChance = 1.0) : array
     {
         $loot     = [];
         $rawItems = [];
 
         if (!$tableName || !$lootId)
-            return null;
+            return [null, null];
 
         $rows = DB::World()->select('SELECT * FROM ?# WHERE entry = ?d{ AND groupid = ?d}', $tableName, $lootId, $groupId ?: DBSIMPLE_SKIP);
         if (!$rows)
-            return null;
+            return [null, null];
 
         $groupChances = [];
         $nGroupEquals = [];
+        $cnd = new Conditions();
         foreach ($rows as $entry)
         {
             $set = array(
@@ -160,6 +161,11 @@ class Loot
                 'realChanceMod' => $baseChance,
                 'groupChance'   => 0
             );
+
+            if ($entry['QuestRequired'])
+                foreach (DB::Aowow()->selectCol('SELECT id FROM ?_quests WHERE (`reqSourceItemId1` = ?d OR `reqSourceItemId2` = ?d OR `reqSourceItemId3` = ?d OR `reqSourceItemId4` = ?d OR `reqItemId1` = ?d OR `reqItemId2` = ?d OR `reqItemId3` = ?d OR `reqItemId4` = ?d OR `reqItemId5` = ?d OR `reqItemId6` = ?d) AND (`cuFlags` & ?d) = 0',
+                    $entry['Item'], $entry['Item'], $entry['Item'], $entry['Item'], $entry['Item'], $entry['Item'], $entry['Item'], $entry['Item'], $entry['Item'], $entry['Item'], CUSTOM_EXCLUDE_FOR_LISTVIEW | CUSTOM_UNAVAILABLE) as $questId)
+                    $cnd->addExternalCondition(Conditions::lootTableToConditionSource($tableName), $lootId . ':' . $entry['Item'], [Conditions::QUESTTAKEN, $questId], true);
 
             // if ($entry['LootMode'] > 1)
             // {
@@ -257,6 +263,12 @@ class Loot
             $groupChances[$k] = (100 - $sum) / ($nGroupEquals[$k] ?: 1);
         }
 
+        if ($cnd->getBySourceGroup($lootId, Conditions::lootTableToConditionSource($tableName))->prepare())
+        {
+            self::storeJSGlobals($cnd->getJsGlobals());
+            $cnd->toListviewColumn($loot, $this->extraCols, $lootId, 'content');
+        }
+
         return [$loot, array_unique($rawItems)];
     }
 
@@ -268,26 +280,22 @@ class Loot
             return false;
     
         /*
-            todo (high): implement conditions on loot (and conditions in general)
-    
-        also
-    
             // if (is_array($this->entry) && in_array($table, [LOOT_CREATURE, LOOT_GAMEOBJECT])
                 // iterate over the 4 available difficulties and assign modes
     
             modes:{"mode":1,"1":{"count":4408,"outof":16013},"4":{"count":4408,"outof":22531}}
         */
         $handledRefs = [];
-        $struct = self::getByContainerRecursive($table, $this->entry, $handledRefs);
-        if (!$struct)
+        [$lootRows, $itemIds] = self::getByContainerRecursive($table, $this->entry, $handledRefs);
+        if (!$lootRows)
             return false;
-    
-        $items = new ItemList(array(['i.id', $struct[1]], CFG_SQL_LIMIT_NONE));
-        $this->jsGlobals = $items->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED);
+
+        $items = new ItemList(array(['i.id', $itemIds], Cfg::get('SQL_LIMIT_NONE')));
+        self::storeJSGlobals($items->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
         $foo = $items->getListviewData();
     
         // assign listview LV rows to loot rows, not the other way round! The same item may be contained multiple times
-        foreach ($struct[0] as $loot)
+        foreach ($lootRows as $loot)
         {
             $base = array(
                 'percent' => round($loot['groupChance'] * $loot['realChanceMod'], 3),
@@ -301,12 +309,21 @@ class Loot
     
             if ($_ = $loot['parentRef'])
                 $base['reference'] = $_;
-    
+
+            if (isset($loot['condition']))
+                $base['condition'] = $loot['condition'];
+
             if ($_ = self::createStack($loot))
                 $base['pctstack'] = $_;
     
             if (empty($loot['reference'])) // regular drop
             {
+                if (!isset($foo[$loot['content']]))
+                {
+                    trigger_error('Item #'.$loot['content'].' referenced by loot does not exist!', E_USER_WARNING);
+                    continue;
+                }
+
                 if (!User::isInGroup(U_GROUP_EMPLOYEE))
                 {
                     if (!isset($this->results[$loot['content']]))
@@ -399,34 +416,37 @@ class Loot
     
         return true;
     }
-    
-    public function getByItem(int $entry, int $maxResults = CFG_SQL_LIMIT_DEFAULT, array $lootTableList = []) : bool
+
+    public function getByItem(int $entry, int $maxResults = -1, array $lootTableList = []) : bool
     {
-        $this->entry = intVal($entry);
+        $this->entry = $entry;
 
         if (!$this->entry)
             return false;
 
+        if ($maxResults < 0)
+            $maxResults = Cfg::get('SQL_LIMIT_DEFAULT');
+
         //  [fileName, tabData, tabName, tabId, extraCols, hiddenCols, visibleCols]
         $tabsFinal  = array(
-            ['item',        [], '$LANG.tab_containedin',      'contained-in-item',       [], [], []],
-            ['item',        [], '$LANG.tab_disenchantedfrom', 'disenchanted-from',       [], [], []],
-            ['item',        [], '$LANG.tab_prospectedfrom',   'prospected-from',         [], [], []],
-            ['item',        [], '$LANG.tab_milledfrom',       'milled-from',             [], [], []],
-            ['creature',    [], '$LANG.tab_droppedby',        'dropped-by',              [], [], []],
-            ['creature',    [], '$LANG.tab_pickpocketedfrom', 'pickpocketed-from',       [], [], []],
-            ['creature',    [], '$LANG.tab_skinnedfrom',      'skinned-from',            [], [], []],
-            ['creature',    [], '$LANG.tab_minedfromnpc',     'mined-from-npc',          [], [], []],
-            ['creature',    [], '$LANG.tab_salvagedfrom',     'salvaged-from',           [], [], []],
-            ['creature',    [], '$LANG.tab_gatheredfromnpc',  'gathered-from-npc',       [], [], []],
-            ['quest',       [], '$LANG.tab_rewardfrom',       'reward-from-quest',       [], [], []],
-            ['zone',        [], '$LANG.tab_fishedin',         'fished-in-zone',          [], [], []],
-            ['object',      [], '$LANG.tab_containedin',      'contained-in-object',     [], [], []],
-            ['object',      [], '$LANG.tab_minedfrom',        'mined-from-object',       [], [], []],
-            ['object',      [], '$LANG.tab_gatheredfrom',     'gathered-from-object',    [], [], []],
-            ['object',      [], '$LANG.tab_fishedin',         'fished-in-object',        [], [], []],
-            ['spell',       [], '$LANG.tab_createdby',        'created-by',              [], [], []],
-            ['achievement', [], '$LANG.tab_rewardfrom',       'reward-from-achievement', [], [], []]
+            [Type::ITEM,        [], '$LANG.tab_containedin',      'contained-in-item',       [], [], []],
+            [Type::ITEM,        [], '$LANG.tab_disenchantedfrom', 'disenchanted-from',       [], [], []],
+            [Type::ITEM,        [], '$LANG.tab_prospectedfrom',   'prospected-from',         [], [], []],
+            [Type::ITEM,        [], '$LANG.tab_milledfrom',       'milled-from',             [], [], []],
+            [Type::NPC,         [], '$LANG.tab_droppedby',        'dropped-by',              [], [], []],
+            [Type::NPC,         [], '$LANG.tab_pickpocketedfrom', 'pickpocketed-from',       [], [], []],
+            [Type::NPC,         [], '$LANG.tab_skinnedfrom',      'skinned-from',            [], [], []],
+            [Type::NPC,         [], '$LANG.tab_minedfromnpc',     'mined-from-npc',          [], [], []],
+            [Type::NPC,         [], '$LANG.tab_salvagedfrom',     'salvaged-from',           [], [], []],
+            [Type::NPC,         [], '$LANG.tab_gatheredfromnpc',  'gathered-from-npc',       [], [], []],
+            [Type::QUEST,       [], '$LANG.tab_rewardfrom',       'reward-from-quest',       [], [], []],
+            [Type::ZONE,        [], '$LANG.tab_fishedin',         'fished-in-zone',          [], [], []],
+            [Type::OBJECT,      [], '$LANG.tab_containedin',      'contained-in-object',     [], [], []],
+            [Type::OBJECT,      [], '$LANG.tab_minedfrom',        'mined-from-object',       [], [], []],
+            [Type::OBJECT,      [], '$LANG.tab_gatheredfrom',     'gathered-from-object',    [], [], []],
+            [Type::OBJECT,      [], '$LANG.tab_fishedin',         'fished-in-object',        [], [], []],
+            [Type::SPELL,       [], '$LANG.tab_createdby',        'created-by',              [], [], []],
+            [Type::ACHIEVEMENT, [], '$LANG.tab_rewardfrom',       'reward-from-achievement', [], [], []]
         );
         $refResults = [];
         $query      =   'SELECT
@@ -456,6 +476,16 @@ class Loot
             $this->entry
         );
 
+    /*  i'm currently not seeing a reasonable way to blend this into creature/gobject/etc tabs as one entity may drop the same item multiple times, with and without conditions.
+        if ($newRefs)
+        {
+            $cnd = new Conditions();
+            if ($cnd->getBySourceEntry($this->entry, Conditions::SRC_REFERENCE_LOOT_TEMPLATE))
+                if ($cnd->toListviewColumn($newRefs, $x, $this->entry))
+                    self::storejsGlobals($cnd->getJsGlobals());
+        }
+    */
+
         while ($newRefs)
         {
             $curRefs = $newRefs;
@@ -471,14 +501,17 @@ class Loot
         /*
             search the real loot-templates for the itemId and gathered refds
         */
-        for ($i = 1; $i < count($this->lootTemplates); $i++)
+        foreach ($this->lootTemplates as $lootTemplate)
         {
-            if ($lootTableList && !in_array($this->lootTemplates[$i], $lootTableList))
+            if ($lootTableList && !in_array($lootTemplate, $lootTableList))
+                continue;
+
+            if ($lootTemplate == LOOT_REFERENCE)
                 continue;
 
             $result = $this->calcChance(DB::World()->select(
                 sprintf($query, '{lt1.reference IN (?a) OR }(lt1.reference = 0 AND lt1.item = ?d)'),
-                $this->lootTemplates[$i], $this->lootTemplates[$i],
+                $lootTemplate, $lootTemplate,
                 $refResults ? array_keys($refResults) : DBSIMPLE_SKIP,
                 $this->entry
             ));
@@ -494,10 +527,10 @@ class Loot
             }
 
             // cap fetched entries to the sql-limit to guarantee, that the highest chance items get selected first
-            // screws with GO-loot and skinnig-loot as these templates are shared for several tabs (fish, herb, ore) (herb, ore, leather)
+            // screws with GO-loot and skinning-loot as these templates are shared for several tabs (fish, herb, ore) (herb, ore, leather)
             $ids = array_slice(array_keys($result), 0, $maxResults);
 
-            switch ($this->lootTemplates[$i])
+            switch ($lootTemplate)
             {
                 case LOOT_CREATURE:     $field = 'lootId';              $tabId =  4;    break;
                 case LOOT_PICKPOCKET:   $field = 'pickpocketLootId';    $tabId =  5;    break;
@@ -572,9 +605,9 @@ class Loot
                 case LOOT_SPELL:
                     $conditions = array(
                         'OR',
-                        ['AND', ['effect1CreateItemId', $this->entry], ['OR', ['effect1Id', SpellList::$effects['itemCreate']], ['effect1AuraId', SpellList::$auras['itemCreate']]]],
-                        ['AND', ['effect2CreateItemId', $this->entry], ['OR', ['effect2Id', SpellList::$effects['itemCreate']], ['effect2AuraId', SpellList::$auras['itemCreate']]]],
-                        ['AND', ['effect3CreateItemId', $this->entry], ['OR', ['effect3Id', SpellList::$effects['itemCreate']], ['effect3AuraId', SpellList::$auras['itemCreate']]]],
+                        ['AND', ['effect1CreateItemId', $this->entry], ['OR', ['effect1Id', SpellList::EFFECTS_ITEM_CREATE], ['effect1AuraId', SpellList::AURAS_ITEM_CREATE]]],
+                        ['AND', ['effect2CreateItemId', $this->entry], ['OR', ['effect2Id', SpellList::EFFECTS_ITEM_CREATE], ['effect2AuraId', SpellList::AURAS_ITEM_CREATE]]],
+                        ['AND', ['effect3CreateItemId', $this->entry], ['OR', ['effect3Id', SpellList::EFFECTS_ITEM_CREATE], ['effect3AuraId', SpellList::AURAS_ITEM_CREATE]]],
                     );
                     if ($ids)
                         $conditions[] = ['id', $ids];
@@ -588,7 +621,7 @@ class Loot
                         if (!empty($result))
                             $tabsFinal[16][4][] = '$Listview.extraCols.percent';
 
-                        if ($srcObj->hasSetFields(['reagent1']))
+                        if ($srcObj->hasSetFields('reagent1', 'reagent2', 'reagent3', 'reagent4', 'reagent5', 'reagent6', 'reagent7', 'reagent8'))
                             $tabsFinal[16][6][] = 'reagents';
 
                         foreach ($srcObj->iterate() as $_)
@@ -600,13 +633,28 @@ class Loot
             if (!$ids)
                 continue;
 
+            $parentData = [];
             switch ($tabsFinal[abs($tabId)][0])
             {
-                case 'creature':                            // new CreatureList
-                case 'item':                                // new ItemList
-                case 'zone':                                // new ZoneList
-                    $oName  = ucFirst($tabsFinal[abs($tabId)][0]).'List';
-                    $srcObj = new $oName(array([$field, $ids]));
+                case TYPE::NPC:                             // new CreatureList
+                    if ($baseIds = DB::Aowow()->selectCol(
+                       'SELECT `difficultyEntry1` AS ARRAY_KEY, `id` FROM ?_creature WHERE difficultyEntry1 IN (?a) UNION
+                        SELECT `difficultyEntry2` AS ARRAY_KEY, `id` FROM ?_creature WHERE difficultyEntry2 IN (?a) UNION
+                        SELECT `difficultyEntry3` AS ARRAY_KEY, `id` FROM ?_creature WHERE difficultyEntry3 IN (?a)',
+                        $ids, $ids, $ids))
+                        {
+                            $parentObj = new CreatureList(array(['id', $baseIds]));
+                            if (!$parentObj->error)
+                            {
+                                self::storeJSGlobals($parentObj->getJSGlobals());
+                                $parentData = $parentObj->getListviewData();
+                                $ids = array_diff($ids, $baseIds);
+                            }
+                        }
+
+                case Type::ITEM:                            // new ItemList
+                case Type::ZONE:                            // new ZoneList
+                    $srcObj = Type::newList($tabsFinal[abs($tabId)][0], array([$field, $ids]));
                     if (!$srcObj->error)
                     {
                         $srcData = $srcObj->getListviewData();
@@ -623,7 +671,11 @@ class Loot
                             else if ($tabId < 0)
                                 $tabId = abs($tabId);       // general case (skinning)
 
-                            $tabsFinal[$tabId][1][] = array_merge($srcData[$srcObj->id], $result[$srcObj->getField($field)]);
+                            if (($p = $srcObj->getField('parentId')) && ($d = $parentData[$p] ?? null))
+                                $tabsFinal[$tabId][1][] = array_merge($d,                    $result[$srcObj->getField($field)]);
+                            else
+                                $tabsFinal[$tabId][1][] = array_merge($srcData[$srcObj->id], $result[$srcObj->getField($field)]);
+
                             $tabsFinal[$tabId][4][] = '$Listview.extraCols.percent';
                         }
                     }
@@ -640,15 +692,15 @@ class Loot
             );
 
             if ($data[4])
-                $tabData['extraCols']   = array_unique($data[4]);
+                $tabData['extraCols'] = array_unique($data[4]);
 
             if ($data[5])
-                $tabData['hiddenCols']  = array_unique($data[5]);
+                $tabData['hiddenCols'] = array_unique($data[5]);
 
             if ($data[6])
                 $tabData['visibleCols'] = array_unique($data[6]);
 
-            $this->results[$tabId] = [$data[0], $tabData];
+            $this->results[$tabId] = [Type::getFileString($data[0]), $tabData];
         }
 
         return true;

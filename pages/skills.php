@@ -19,7 +19,7 @@ class SkillsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -38,7 +38,7 @@ class SkillsPage extends GenericPage
 
         $skills = new SkillList($conditions);
 
-        $this->lvTabs[] = ['skill', ['data' => array_values($skills->getListviewData())]];
+        $this->lvTabs[] = [SkillList::$brickFile, ['data' => array_values($skills->getListviewData())]];
     }
 
     protected function generateTitle()

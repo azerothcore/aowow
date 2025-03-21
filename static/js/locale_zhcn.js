@@ -325,7 +325,8 @@ var mn_objects = [
     [-3,"草药"],
     [-4,"矿点"],
     [-2,"任务"],
-    [-6,"工具"]
+    [-6,"工具"],
+    [6,"陷阱"]
 ];
 var mn_quests = [
     [,"大陆"],
@@ -426,7 +427,7 @@ var mn_quests = [
         [1176,"祖尔法拉克"], // Zul'Farrak,
         [1196,"乌特加德之巅"], // Utgarde Pinnacle,
         [1337,"奥达曼"], // Uldaman,
-        [1417,"沉没的神庙"], // Sunken Temple
+        [1477,"沉没的神庙"], // Sunken Temple
         [1581,"死亡矿井"], // The Deadmines,
         [1583,"黑石塔"], // Blackrock Spire,
         [1584,"黑石深渊"], // Blackrock Depths,
@@ -1495,6 +1496,7 @@ var g_object_types = {
        0: '其他',
        9: "书籍",
        3: "容器",
+       6: "陷阱",
     "-5": "提箱",
       25: "钓鱼水池",
     "-3": "草药",
@@ -1637,7 +1639,7 @@ var g_quest_sorts = {
        1196: '乌特加德之巅',
        1337: '奥达曼',
        1377: '希利苏斯',
-       1417: '沉没的神庙',
+       1477: '沉没的神庙',
        1497: '幽暗城',
        1517: '奥达曼',
        1519: '暴风城',
@@ -2178,45 +2180,6 @@ var g_zones = {
     4987: '红玉圣殿'
 };
 
-var g_zone_areas = {
-    206:  ['诺迪尔备战区', '掠龙氏族高台', '提尔之台'],
-    209:  ['庭院', '饭厅', '空巢', '下层瞭望台', '上层瞭望台', '高弗雷勋爵的大厅', '城墙走道'],
-    719:  ['阿斯卡之池', '月神圣地密室', '遗忘之池'],
-    721:  ['齿轮大厅', '宿舍', '发射台', '工匠议会'],
-    796:  ['Graveyard', 'Library', 'Armory', 'Cathedral'],
-    1196: ['尖塔下层', '尖塔上层'],
-    1337: ['守护者大厅', '卡兹格罗斯之座'],
-    1581: ['死亡矿井', '铁甲湾'],
-    1583: ['塔萨洛尔', '蛛网隧道', '霍德玛尔城', '黑手大厅', '哈雷肯之巢', '战斗之厅'],
-    1584: ['禁闭室', '暗炉城'],
-    2017: ['十字军广场', '街巷'],
-    2057: ['遗骨之穴', '召唤大厅', '书房上层', '院长的书房'],
-    2100: ['玛拉顿的洞穴', '扎尔塔之墓'],
-    2557: ['戈多克议会', '中心花园', '上层精灵庭院', '伊莫塔尔的牢笼', '扭木广场', '艾德雷斯神殿'],
-    2677: ['龙喉兵营', '征战大厅', '血色实验室', '奈法利安的巢穴'],
-    3428: ['地下虫巢', '神殿大门', '克苏恩地穴'],
-    3456: ['构造区', '蜘蛛区', '军事区', '瘟疫区', '大墓地下层', '大墓地上层'],
-    3457: ['仆役宿舍', '上层马厩', '宴会厅', '会客间', '歌剧院楼座', '主宰的露台', '下层断阶', '上层断阶', '展览馆', '守护者的图书馆', '储藏室', '上层图书馆', '观星大厅', '象棋大厅', '麦迪文的房间', '能量站', '虚空异界'],
-    3715: ['蒸汽地窟', '冷却池'],
-    3790: ['转生大厅', '灵魂之桥'],
-    3791: ['塞泰克鸦巢', '哀悼大厅'],
-    3848: ['静止隔间：特雷奥', '静止隔间：玛克希姆', '密封核心'],
-    3849: ['能源舰', '计算密室'],
-    3959: ['伊利达雷训练场', '卡拉波下水道', '暗影圣殿', '苦痛大厅', '血魔之厅', '欢愉之园', '命令大厅', '神殿之巅'],
-    4075: ['太阳之井高地', '日蚀神殿'],
-    4100: ['斯坦索姆外围', '斯坦索姆城'],
-    4131: ['大魔导师的圣堂', '观测台'],
-    4196: ['达克萨隆前庭', '达克萨隆悬崖'],
-    4228: ['突变之环', '加速之环', '转化之环', '校准之环'],
-    4272: ['坚韧军营', '造物者步道'],
-    4273: ['壮阔大道', '奥杜尔的前厅', '奥杜尔的内部圣殿', '尤格-萨隆的监狱', '思想火花', '心灵之眼'],
-    4277: ['孵化深渊', '哈多诺克斯之巢', '镀金之门'],
-    4395: ['达拉然城', '达拉然下水道'],
-    4494: ['安卡赫特', 'Level 2'],
-    4722: ['银色演武场', '寒冰深渊'],
-    4812: ['堡垒下层', '颅骨之墙', '死亡使者之台', '冰霜女王的巢穴', '上层区域', '皇家区', '冰封王座', '霜之哀伤']
-};
-
 var g_zone_categories = {
      0: "东部王国",
      1: "卡利姆多",
@@ -2452,67 +2415,158 @@ var g_world_object_types = {
     7: '玩家尸体'
 };
 
-var g_condition_types = {
-     1: ['Looting',        'If the conditions are met, this item can be dropped by [npc=$1].'],                                 // CND_SRC_CREATURE_LOOT_TEMPLATE
-     2: ['Disenchanting',  'If the conditions are met, this item can be found when disenchanting [item=$1].'],                  // CND_SRC_DISENCHANT_LOOT_TEMPLATE
-     3: ['Fishing',        'If the conditions are met, fishing in [zone=$1] can yield this item.'],                             // CND_SRC_FISHING_LOOT_TEMPLATE
-     4: ['Object Opening', 'If the conditions are met, this item can be found in [object=$1].'],                                // CND_SRC_GAMEOBJECT_LOOT_TEMPLATE
-     5: ['Item Opening',   'If the conditions are met, this item can be found in [item=$1].'],                                  // CND_SRC_ITEM_LOOT_TEMPLATE
-     6: ['Mail Attachm.',  'If the conditions are met, this item can be attached to this mail.'],                               // CND_SRC_MAIL_LOOT_TEMPLATE
-     7: ['Milling',        'If the conditions are met, this item can be milled from [item=$1].'],                               // CND_SRC_MILLING_LOOT_TEMPLATE
-     8: ['Pickpocketing',  'If the conditions are met, this item can be picked from [npc=$1].'],                                // CND_SRC_PICKPOCKETING_LOOT_TEMPLATE
-     9: ['Prospecting',    'If the conditions are met, this item can be prospected from [item=$1].'],                           // CND_SRC_PROSPECTING_LOOT_TEMPLATE
-    10: ['Ref. Looting',   ''],                                                                                                 // CND_SRC_REFERENCE_LOOT_TEMPLATE
-    11: ['Skinning',       'If the conditions are met, this item can be skinned from [npc=$1].'],                               // CND_SRC_SKINNING_LOOT_TEMPLATE
-    12: ['Crafting',       'If the conditions are met, casting [spell=$1] may also create this item.'],                         // CND_SRC_SPELL_LOOT_TEMPLATE
-    13: ['Auto Target',    'Only targets matching the conditions can be affected by the spell.'],                               // CND_SRC_SPELL_IMPLICIT_TARGET
-    14: ['Gossip',         'Display the related Gossip entry on [npc=$2], if the conditions are met.'],                         // CND_SRC_GOSSIP_MENU
-    15: ['Gossip Menu',    'Display the related Gossip menu, if the conditions are met.'],                                      // CND_SRC_GOSSIP_MENU_OPTION
-    16: ['Vehicle',        'This Creature can be used as a vehicle, if the conditions are met.'],                               // CND_SRC_CREATURE_TEMPLATE_VEHICLE
-    17: ['Spell',          'This Spell can only be cast, if the conditions are met.'],                                          // CND_SRC_SPELL
-    18: ['Spell Click',    'If the conditions are met, [npc=$2] casts [spell=$1] if clicked on.'],                              // CND_SRC_SPELL_CLICK_EVENT
-    19: ['Quest Accept',   'The Player can accept this quest, if the condition is met.'],                                       // CND_SRC_QUEST_SHOW_MARK
-    20: ['Quest Sign',     'A [icon name=quest_startend]&nbsp;[/icon] will be shown for this quest, if the condition is met.'], // CND_SRC_QUEST_ACCEPT
-    21: ['Vehicle Spell',  'If the conditions are met, vehicle [npc=$2] has [spell=$1] available.'],                            // CND_SRC_VEHICLE_SPELL
-    22: ['SmartAI',        'If the conditions are met, the creatures AI may perform additional actions.'],                      // CND_SRC_SMART_EVENT
-    23: ['Vendor',         'If the conditions are met, the vendor will have this item available.'],                             // CND_SRC_NPC_VENDOR
-    24: ['Spell Proc',     'If the conditions are met, the spell is allowed to proc.']                                          // CND_SRC_SPELL_PROC
+var g_instance_info = {
+    0: 'Data',
+    1: 'GUID',
+    2: 'Boss State',
+    3: 'Data64'
+};
+
+var g_unit_states = {
+     0: 'Died',
+     1: 'Melee attacking',
+     2: 'Charmed',
+     3: 'Stunned',
+     4: 'Roaming',
+     5: 'Chase',
+     6: 'Focusing',
+     7: 'Fleeing',
+     8: 'In flight',
+     9: 'Follow',
+    10: 'Root',
+    11: 'Confused',
+    12: 'Distracted',
+    13: 'Isolated',
+    14: 'Attack player',
+    15: 'Casting',
+    16: 'Possessed',
+    17: 'Charging',
+    18: 'Jumping',
+    19: 'Follow formation',
+    20: 'Move',
+    21: 'Rotating',
+    22: 'Evade',
+    23: 'Roaming move',
+    24: 'Confused move',
+    25: 'Fleeing move',
+    26: 'Chase move',
+    27: 'Follow move',
+    28: 'Ignore pathfinding',
+    29: 'Follow formation move'
+};
+
+var g_relation_types = {
+    0: 'is$N: not; itself',
+    1: 'is$N: not; in a group with $3',
+    2: 'is$N: not; in a raid or party with $3',
+    3: 'is$N: not; owned by $3',
+    4: 'is$N: not; a passenger of $3',
+    5: 'was$N: not; summoned by $3'
+};
+
+var g_stand_states = {
+    0: 'standing',
+    1: 'sitting',
+    2: 'sitting on a chair',
+    3: 'sleeping',
+    4: 'sitting on a low chair',
+    5: 'sitting on a medium chair',
+    6: 'sitting on a high chair',
+    7: 'dead',
+    8: 'kneeling',
+    9: 'submerged'
+};
+
+var g_quest_states = {
+    0: 'not yet seen',
+    1: 'completed',
+    3: 'taken',
+    5: 'failed',
+    6: 'been rewarded',
+};
+
+var g_condition_sources = {
+     0: [['player', null],       ''],
+     1: [['player', null],       'If the conditions are met, [item=$2] can be dropped by [npc=$1].'],
+     2: [['player', null],       'If the conditions are met, [item=$2] can be found when disenchanting [item=$1].'],
+     3: [['player', null],       'If the conditions are met, fishing in [zone=$1] can yield [item=$2].'],
+     4: [['player', null],       'If the conditions are met, [item=$2] can be found in [object=$1].'],
+     5: [['player', null],       'If the conditions are met, [item=$2] can be found in [item=$1].'],
+     6: [['player', null],       'If the conditions are met, [item=$2] can be attached to the mail from [quest=$1].'],
+     7: [['player', null],       'If the conditions are met, [item=$2] can be milled from [item=$1].'],
+     8: [['player', null],       'If the conditions are met, [item=$2] can be picked from [npc=$1].'],
+     9: [['player', null],       'If the conditions are met, [item=$2] can be prospected from [item=$1].'],
+    10: [['player', null],       'If the conditions are met, [item=$2] will be referenced in template #$1.'],
+    11: [['player', null],       'If the conditions are met, [item=$2] can be gathered from [npc=$1].'],
+    12: [['player', null],       'If the conditions are met, casting [spell=$1] may also create [item=$2].'],
+    13: [['target', 'caster'],   'Only a $T%:spell%; matching the conditions can be affected by [spell=$2].'],
+    14: [['player', 'entity'],   'Display Gossip text #$2 from menu #$1, if the conditions on the $T%:%; are met.'],
+    15: [['player', 'entity'],   'Display Gossip option #$2 from menu #$1, if the conditions on the $T%:%; are met.'],
+    16: [['player', 'creature'], '[npc=$2] can be used as a vehicle, if $Tthe %s:its; conditions are met.'],
+    17: [['caster', 'target'],   '[spell=$2] can only be cast, if the $Tspell%s:%s; conditions are met.'],
+    18: [['player', 'creature'], 'If the $T%s:%s; conditions are met, [npc=$1] casts [spell=$2] if clicked on.'],
+    19: [['player', null],       'The Player can accept [quest=$2], if the condition is met.'],
+    20: [['player', null],       'A [icon name=quest_startend]&nbsp;[/icon] will be shown for [quest=$2], if the condition is met.'],
+    21: [['player', 'creature'], 'If the $T%s:%s; conditions are met, vehicle [npc=$1] has [spell=$2] available.'],
+    22: [['invoker', 'entity'],  'If the conditions for the $T%:%; are met, the AI may perform additional actions.'],
+    23: [['player', 'creature'], 'If the conditions for the $T%:%; are met, [npc=$1] will have [item=$2] for sale.'],
+    24: [['caster', 'target'],   'If the conditions for the $Tspell%:%; are met, the [spell=$2] is allowed to proc.'],
+    30: [['player', null],       'If the conditions are met, [url=?areatrigger=$2]Areatrigger #$2[/url] is allowed to trigger.']
 };
 
 var g_conditions = {
-     1: 'The Player $has:does not have; an aura of $1',
-     2: 'The Player $owns: does not own; $1',
-     3: 'The Player $has:does not have; $1 equipped',
-     4: 'The Player is$: not; in $1',                                       // also used by 22, 23
-     5: '玩家声望关系和$1是$:不是;$2',
-     6: '玩家是$:不是;$1',
-     7: 'The Player $knows: does not know; $1',
-     8: 'The Player has$: not; finished $1',
-     9: '玩家已经$:没有;接受$1',
-    10: 'The Player is$: not; $1',
-    11: 'WorldState #$1 is$: not; $2',
-    12: '$1 must$: not; be active',
-    13: 'The instance $has:does not have; a certain state',                 // nyi
-    14: 'The Player has $never:; interacted with $1',
-    15: 'The Player is$: not; a $1',                                        // also used by 16
-    17: 'The Player has$: not; achieved $1',
-    18: 'The Player has$: not; obtained $1',
-    20: 'The Player\'s gender is$: not; [span class=icon-$2]$1[/span]',
-    21: 'The target $has:does not have; a certain state',                   // nyi
-    24: '',                                                                 // not used
-    25: 'The Player $knows: does not know; $1',
-    26: 'The Creature is$: not; in phase $1',
-    27: 'The target\'s level is$: not; $2 $1',
-    28: 'The Player has$: not; completed $1',
-    29: 'The Player is$: not; within $2yd of $1',                           // also used by 30
-    31: 'Casters\'s target is$: not; $1',                                   // also used by 32
-    33: 'The Player $has:does not have; a certain relation to the target',  // nyi
-    34: 'The target $has:does not have; a certain reaction to the Player',  // nyi
-    35: 'The target is$: not; $2 $1yd away',
-    36: 'The target is$: not; alive',
-    37: 'The target\'s health is$: not; $2 $1',
-    38: 'The target\'s health is$: not; $2 $1%'
+     0: 'Always $Ntrue:false;',
+     1: 'The target $Nhas:does not have; an aura of [spell=$1]',
+     2: 'The Player $Nhas:does not have; $2 [item=$1] in their inventory$C$3 or bank:;',
+     3: 'The Player $Nhas:does not have; [item=$1] equipped',
+     4: 'The Player is$N: not; in [zone=$1]',
+     5: 'The Player\'s standing with [faction=$1] is$N: not; $2',                           // '玩家声望关系和$1是$:不是;$2'
+     6: 'The Player is$N: not; a member of the $1',                                         // '玩家是$:不是;$1'
+     7: 'The Player is$N: not; proficient in [skill=$1]$C$2 (min. $2):;',
+     8: 'The Player was$N: not; rewarded [quest=$1]',
+     9: 'The Player has$N: not; accepted [quest=$1]',                                       // '玩家已经$:没有;接受$1'
+    10: 'The Player is$N: not; $1',
+    11: 'WorldState #$1 is$N: not; $2',
+    12: '[event=$1] must$N: not; be active',
+    13: 'The instance\'s $3 at index #$1 is$N: not; equal to "$2"',
+    14: 'The Player has $Nnever:; interacted with [quest=$1]',
+    15: 'The Player is$N: not; a $1',
+    16: 'The Player is$N: not; a $1',
+    17: 'The Player has$N: not; achieved [achievement=$1]',
+    18: 'The Player has$N: not; obtained [title=$1]',
+    19: 'The entity\'s SpawnMask is$N: not; equal to "$1"',
+    20: 'The Player\'s gender is$N: not; $1',
+    21: 'The unit\'s state is$N: not; $1',
+    22: 'The target is$N: not; in $1',
+    23: 'The target is$N: not; in [zone=$1]',
+    24: 'The creature is$N: not; a $1',
+    25: 'The Player $Nknows: does not know; [spell=$1]',
+    26: 'The entity is$N: not; in phase $1',
+    27: 'The target\'s level is$N: not; $2 $1',
+    28: 'The Player has$N: not; completed [quest=$1]',
+    29: 'The target is$N: not; within $2yd of $C$3deceased:alive; [npc=$1]',
+    30: 'The target is$N: not; within $2yd of [object=$1]',
+    31: 'The entity is$N: not; $C$2: a; $1$C$3 (GUID $3):;',
+    32: 'The entity is$N: not; a $1',
+    33: '$1 $2',
+    34: 'The unit is$N: not; $2 to $1',
+    35: 'The distance between unit and $1 is$N: not; $3 $2yd',
+    36: 'The unit is$N: not; alive',
+    37: 'The unit\'s health is$N: not; $2 $1 points',
+    38: 'The unit\'s health is$N: not; $2 $1%',
+    39: '[achievement=$1] $Nwas:is yet to be; achieved on this realm',
+    40: 'The unit is$N: not; swimming',
+    42: 'The creature is$N: not; $1',
+    43: 'The Player has$N: not yet; done [quest=$1] for the day',
+    44: 'The unit is$N: not; charmed',
+    45: 'The Player $Nhas:doesn\'t have; an active $C$1hunter:summoned; pet',
+    46: 'The Player is$N: not; riding a taxi',
+    47: 'The Player has$N: not; $2 [quest=$1]',
+    48: 'The Player has$N: not; collected $3 towards objective #$2 of [quest=$1]',
+    49: 'The current map difficulty is #$1',
+    50: 'The Player $C$1$Ncan:can\'t; be:is$N: not;; a Gamemaster'
 };
+
 /* end aowow custom */
 
 var LANG = {
@@ -2597,7 +2651,7 @@ var LANG = {
     level:                  "等级",
     location:               "地点",
     losses:                 "损失",
-    losses:                 "损失",
+    members:                "成员",
     model:                  "模型",
     money:                  "金钱",
     name:                   "名称",
@@ -2632,7 +2686,7 @@ var LANG = {
     preview:                "预览",
     privateprofile:         "私人",
     prize:                  "奖品",
-    profiler:               "Profiler", // enUS
+    profiler:               "档案库",
     progress:               "进行",
     purge:                  "清除",
     publicprofile:          "公开",
@@ -2828,7 +2882,7 @@ var LANG = {
     lvnote_factionsfound:     "发现$1个阵营 (显示$2个)",
     lvnote_petsfound:         "找到$1个宠物 (显示$2个)",
     lvnote_achievementsfound: "找到$1个成就 (显示$2个)",
-    lvnote_achievementsind:   '成就分类目录<a href="?achievements=$1.$2" target="_blank">$3</a>.',
+    lvnote_achievementsind:   '成就分类目录<a href="?achievements=$1.$2" target="_blank">$3</a>.',
     lvnote_statisticsfound:   "$1 statistics found ($2 displayed)", // enUS
     lvnote_charactersfound:   "$1 total characters", // enUS
     lvnote_charactersfound2:  "$1 total characters, $2 matching", // enUS
@@ -3016,9 +3070,9 @@ var LANG = {
     tooltip_activeholiday:             "该事件正在进行中",
     tooltip_achievementcomplete:       "$1在$2/$3/$4上获得成就",
     tooltip_achievementnotfound:       "无法找到成就 :(",
-    tooltip_achievementpoints:         "成就点",
+    tooltip_achievementpoints:         "成就点数",
     tooltip_allianceonly:              "仅限联盟",
-    tooltip_arenapoints:               "Arena Points", // enUS
+    tooltip_arenapoints:               "竞技场点数",
     tooltip_armorbonus:                "有$1额外护甲",
     tooltip_avgmoneycontained:         "平均含有金钱",
     tooltip_avgmoneydropped:           "平均掉落金钱",
@@ -3224,6 +3278,7 @@ var LANG = {
     tab_weaponskills:         "武器技能",
     tab_world:                "世界",
     tab_zones:                "地区",
+    tab_bonusloot:            "奖励战利品",                      // aowow - custom from BONUS_LOOT_LABEL
 
     numberofupvotesreceived_tip: "收到顶票数量",
     deletethisreply_stc:         "删除本评论",
@@ -3446,8 +3501,8 @@ var LANG = {
         300: ["指南",        "指南",         "指南",          "指南"],
         501: ["表情",        "表情",         "表情",          "表情"],
         502: ["附魔",        "附魔",         "附魔",          "附魔"],
-        503: ["Areatrigger", "areatrigger",  "Areatriggers", "areatriggers"],
-        504: ["Mail",        "mail",         "Mails",        "mails"]
+        503: ["区域触发器", "区域触发器",  "区域触发器", "区域触发器"],
+        504: ["邮件",        "邮件",         "邮件",        "邮件"]
     },
 
     timeunitssg: ["年", "月", "周", "天", "小时", "分钟", "秒"],
@@ -3491,15 +3546,15 @@ var LANG = {
     },
 
     traits: {
-        agi:                ["敏捷", "敏捷", "敏"],
+        agi:                ["敏捷", "敏捷", "敏捷"],
         arcres:             ["奥术抗性", "奥术抗性", "奥抗"],
         arcsplpwr:          ["奥术法术强度", "奥术强化", "奥强"],
         armor:              ["护甲", "护甲", "护甲"],
         armorbonus:         ["额外护甲", "额外护甲", "额外护甲"],
         armorpenrtng:       ["护甲穿透等级", "护甲穿透", "穿透"],
         atkpwr:             ["攻击伤害", "攻强", "攻强"],
-        avgbuyout:          ["平均购买价", "一口价", "AH"],
-        avgmoney:           ["平均含有金钱", "Money", "Money"], // enUS
+        avgbuyout:          ["平均购买价", "一口价", "均价"],
+        avgmoney:           ["平均含有金钱", "金钱", "金钱"],
         block:              ["格挡价值", "格挡值", "格挡"],
         blockrtng:          ["格挡等级", "格挡", "格挡"],
         buyprice:           ["购买价格（铜）", "购买", "购买"],
@@ -3525,7 +3580,7 @@ var LANG = {
         holres:             ["神圣抗性", "神圣抗力", "抗圣"],
         holsplpwr:          ["神圣魔法力量", "神圣技能", "圣力"],
         "int":              ["智力", "智力", "智力"],
-        level:              ["等级", "等级", "Lvl"],
+        level:              ["等级", "等级", "等级"],
         mana:               ["法力", "法力", "法力"],
         manargn:            ["法力回复", "每5秒回复法力值", "每5秒回复法力值"],
         mleatkpwr:          ["近战攻击强度", "近战AP", "攻强"],
@@ -3552,7 +3607,7 @@ var LANG = {
         rgdhastertng:       ["远程加速等级", "远程加速", "加速"],
         rgdhitrtng:         ["远程命中等级", "远程命中", "命中"],
         rgdspeed:           ["远程速度", "远程速度", "速度"],
-        sellprice:          ["售价（铜）", "Sell", "Sell"], // enUS
+        sellprice:          ["售价（铜）", "售价", "售价"],
         sepbasestats:       "基本属性",
         sepdefensivestats:  "防御属性",
         sepgeneral:         "一般",
@@ -3573,7 +3628,7 @@ var LANG = {
         splhitrtng:         ["法术命中等级", "法师命中", "命中"],
         splpen:             ["法术穿透", "法术穿透", "穿透"],
         sta:                ["耐力", "耐力", "耐力"],
-        str:                ["力量", "力量", "强度"]
+        str:                ["力量", "力量", "力量"]
     },
 
     fishow: "创建筛选条件",
@@ -3694,7 +3749,7 @@ var LANG = {
         event:          [
                             [141, "冬幕节"], [181, "复活节"], [201, "儿童周"], [283, "战斗的召唤：奥特兰克山谷"], [284, "战斗的召唤：战歌峡谷"],
                             [285, "战斗的召唤：阿拉希盆地"], [301, "荆棘谷钓鱼大赛"], [321, "收获节"], [324, "万圣节"], [327, "春节"],
-                            [335, "情人节"], [341, "仲夏火焰节"], [353, "战斗的召唤：风暴之眼"], [372, "美酒节"], [374, "暗月马戏团"],
+                            [423, "情人节"], [341, "仲夏火焰节"], [353, "战斗的召唤：风暴之眼"], [372, "美酒节"], [374, "暗月马戏团"],
                             [398, "海盗日"], [400, "战斗的召唤：远古海滩"], [404, "感恩节"], [409, "悼念日"], [420, "战斗的召唤：征服之岛"],
                             [424, "卡鲁亚克钓鱼大赛"]
                         ],
@@ -3749,7 +3804,8 @@ var LANG = {
                         ],
         itemsource:     [
                             [1, "任意"], [11, "成就"], [3, "已制造"], [4, "掉落"], [10, "活动"],
-                            [5, "PvP"], [6, "任务"], [9, "新手"], [7, "商人"], [2, "无"]
+                            [5, "PvP"], [6, "任务"], [9, "新手"], [7, "商人"], [12, "可钓"],
+                            [2, "无"]
                         ],
         glyphtype:      [   [1, "大"], [2, "小"]  ],
         classs:         [
@@ -3978,8 +4034,8 @@ var LANG = {
         otredemption:            "通过赎回获得",
         otskinning:              "通过剥皮获得",
         purchasablewithitem:     "可用物品购买…",
-        purchasablewithhonor:    "Purchasable with honor points", // enUS
-        purchasablewitharena:    "Purchasable with arena points", // enUS
+        purchasablewithhonor:    "可用荣誉点数购买",
+        purchasablewitharena:    "可用竞技场点数购买",
         purchasablewithcurrency: "可用货币购买…",
         rewardedbyachievement:   "成就奖励",
         rewardedbyfactionquest:  "任务奖励",
@@ -4322,7 +4378,7 @@ var LANG = {
     // aowow custom
     fienchantments: {
         id:             "ID",
-        hascondition:   "Requires a combination of gems",
+        hascondition:   "需要宝石组合",
         requiresprof:   "需要专业",
 
         sepcommunity:   "社区",
@@ -4339,26 +4395,26 @@ var LANG = {
 
     pr_notice:     'First time? &ndash; Don\'t be shy! Just check out our <a href="?help=profiler" target="_blank">Help page</a>! &nbsp; <small class="q0"><a href="javascript:;">close</a></small>', // enUS
     pr_datasource: 'Data in this tab was last updated $2 by <a href="?user=$1" target="_blank">$1</a>.', // enUS
-    pr_purgedata:  "Click to delete all completion data in the current tab.<br />Only the user who uploaded the data may purge it.", // enUS
+    pr_purgedata:  "单击可删除当前选项卡中的所有已完成数据。<br />只有上传了数据的用户才能清除数据。",
 
-    message_nocharacterselected: "No characters selected.",
-    message_toomanycharacters:   "Please select only 1 character.",
-    message_noprofileselected:   "No profiles selected.",
-    message_norowselected:       "Please select one or more items to $1 from this list.",
-    message_characterresync:     "An Armory resync has been requested for the selected characters.",
-    message_resyncerror:         "An error occurred when resyncing:",
-    message_saveerror:           "Error: Your profile could not be saved. Accounts have a limit of ten profiles. Please delete some from your user page, or upgrade your account to Premium for more space.",
-    message_saveok:              "Save successful!",
-    message_saveasinvalidname:   "Invalid name.",
-    message_invalidlevel:        "Death Knights must be at least level 55.",
-    message_missingregion:       "Please select a region.",
-    message_missingrealm:        "Please select a realm.",
-    message_missingcharacter:    "Please enter a character name.",
-    message_profilenotsaved:     "$1Warning:$2 Your changes haven't been saved!",
-    message_nosignatureselected: "No signatures selected.",
-    message_toomanysignatures:   "Please select only 1 signature.",
-    message_nosigbookmarks:      "You have not bookmarked any characters. Please add some to continue.",
-    message_bookmarkforsig:      "Please bookmark this character before creating a signature.",
+    message_nocharacterselected: "未选择任何角色。",
+    message_toomanycharacters:   "请仅选择一个角色。",
+    message_noprofileselected:   "未选择配置文件。",
+    message_norowselected:       "请从此列表中选择一个或多个要$1的物品。",
+    message_characterresync:     "已为所选角色与军械库请求同步。",
+    message_resyncerror:         "重新同步时出错：",
+    message_saveerror:           "错误：无法保存您的配置文件。帐户最多有十个配置文件。请从您的用户页面中删除一些，或将您的帐户升级到Premium以获得更多空间。",
+    message_saveok:              "保存成功！",
+    message_saveasinvalidname:   "无效的名字。",
+    message_invalidlevel:        "死亡骑士必须至少达到55级。",
+    message_missingregion:       "请选择一个区域。",
+    message_missingrealm:        "请选择一个服务器。",
+    message_missingcharacter:    "请输入角色名字。",
+    message_profilenotsaved:     "$1警告：$2 您的更改尚未保存！",
+    message_nosignatureselected: "未选择签名。",
+    message_toomanysignatures:   "请仅选择一个签名。",
+    message_nosigbookmarks:      "您没有为任何角色添加书签。请添加一些以继续。",
+    message_bookmarkforsig:      "在创建签名之前，请为此角色添加书签。",
 
     confirm_linkcharacter:   "This character will be added to your list of characters.\n\nDo you want to continue?",
     confirm_linkedcharacter: "This character has been added to your list.\n\nDo you want to be taken there?",
@@ -4400,32 +4456,32 @@ var LANG = {
     tab_guilds:     "Guilds",
     tab_reputation: "Reputation",
 
-    lvnote_clicksubcatg: "Click on a subcategory below to filter the other tabs.",
+    lvnote_clicksubcatg: "单击下面的子类别以筛选其他选项卡。",
 
     button_save:      "保存",
-    button_saveas:    "Save as",
-    button_bookmark:  "Bookmark",
-    button_pin:       "Pin",
-    button_unpin:     "Unpin",
-    button_claimchar: "Claim character",
-    button_resync:    "Resync",
+    button_saveas:    "另存为",
+    button_bookmark:  "书签",
+    button_pin:       "固定",
+    button_unpin:     "取消固定",
+    button_claimchar: "绑定角色",
+    button_resync:    "同步",
     button_signature: "签名",
 
     button_customprofile: "Custom profile",
     button_armorychar:    "Manage character",
 
-    pr_clienttab:    "$1<br /><span class=\"q1\">If this is your character, you can track your<br />$2 using the Wowhead Client!</span><br /><span class=\"q2\">Click to learn more</span>",
-    pr_lookup:       "Lookup: ",
+    pr_clienttab:    "$1<br /><span class=\"q1\">If this is your character, you can track your<br />$2 using the Wowhead Client!</span><br /><span class=\"q2\">点击学习更多</span>",
+    pr_lookup:       "查找：",
     pr_noneitem:     "无",
     pr_nonegem:      "无",
     pr_noneenchant:  "无",
     pr_nonepet:      "无",
-    pr_specifyitem:  "Please enter an item name to search for.",
-    pr_searching:    'Searching for items named "$1"...',
-    pr_noresults:    'No results found for "$1"!',
-    pr_region:       "(Region)",
-    pr_realm:        "(Realm)",
-    pr_selectregion: "Select a region",
+    pr_specifyitem:  "请输入要搜索的物品名称。",
+    pr_searching:    '正在搜索名为 "$1" 的物品...',
+    pr_noresults:    '找不到 "$1" 的结果!',
+    pr_region:       "(地区)",
+    pr_realm:        "(服务器)",
+    pr_selectregion: "选择一个地区",
     pr_vendorsin:    "商人在",
     pr_yes:          "Yes",
     pr_dungeons:     "Dungeons",
@@ -4436,26 +4492,26 @@ var LANG = {
     pr_tt_normal:   "$1 (10人)",
     pr_tt_heroic:   "$1 (25人)",
     pr_tt_earned:   "$1 has earned $2 of $3 achievements ($4%).",
-    pr_tt_earned2:  "$1 has killed all bosses in this instance.",
+    pr_tt_earned2:  "$1击杀了副本中的所有首领。",
     pr_tt_progress: "Progress",
-    pr_tt_obtained: "Total number obtained: $1",
-    pr_tt_nodata:   "This statistic is not currently available in-game<br />and cannot be tracked.",
-    pr_tt_enchreq:  "Enchantment Requires Level $1",
-    pr_tt_new:      '<b class="q">New</b><br />Create a new custom profile from scratch.',
-    pr_tt_saveas:   '<b class="q">Save as</b><br />Save the current character as a custom<br />profile tied to your account.',
-    pr_tt_resync:   '<b class="q">Resync</b><br />Resync the character with the latest<br />version available on the Armory.',
+    pr_tt_obtained: "获得的总数：$1",
+    pr_tt_nodata:   "此统计信息目前在游戏中不可用<br />无法跟踪。",
+    pr_tt_enchreq:  "附魔需要等级 $1",
+    pr_tt_new:      '<b class="q">新建</b><br />Create a new custom profile from scratch.',
+    pr_tt_saveas:   '<b class="q">另存为</b><br />Save the current character as a custom<br />profile tied to your account.',
+    pr_tt_resync:   '<b class="q">重新同步</b><br />Resync the character with the latest<br />version available on the Armory.',
     pr_tt_claim:    '<b class="q">Claim character</b><br />Add this character to your list of characters.',
-    pr_tt_include:  '<b class="q">Include</b><br />Move selected entries out of your exclusion list.',
-    pr_tt_exclude:  '<b class="q">Exclude</b><br />Move selected entries to your exclusion list.<br />This can be useful to hide things you don\'t<br />consider important to reach 100% completion.',
+    pr_tt_include:  '<b class="q">Include</b><br />将所选条目移出排除列表。',
+    pr_tt_exclude:  '<b class="q">Exclude</b><br />将所选条目加入排除列表。<br />This can be useful to hide things you don\'t<br />consider important to reach 100% completion.',
     pr_tt_noqexcl:  '<div class="pad"><span class="q10">Note:</span> Quick exclusions aren\'t currently available for this tab.',
     pr_tt_excldone: "Complete but excluded",
     pr_tt_questtip: "Repeatable quests and quests that don't<br />appear in your quest log aren't tracked.",
 
-    pr_tip_rclkopt:  "Tip: Right-click slots for more options.",
-    pr_tip_sclkopt:  "Tip: Shift-click items for more options.",
-    pr_tip_rclkopt2: "Tip: Right-click items, gems and enchants for more options.",
-    pr_tip_sclkopt2: "Tip: Shift-click items, gems and enchants for more options.",
-    pr_tip_quests:   "Note: <span class=\"tip\">Certain</span> quests aren't tracked by Blizzard's API.",
+    pr_tip_rclkopt:  "提示：右键点击插槽以获取更多选项。",
+    pr_tip_sclkopt:  "提示：Shift+左键点击装备以获取更多选项。",
+    pr_tip_rclkopt2: "提示：右键点击装备、宝石、附魔以获取更多选项。",
+    pr_tip_sclkopt2: "提示：Shift+左键点击装备、宝石、附魔以获取更多选项。",
+    pr_tip_quests:   "提示: <span class=\"tip\">Certain</span> quests aren't tracked by Blizzard's API.",
 
     pr_header_noname:    "Noname",
     pr_header_character: '等级 $1 <a href="?race=$4">$2</a> <a href="?class=$5" class="c$5">$3</a>',
@@ -4476,38 +4532,38 @@ var LANG = {
     pr_dialog_public:      "Visibility: ",
 
     pr_qf_quickfacts:     "相关信息",
-    pr_qf_progress:       "Progress",
-    pr_qf_toc:            "Table of Contents",
-    pr_qf_owner:          "Owner: ",
-    pr_qf_character:      "Character: ",
-    pr_qf_profiles:       "Profiles: ",
-    pr_qf_playedtime:     "Played time: ",
-    pr_qf_gearscore:      "Gear score: ",
+    pr_qf_progress:       "进展",
+    pr_qf_toc:            "目录",
+    pr_qf_owner:          "所有者：",
+    pr_qf_character:      "角色：",
+    pr_qf_profiles:       "配置文件：",
+    pr_qf_playedtime:     "游戏时间：",
+    pr_qf_gearscore:      "Gear score：",
     pr_qf_itemlevel:      "物品等级：",
     pr_qf_talents:        "天赋：",
     pr_qf_achievements:   "成就：",
-    pr_qf_xvxteam:        "$1v$1 team: ",
-    pr_qf_updated:        "Updated ",
-    pr_qf_resynced:       "Resynced ",
-    pr_qf_notsaved:       "Profile has not been saved!",
-    pr_qf_gearmeter:      "Gear",
-    pr_qf_raidactivity1:  "All Raid Activity",
-    pr_qf_raidactivity2:  "Recent Raid Activity",
-    pr_qf_activitytip1:   "Click to display recent raid activity",
-    pr_qf_activitytip2:   "Click to display all raid activity",
+    pr_qf_xvxteam:        "$1v$1 队伍：",
+    pr_qf_updated:        "已更新 ",
+    pr_qf_resynced:       "上次同步 ",
+    pr_qf_notsaved:       "配置文件尚未保存！",
+    pr_qf_gearmeter:      "难度",
+    pr_qf_raidactivity1:  "所有副本活动",
+    pr_qf_raidactivity2:  "最近副本活动",
+    pr_qf_activitytip1:   "单击以显示最近的副本活动",
+    pr_qf_activitytip2:   "单击以显示全部的副本活动",
     pr_qf_activitypct1:   "$1%的全部活动",
     pr_qf_activitypct2:   "$1%的最近活动",
     pr_qf_raidcomplete:   "$1%完成",
 
-    pr_qf_gear0: "Trivial",
-    pr_qf_gear1: "Easy",
-    pr_qf_gear2: "Ideal",
-    pr_qf_gear3: "Challenging",
-    pr_qf_gear4: "Difficult",
-    pr_qf_gear5: "Futile",
+    pr_qf_gear0: "小事",
+    pr_qf_gear1: "简单",
+    pr_qf_gear2: "理想",
+    pr_qf_gear3: "挑战",
+    pr_qf_gear4: "困难",
+    pr_qf_gear5: "徒劳",
 
-    menu_charlookup:      "Lookup by name...",
-    menu_newprofile:      "New Custom Profile",
+    menu_charlookup:      "按名称查找...",
+    menu_newprofile:      "新建自定义配置文件",
     menu_chooseclassspec: "选择你的职业/专精",
 
     pr_menu_equip:      "Equip...",
@@ -4515,32 +4571,32 @@ var LANG = {
     pr_menu_add:        "Add...",
     pr_menu_unequip:    "Unequip",
     pr_menu_remove:     "移除",
-    pr_menu_addgem:     "Add Gem...",
-    pr_menu_repgem:     "Replace Gem...",
-    pr_menu_addenchant: "Add Enchant...",
-    pr_menu_repenchant: "Replace Enchant...",
-    pr_menu_addsubitem: "Add Random Property...",
-    pr_menu_repsubitem: "Replace Random Property...",
-    pr_menu_extrasock:  "Extra Socket",
-    pr_menu_display:    "Display on Character",
-    pr_menu_clearenh:   "Clear Enhancements",
+    pr_menu_addgem:     "添加宝石...",
+    pr_menu_repgem:     "替换宝石...",
+    pr_menu_addenchant: "添加附魔...",
+    pr_menu_repenchant: "替换附魔...",
+    pr_menu_addsubitem: "添加随机属性...",
+    pr_menu_repsubitem: "替换随机属性...",
+    pr_menu_extrasock:  "额外插槽",
+    pr_menu_display:    "在角色身上显示",
+    pr_menu_clearenh:   "清除附魔",
     pr_menu_links:      "链接",
     pr_menu_compare:    "比较",
     pr_menu_upgrades:   "查找升级",
     pr_menu_whowears:   "谁会穿这个？",
 
-    pr_queue_unknown:   "Unknown",
+    pr_queue_unknown:   "未知",
     pr_queue_noprocess: "The queue is not currently running.",
-    pr_queue_resyncreq: "<b>An Armory resync has been requested.</b>",
-    pr_queue_addqueue:  "Adding to the Armory queue...",
-    pr_queue_status1:   "Position in queue: <b>$1</b> &ndash; Estimated time: <b>$2</b>",
-    pr_queue_status2:   "Fetching data now...",
-    pr_queue_status3:   'Data is ready! <a href="?$2" rel="np">Reload to view</a>.',
-    pr_queue_status4:   'Unable to resync from the Armory: $1. Try <a href="javascript:;">resyncing</a> again.',
-    pr_queue_batch:     "Queue: <b>$1</b> – Processing: <b>$2</b> – Ready: <b>$3</b> – Error: <b>$4</b>",
+    pr_queue_resyncreq: "<b>已请求军械库同步。</b>",
+    pr_queue_addqueue:  "添加到军械库队列。。。...",
+    pr_queue_status1:   "队列位置：<b>$1</b> &ndash; 预计时间：<b>$2</b>",
+    pr_queue_status2:   "正在获取数据...",
+    pr_queue_status3:   '数据准备就绪！<a href="?$2" rel="np">点击</a>显示。',
+    pr_queue_status4:   '无法从军械库重新同步：$1。尝试再次<a href="javascript:;">重新同步</a>。',
+    pr_queue_batch:     "队列：<b>$1</b> – 处理中：<b>$2</b> – 准备：<b>$3</b> – 错误：<b>$4</b>",
 
-    pr_error_armory0:    "Error unknown",
-    pr_error_armory1:    "Character does not exist",
+    pr_error_armory0:    "未知错误",
+    pr_error_armory1:    "角色不存在",
     pr_error_armory2:    "The Armory could not be reached",
 
     pr_inv_title:       "Gear Summary",
@@ -4678,14 +4734,14 @@ var LANG = {
     pr_note_items:         "物品",
     pr_note_match:         "匹配",
     pr_note_profs:         "专业",
-    pr_note_wotlk:         "WotLK",
+    pr_note_wotlk:         "WLK",
     pr_note_usable:        "可用",
-    pr_note_known:         "Known",
-    pr_note_missing:       "Missing",
+    pr_note_known:         "已知",
+    pr_note_missing:       "缺少",
     pr_note_normal:        "Normal",
     pr_note_exotic:        "Exotic",
     pr_note_gearscore:     "装备",
-    pr_note_weighted:      "Weighted",
+    pr_note_weighted:      "权重",
 
     pr_note_pendingrename: "Pending Rename",
 
@@ -4866,15 +4922,20 @@ var LANG = {
 
     /* AoWoW: start custom */
 
+    tab_conditions:    '[Conditions]',
+    tab_condition_for: '[Condition for]',
+    cnd_either:        '[Either]',
+    cnd_or:            '[Or]',
+
     // Guide
     myguides:          '我的指南',
-    listguides:        '[List of guides]',
+    listguides:        '指南列表',
     createnewguide:    '创建新指南',
     needsvotes_format: '（需要 $1 个投票）',
     needsvote_format:  '（需要 $1 个投票）',
     outofvotes_format: '[(out of $1 votes)]',
     outofvote_format:  '[(out of $1 vote)]',
-    guideAuthor:       '[Guide Author]',
+    guideAuthor:       '指南作者',
     autoresizetextbox: '自动缩放文字框',
 
     restock: '[Restock]',

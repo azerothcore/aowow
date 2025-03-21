@@ -25,7 +25,7 @@ class AchievementList extends BaseType
         todo: evaluate TC custom-data-tables: a*_criteria_data should be merged on installation
     */
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -257,12 +257,15 @@ class AchievementList extends BaseType
         return $x;
     }
 
-    public function getSourceData()
+    public function getSourceData(int $id = 0) : array
     {
         $data = [];
 
         foreach ($this->iterate() as $__)
         {
+            if ($id && $id != $this->id)
+                continue;
+
             $data[$this->id] = array(
                 "n"  => $this->getField('name', true),
                 "s"  => $this->curTpl['faction'],
@@ -280,9 +283,10 @@ class AchievementListFilter extends Filter
 {
 
     protected $enums         = array(
+         4 => parent::ENUM_ZONE,                            // location
         11 => array(
               327 => 160,                                   // Lunar Festival
-              335 => 187,                                   // Love is in the Air
+              423 => 187,                                   // Love is in the Air
               181 => 159,                                   // Noblegarden
               201 => 163,                                   // Children's Week
               341 => 161,                                   // Midsummer Fire Festival
@@ -292,8 +296,8 @@ class AchievementListFilter extends Filter
               141 => 156,                                   // Feast of Winter Veil
               409 => -3456,                                 // Day of the Dead
               398 => -3457,                                 // Pirates' Day
-              FILTER_ENUM_ANY  => true,
-              FILTER_ENUM_NONE => false,
+              parent::ENUM_ANY  => true,
+              parent::ENUM_NONE => false,
               283 => -1,                                    // valid events without achievements
               285 => -1,   353 => -1,   420 => -1,
               400 => -1,   284 => -1,   374 => -1,
@@ -301,45 +305,33 @@ class AchievementListFilter extends Filter
         )
     );
 
-    protected $genericFilter = array(                       // misc (bool): _NUMERIC => useFloat; _STRING => localized; _FLAG => match Value; _BOOLEAN => stringSet
-         2 => [FILTER_CR_BOOLEAN,   'reward_loc0', true                             ], // givesreward
-         3 => [FILTER_CR_STRING,    'reward',      STR_LOCALIZED                    ], // rewardtext
-         4 => [FILTER_CR_NYI_PH,    null,          1,                               ], // location [enum]
-         5 => [FILTER_CR_CALLBACK,  'cbSeries',    ACHIEVEMENT_CU_FIRST_SERIES, null], // first in series [yn]
-         6 => [FILTER_CR_CALLBACK,  'cbSeries',    ACHIEVEMENT_CU_LAST_SERIES,  null], // last in series [yn]
-         7 => [FILTER_CR_BOOLEAN,   'chainId',                                      ], // partseries
-         9 => [FILTER_CR_NUMERIC,   'id',          NUM_CAST_INT,                true], // id
-        10 => [FILTER_CR_STRING,    'ic.name',                                      ], // icon
-        11 => [FILTER_CR_CALLBACK,  'cbRelEvent', null,                         null], // related event [enum]
-        14 => [FILTER_CR_FLAG,      'cuFlags',     CUSTOM_HAS_COMMENT               ], // hascomments
-        15 => [FILTER_CR_FLAG,      'cuFlags',     CUSTOM_HAS_SCREENSHOT            ], // hasscreenshots
-        16 => [FILTER_CR_FLAG,      'cuFlags',     CUSTOM_HAS_VIDEO                 ], // hasvideos
-        18 => [FILTER_CR_STAFFFLAG, 'flags',                                        ]  // flags
+    protected $genericFilter = array(
+         2 => [parent::CR_BOOLEAN,   'reward_loc0', true                             ], // givesreward
+         3 => [parent::CR_STRING,    'reward',      STR_LOCALIZED                    ], // rewardtext
+         4 => [parent::CR_NYI_PH,    null,          1,                               ], // location [enum]
+         5 => [parent::CR_CALLBACK,  'cbSeries',    ACHIEVEMENT_CU_FIRST_SERIES, null], // first in series [yn]
+         6 => [parent::CR_CALLBACK,  'cbSeries',    ACHIEVEMENT_CU_LAST_SERIES,  null], // last in series [yn]
+         7 => [parent::CR_BOOLEAN,   'chainId',                                      ], // partseries
+         9 => [parent::CR_NUMERIC,   'id',          NUM_CAST_INT,                true], // id
+        10 => [parent::CR_STRING,    'ic.name',                                      ], // icon
+        11 => [parent::CR_CALLBACK,  'cbRelEvent', null,                         null], // related event [enum]
+        14 => [parent::CR_FLAG,      'cuFlags',     CUSTOM_HAS_COMMENT               ], // hascomments
+        15 => [parent::CR_FLAG,      'cuFlags',     CUSTOM_HAS_SCREENSHOT            ], // hasscreenshots
+        16 => [parent::CR_FLAG,      'cuFlags',     CUSTOM_HAS_VIDEO                 ], // hasvideos
+        18 => [parent::CR_STAFFFLAG, 'flags',                                        ]  // flags
     );
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'    => [FILTER_V_RANGE, [2, 18],                                         true ], // criteria ids
-        'crs'   => [FILTER_V_LIST,  [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 99999]], true ], // criteria operators
-        'crv'   => [FILTER_V_REGEX, '/[\p{C};:%\\\\]/ui',                            true ], // criteria values - only printable chars, no delimiters
-        'na'    => [FILTER_V_REGEX, '/[\p{C};%\\\\]/ui',                             false], // name / description - only printable chars, no delimiter
-        'ex'    => [FILTER_V_EQUAL, 'on',                                            false], // extended name search
-        'ma'    => [FILTER_V_EQUAL, 1,                                               false], // match any / all filter
-        'si'    => [FILTER_V_LIST,  [1, 2, 3, -1, -2],                               false], // side
-        'minpt' => [FILTER_V_RANGE, [1, 99],                                         false], // required level min
-        'maxpt' => [FILTER_V_RANGE, [1, 99],                                         false]  // required level max
+        'cr'    => [parent::V_RANGE, [2, 18],                                                             true ], // criteria ids
+        'crs'   => [parent::V_LIST,  [parent::ENUM_NONE, parent::ENUM_ANY, [0, 99999]],                   true ], // criteria operators
+        'crv'   => [parent::V_REGEX, parent::PATTERN_CRV,                                                 true ], // criteria values - only printable chars, no delimiters
+        'na'    => [parent::V_REGEX, parent::PATTERN_NAME,                                                false], // name / description - only printable chars, no delimiter
+        'ex'    => [parent::V_EQUAL, 'on',                                                                false], // extended name search
+        'ma'    => [parent::V_EQUAL, 1,                                                                   false], // match any / all filter
+        'si'    => [parent::V_LIST,  [SIDE_ALLIANCE, SIDE_HORDE, SIDE_BOTH, -SIDE_ALLIANCE, -SIDE_HORDE], false], // side
+        'minpt' => [parent::V_RANGE, [1, 99],                                                             false], // required level min
+        'maxpt' => [parent::V_RANGE, [1, 99],                                                             false]  // required level max
     );
-
-    protected function createSQLForCriterium(&$cr)
-    {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCr = $this->genericCriterion($cr))
-                return $genCr;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
-    }
 
     protected function createSQLForValues()
     {
@@ -351,9 +343,9 @@ class AchievementListFilter extends Filter
         {
             $_ = [];
             if (isset($_v['ex']) && $_v['ex'] == 'on')
-                $_ = $this->modularizeString(['name_loc'.User::$localeId, 'reward_loc'.User::$localeId, 'description_loc'.User::$localeId]);
+                $_ = $this->modularizeString(['name_loc'.Lang::getLocale()->value, 'reward_loc'.Lang::getLocale()->value, 'description_loc'.Lang::getLocale()->value]);
             else
-                $_ = $this->modularizeString(['name_loc'.User::$localeId]);
+                $_ = $this->modularizeString(['name_loc'.Lang::getLocale()->value]);
 
             if ($_)
                 $parts[] = $_;
@@ -372,13 +364,13 @@ class AchievementListFilter extends Filter
         {
             switch ($_v['si'])
             {
-                case -1:                                    // faction, exclusive both
-                case -2:
+                case -SIDE_ALLIANCE:                        // equals faction
+                case -SIDE_HORDE:
                     $parts[] = ['faction', -$_v['si']];
                     break;
-                case 1:                                     // faction, inclusive both
-                case 2:
-                case 3:                                     // both
+                case SIDE_ALLIANCE:                         // includes faction
+                case SIDE_HORDE:
+                case SIDE_BOTH:
                     $parts[] = ['faction', $_v['si'], '&'];
                     break;
             }
@@ -387,30 +379,30 @@ class AchievementListFilter extends Filter
         return $parts;
     }
 
-    protected function cbRelEvent($cr, $value)
+    protected function cbRelEvent(int $cr, int $crs, string $crv) : ?array
     {
-        if (!isset($this->enums[$cr[0]][$cr[1]]))
-            return false;
+        if (!isset($this->enums[$cr][$crs]))
+            return null;
 
-        $_ = $this->enums[$cr[0]][$cr[1]];
+        $_ = $this->enums[$cr][$crs];
         if (is_int($_))
             return ($_ > 0) ? ['category', $_] : ['id', abs($_)];
         else
         {
-            $ids = array_filter($this->enums[$cr[0]], function($x) { return is_int($x) && $x > 0; });
+            $ids = array_filter($this->enums[$cr], fn($x) => is_int($x) && $x > 0);
 
             return ['category', $ids, $_ ? null : '!'];
         }
 
-        return false;
+        return null;
     }
 
-    protected function cbSeries($cr, $value)
+    protected function cbSeries(int $cr, int $crs, string $crv, int $seriesFlag) : ?array
     {
-        if ($this->int2Bool($cr[1]))
-            return $cr[1] ? ['AND', ['chainId', 0, '!'], ['cuFlags', $value, '&']] : ['AND', ['chainId', 0, '!'], [['cuFlags', $value, '&'], 0]];
+        if ($this->int2Bool($crs))
+            return $crs ? ['AND', ['chainId', 0, '!'], ['cuFlags', $seriesFlag, '&']] : ['AND', ['chainId', 0, '!'], [['cuFlags', $seriesFlag, '&'], 0]];
 
-        return false;
+        return null;
     }
 }
 

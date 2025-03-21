@@ -8,6 +8,8 @@ class GuildList extends BaseType
 {
     use profilerHelper, listviewHelper;
 
+    public static $contribute = CONTRIBUTE_NONE;
+
     public function getListviewData()
     {
         $this->getGuildScores();
@@ -44,7 +46,7 @@ class GuildList extends BaseType
         if (!$guilds)
             return;
 
-        $stats = DB::Aowow()->select('SELECT guild AS ARRAY_KEY, id AS ARRAY_KEY2, level, gearscore, achievementpoints, IF(cuFlags & ?d, 0, 1) AS synced FROM ?_profiler_profiles WHERE guild IN (?a) ORDER BY gearscore DESC', PROFILER_CU_NEEDS_RESYNC, $guilds);
+        $stats = DB::Aowow()->select('SELECT `guild` AS ARRAY_KEY, `id` AS ARRAY_KEY2, `level`, `gearscore`, `achievementpoints`, IF(`cuFlags` & ?d, 0, 1) AS "synced" FROM ?_profiler_profiles WHERE `guild` IN (?a) ORDER BY `gearscore` DESC', PROFILER_CU_NEEDS_RESYNC, $guilds);
         foreach ($this->iterate() as &$_curTpl)
         {
             $id = $_curTpl['id'];
@@ -88,17 +90,14 @@ class GuildListFilter extends Filter
     public    $extraOpts     = [];
     protected $genericFilter = [];
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'na'     => [FILTER_V_REGEX,    '/[\p{C};%\\\\]/ui',                            false], // name - only printable chars, no delimiter
-        'ma'     => [FILTER_V_EQUAL,    1,                                              false], // match any / all filter
-        'ex'     => [FILTER_V_EQUAL,    'on',                                           false], // only match exact
-        'si'     => [FILTER_V_LIST,     [1, 2],                                         false], // side
-        'rg'     => [FILTER_V_CALLBACK, 'cbRegionCheck',                                false], // region
-        'sv'     => [FILTER_V_CALLBACK, 'cbServerCheck',                                false], // server
+        'na' => [parent::V_REGEX,    parent::PATTERN_NAME,        false], // name - only printable chars, no delimiter
+        'ma' => [parent::V_EQUAL,    1,                           false], // match any / all filter
+        'ex' => [parent::V_EQUAL,    'on',                        false], // only match exact
+        'si' => [parent::V_LIST,     [SIDE_ALLIANCE, SIDE_HORDE], false], // side
+        'rg' => [parent::V_CALLBACK, 'cbRegionCheck',             false], // region
+        'sv' => [parent::V_CALLBACK, 'cbServerCheck',             false], // server
     );
-
-    protected function createSQLForCriterium(&$cr) { }
 
     protected function createSQLForValues()
     {
@@ -115,16 +114,16 @@ class GuildListFilter extends Filter
         // side [list]
         if (!empty($_v['si']))
         {
-            if ($_v['si'] == 1)
-                $parts[] = ['c.race', [1, 3, 4, 7, 11]];
-            else if ($_v['si'] == 2)
-                $parts[] = ['c.race', [2, 5, 6, 8, 10]];
+            if ($_v['si'] == SIDE_ALLIANCE)
+                $parts[] = ['c.race', ChrRace::fromMask(ChrRace::MASK_ALLIANCE)];
+            else if ($_v['si'] == SIDE_HORDE)
+                $parts[] = ['c.race', ChrRace::fromMask(ChrRace::MASK_HORDE)];
         }
 
         return $parts;
     }
 
-    protected function cbRegionCheck(&$v)
+    protected function cbRegionCheck(string &$v) : bool
     {
         if (in_array($v, Util::$regions))
         {
@@ -137,7 +136,7 @@ class GuildListFilter extends Filter
         return false;
     }
 
-    protected function cbServerCheck(&$v)
+    protected function cbServerCheck(string &$v) : bool
     {
         foreach (Profiler::getRealms() as $realm)
             if ($realm['name'] == $v)
@@ -162,7 +161,7 @@ class RemoteGuildList extends GuildList
                     'c'  => ['j' => 'characters c ON c.guid = gm.guid', 's' => ', BIT_OR(IF(c.race IN (1, 3, 4, 7, 11), 1, 2)) - 1 AS faction']
                 );
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         // select DB by realm
         if (!$this->selectRealms($miscData))
@@ -185,7 +184,7 @@ class RemoteGuildList extends GuildList
         foreach ($this->iterate() as $guid => &$curTpl)
         {
             // battlegroup
-            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
+            $curTpl['battlegroup'] = Cfg::get('BATTLEGROUP');
 
             $r = explode(':', $guid)[0];
             if (!empty($realms[$r]))
@@ -216,7 +215,7 @@ class RemoteGuildList extends GuildList
                 $distrib[$curTpl['realm']]++;
         }
 
-        $limit = CFG_SQL_LIMIT_DEFAULT;
+        $limit = Cfg::get('SQL_LIMIT_DEFAULT');
         foreach ($conditions as $c)
             if (is_int($c))
                 $limit = $c;
@@ -254,7 +253,7 @@ class RemoteGuildList extends GuildList
 
         // basic guild data
         foreach (Util::createSqlBatchInsert($data) as $ins)
-            DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_guild (?#) VALUES '.$ins, array_keys(reset($data)));
+            DB::Aowow()->query('INSERT INTO ?_profiler_guild (?#) VALUES '.$ins.' ON DUPLICATE KEY UPDATE `id` = `id`', array_keys(reset($data)));
 
         // merge back local ids
         $localIds = DB::Aowow()->selectCol(
@@ -274,7 +273,7 @@ class LocalGuildList extends GuildList
 {
     protected       $queryBase = 'SELECT g.*, g.id AS ARRAY_KEY FROM ?_profiler_guild g';
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -295,7 +294,7 @@ class LocalGuildList extends GuildList
             }
 
             // battlegroup
-            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
+            $curTpl['battlegroup'] = Cfg::get('BATTLEGROUP');
         }
     }
 

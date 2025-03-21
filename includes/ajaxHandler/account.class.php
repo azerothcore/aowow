@@ -20,16 +20,10 @@ class AjaxAccount extends AjaxHandler
         'remove'     => ['filter' => FILTER_SANITIZE_NUMBER_INT],
      // 'sessionKey' => ['filter' => FILTER_SANITIZE_NUMBER_INT]
     );
-    protected $_get        = array(
-        'locale' => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkLocale']
-    );
 
     public function __construct(array $params)
     {
         parent::__construct($params);
-
-        if (is_numeric($this->_get['locale']))
-            User::useLocale($this->_get['locale']);
 
         if (!$this->params || !User::$id)
             return;
@@ -60,12 +54,12 @@ class AjaxAccount extends AjaxHandler
             // we don't get signaled whether an id should be added to or removed from either includes or excludes
             // so we throw everything into one table and toggle the mode if its already in here
 
-            $includes = DB::Aowow()->selectCol('SELECT typeId FROM ?_profiler_excludes WHERE type = ?d AND typeId IN (?a)', $type, $ids);
+            $includes = DB::Aowow()->selectCol('SELECT `typeId` FROM ?_profiler_excludes WHERE `type` = ?d AND `typeId` IN (?a)', $type, $ids);
 
             foreach ($ids as $typeId)
-                DB::Aowow()->query('INSERT INTO ?_account_excludes (`userId`, `type`, `typeId`, `mode`) VALUES (?a) ON DUPLICATE KEY UPDATE mode = (mode ^ 0x3)', array(
-                    User::$id, $type, $typeId, in_array($includes, $typeId) ? 2 : 1
-                ));
+                DB::Aowow()->query('INSERT INTO ?_account_excludes (`userId`, `type`, `typeId`, `mode`) VALUES (?a) ON DUPLICATE KEY UPDATE `mode` = (`mode` ^ 0x3)',
+                    [User::$id, $type, $typeId, in_array($typeId, $includes) ? 2 : 1]
+                );
 
             return;
         }
@@ -94,24 +88,24 @@ class AjaxAccount extends AjaxHandler
 
             if ($this->_post['id'] && ($id = $this->_post['id'][0]))
             {
-                if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_account_weightscales WHERE userId = ?d AND id = ?d', User::$id, $id))
+                if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_account_weightscales WHERE `userId` = ?d AND `id` = ?d', User::$id, $id))
                 {
                     trigger_error('AjaxAccount::handleWeightscales - scale #'.$id.' not in db or owned by user #'.User::$id, E_USER_ERROR);
                     return '0';
                 }
 
-                DB::Aowow()->query('UPDATE ?_account_weightscales SET `name` = ? WHERE id = ?d', $this->_post['name'], $id);
+                DB::Aowow()->query('UPDATE ?_account_weightscales SET `name` = ? WHERE `id` = ?d', $this->_post['name'], $id);
             }
             else
             {
-                $nScales = DB::Aowow()->selectCell('SELECT COUNT(id) FROM ?_account_weightscales WHERE userId = ?d', User::$id);
+                $nScales = DB::Aowow()->selectCell('SELECT COUNT(`id`) FROM ?_account_weightscales WHERE `userId` = ?d', User::$id);
                 if ($nScales >= 5)                          // more or less hard-defined in LANG.message_weightscalesaveerror
                     return '0';
 
                 $id = DB::Aowow()->query('INSERT INTO ?_account_weightscales (`userId`, `name`) VALUES (?d, ?)', User::$id, $this->_post['name']);
             }
 
-            DB::Aowow()->query('DELETE FROM ?_account_weightscale_data WHERE id = ?d', $id);
+            DB::Aowow()->query('DELETE FROM ?_account_weightscale_data WHERE `id` = ?d', $id);
 
             foreach (explode(',', $this->_post['scale']) as $s)
             {
@@ -125,12 +119,13 @@ class AjaxAccount extends AjaxHandler
             return (string)$id;
         }
         else if ($this->_post['delete'] && $this->_post['id'] && $this->_post['id'][0])
-            DB::Aowow()->query('DELETE FROM ?_account_weightscales WHERE id = ?d AND userId = ?d', $this->_post['id'][0], User::$id);
-        else
         {
-            trigger_error('AjaxAccount::handleWeightscales - malformed request received', E_USER_ERROR);
-            return '0';
+            DB::Aowow()->query('DELETE FROM ?_account_weightscales WHERE `id` = ?d AND `userId` = ?d', $this->_post['id'][0], User::$id);
+            return '';
         }
+
+        trigger_error('AjaxAccount::handleWeightscales - malformed request received', E_USER_ERROR);
+        return '0';
     }
 
     protected function handleFavorites() : void
@@ -171,7 +166,7 @@ class AjaxAccount extends AjaxHandler
     {
         $var = trim(urldecode($val));
 
-        return filter_var($var, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_AOWOW);
+        return filter_var($var, FILTER_SANITIZE_SPECIAL_CHARS, FILTER_FLAG_STRIP_LOW);
     }
 }
 

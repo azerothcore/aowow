@@ -10,15 +10,18 @@ class ObjectPage extends GenericPage
 {
     use TrDetailPage;
 
+    protected $pageText      = [];
+    protected $relBoss       = null;
+
     protected $type          = Type::OBJECT;
     protected $typeId        = 0;
     protected $tpl           = 'object';
     protected $path          = [0, 5];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'swfobject.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/swfobject.js']];
 
-    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkDomain']];
+    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'Locale::tryFromDomain']];
 
     private   $powerTpl      = '$WowheadPower.registerObject(%d, %d, %s);';
 
@@ -28,7 +31,7 @@ class ObjectPage extends GenericPage
 
         // temp locale
         if ($this->mode == CACHE_TYPE_TOOLTIP && $this->_get['domain'])
-            Util::powerUseLocale($this->_get['domain']);
+            Lang::load($this->_get['domain']);
 
         $this->typeId = intVal($id);
 
@@ -36,7 +39,7 @@ class ObjectPage extends GenericPage
         if ($this->subject->error)
             $this->notFound(Lang::game('object'), Lang::gameObject('notFound'));
 
-        $this->name = $this->subject->getField('name', true);
+        $this->name = Lang::unescapeUISequences($this->subject->getField('name', true), Lang::FMT_HTML);
     }
 
     protected function generatePath()
@@ -46,12 +49,12 @@ class ObjectPage extends GenericPage
 
     protected function generateTitle()
     {
-        array_unshift($this->title, $this->name, Util::ucFirst(Lang::game('object')));
+        array_unshift($this->title, Lang::unescapeUISequences($this->subject->getField('name', true), Lang::FMT_RAW), Util::ucFirst(Lang::game('object')));
     }
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         /***********/
         /* Infobox */
@@ -103,7 +106,7 @@ class ObjectPage extends GenericPage
                 break;
             default:                                            // requires key .. maybe
             {
-                $locks = Lang::getLocks($this->subject->getField('lockId'), $ids, true);
+                $locks = Lang::getLocks($this->subject->getField('lockId'), $ids, true, Lang::FMT_MARKUP);
                 $l = [];
 
                 foreach ($ids as $type => $typeIds)
@@ -129,13 +132,7 @@ class ObjectPage extends GenericPage
             $infobox[] = Lang::gameObject('trap').Lang::main('colon').'[object='.$_.']';
         }
 
-        // trap for
-        $trigger = new GameObjectList(array(['linkedTrap', $this->typeId]));
-        if (!$trigger->error)
-        {
-            $this->extendGlobalData($trigger->getJSGlobals());
-            $infobox[] = Lang::gameObject('triggeredBy').Lang::main('colon').'[object='.$trigger->id.']';
-        }
+        // trap for X (note: moved to lv-tabs)
 
         // SpellFocus
         if ($_ = $this->subject->getField('spellFocusId'))
@@ -213,13 +210,11 @@ class ObjectPage extends GenericPage
         /****************/
 
         // pageText
-        if ($this->pageText = Game::getPageText($next = $this->subject->getField('pageTextId')))
-        {
+        if ($this->pageText = Game::getPageText($this->subject->getField('pageTextId')))
             $this->addScript(
-                [JS_FILE,  'Book.js'],
-                [CSS_FILE, 'Book.css']
+                [SC_JS_FILE,  'js/Book.js'],
+                [SC_CSS_FILE, 'css/Book.css']
             );
-        }
 
         // get spawns and path
         $map = null;
@@ -235,16 +230,16 @@ class ObjectPage extends GenericPage
 
 
         $relBoss = null;
-        if ($ll = DB::Aowow()->selectRow('SELECT * FROM ?_loot_link WHERE objectId = ?d ORDER BY priority DESC LIMIT 1', $this->typeId))
+        if ($ll = DB::Aowow()->selectRow('SELECT * FROM ?_loot_link WHERE `objectId` = ?d ORDER BY `priority` DESC LIMIT 1', $this->typeId))
         {
             // group encounter
             if ($ll['encounterId'])
                 $relBoss = [$ll['npcId'], Lang::profiler('encounterNames', $ll['encounterId'])];
             // difficulty dummy
-            else if ($c = DB::Aowow()->selectRow('SELECT id, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8 FROM ?_creature WHERE difficultyEntry1 = ?d OR difficultyEntry2 = ?d OR difficultyEntry3 = ?d', abs($ll['npcId']), abs($ll['npcId']), abs($ll['npcId'])))
+            else if ($c = DB::Aowow()->selectRow('SELECT `id`, `name_loc0`, `name_loc2`, `name_loc3`, `name_loc4`, `name_loc6`, `name_loc8` FROM ?_creature WHERE `difficultyEntry1` = ?d OR `difficultyEntry2` = ?d OR `difficultyEntry3` = ?d', $ll['npcId'], $ll['npcId'], $ll['npcId']))
                 $relBoss = [$c['id'], Util::localizedString($c, 'name')];
             // base creature
-            else if ($c = DB::Aowow()->selectRow('SELECT id, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8 FROM ?_creature WHERE id = ?d', abs($ll['npcId'])))
+            else if ($c = DB::Aowow()->selectRow('SELECT `id`, `name_loc0`, `name_loc2`, `name_loc3`, `name_loc4`, `name_loc6`, `name_loc8` FROM ?_creature WHERE `id` = ?d', $ll['npcId']))
                 $relBoss = [$c['id'], Util::localizedString($c, 'name')];
         }
 
@@ -252,14 +247,14 @@ class ObjectPage extends GenericPage
         $sai = null;
         if ($this->subject->getField('ScriptOrAI') == 'SmartGameObjectAI')
         {
-            $sai = new SmartAI(SAI_SRC_TYPE_OBJECT, $this->typeId, ['name' => $this->name]);
+            $sai = new SmartAI(SmartAI::SRC_TYPE_OBJECT, $this->typeId);
             if (!$sai->prepare())                           // no smartAI found .. check per guid
             {
                 // at least one of many
-                $guids = DB::World()->selectCol('SELECT guid FROM gameobject WHERE id = ?d LIMIT 1', $this->typeId);
+                $guids = DB::World()->selectCol('SELECT `guid` FROM gameobject WHERE `id` = ?d', $this->typeId);
                 while ($_ = array_pop($guids))
                 {
-                    $sai = new SmartAI(SAI_SRC_TYPE_OBJECT, -$_, ['name' => $this->name, 'title' => ' [small](for GUID: '.$_.')[/small]']);
+                    $sai = new SmartAI(SmartAI::SRC_TYPE_OBJECT, -$_, ['title' => ' [small](for GUID: '.$_.')[/small]']);
                     if ($sai->prepare())
                         break;
                 }
@@ -299,7 +294,7 @@ class ObjectPage extends GenericPage
         {
             $this->extendGlobalData($summons->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
-            $this->lvTabs[] = ['spell', array(
+            $this->lvTabs[] = [SpellList::$brickFile, array(
                 'data' => array_values($summons->getListviewData()),
                 'id'   => 'summoned-by',
                 'name' => '$LANG.tab_summonedby'
@@ -318,7 +313,7 @@ class ObjectPage extends GenericPage
                 foreach ($data as $relId => $d)
                     $data[$relId]['trigger'] = array_search($relId, $_);
 
-                $this->lvTabs[] = ['spell', array(
+                $this->lvTabs[] = [SpellList::$brickFile, array(
                     'data'       => array_values($data),
                     'id'         => 'spells',
                     'name'       => '$LANG.tab_spells',
@@ -334,7 +329,7 @@ class ObjectPage extends GenericPage
         {
             $this->extendGlobalData($acvs->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
-            $this->lvTabs[] = ['achievement', array(
+            $this->lvTabs[] = [AchievementList::$brickFile, array(
                 'data' => array_values($acvs->getListviewData()),
                 'id'   => 'criteria-of',
                 'name' => '$LANG.tab_criteriaof'
@@ -360,14 +355,14 @@ class ObjectPage extends GenericPage
             }
 
             if ($_[0])
-                $this->lvTabs[] = ['quest', array(
+                $this->lvTabs[] = [QuestList::$brickFile, array(
                     'data' => array_values($_[0]),
                     'name' => '$LANG.tab_starts',
                     'id'   => 'starts'
                 )];
 
             if ($_[1])
-                $this->lvTabs[] = ['quest', array(
+                $this->lvTabs[] = [QuestList::$brickFile, array(
                     'data' => array_values($_[1]),
                     'name' => '$LANG.tab_ends',
                     'id'   => 'ends'
@@ -382,7 +377,7 @@ class ObjectPage extends GenericPage
             {
                 $this->extendGlobalData($relQuest->getJSGlobals());
 
-                $this->lvTabs[] = ['quest', array(
+                $this->lvTabs[] = [QuestList::$brickFile, array(
                     'data' => array_values($relQuest->getListviewData()),
                     'name' => '$LANG.tab_quests',
                     'id'   => 'quests'
@@ -391,7 +386,6 @@ class ObjectPage extends GenericPage
         }
 
         // tab: contains
-        $reqQuest = [];
         if ($_ = $this->subject->getField('lootId'))
         {
             $goLoot = new Loot();
@@ -402,24 +396,18 @@ class ObjectPage extends GenericPage
                 $hiddenCols  = ['source', 'side', 'slot', 'reqlevel'];
 
                 $this->extendGlobalData($goLoot->jsGlobals);
+                $lootResult = $goLoot->getResult();
 
-                foreach ($goLoot->iterate() as &$lv)
+                foreach ($hiddenCols as $k => $str)
                 {
-                    if (!empty($hiddenCols))
-                        foreach ($hiddenCols as $k => $str)
-                            if (!empty($lv[$str]))
-                                unset($hiddenCols[$k]);
-
-                    if (!$lv['quest'])
-                        continue;
-
-                    $extraCols[] = '$Listview.extraCols.condition';
-                    $reqQuest[$lv['id']] = 0;
-                    $lv['condition'][0][$this->typeId][] = [[CND_QUESTTAKEN, &$reqQuest[$lv['id']]]];
+                    if ($k == 1 && array_filter(array_column($lootResult, $str), function ($x) { return $x != SIDE_BOTH; }))
+                        unset($hiddenCols[$k]);
+                    else if ($k != 1 && array_column($lootResult, $str))
+                        unset($hiddenCols[$k]);
                 }
 
                 $tabData = array(
-                    'data'      => array_values($goLoot->getResult()),
+                    'data'      => array_values($lootResult),
                     'id'        => 'contains',
                     'name'      => '$LANG.tab_contains',
                     'sort'      => ['-percent', 'name'],
@@ -427,40 +415,16 @@ class ObjectPage extends GenericPage
                 );
 
                 if ($hiddenCols)
-                    $tabData['hiddenCols'] = $hiddenCols;
+                    $tabData['hiddenCols'] = array_values($hiddenCols);
 
-                $this->lvTabs[] = ['item', $tabData];
-            }
-        }
-
-        if ($reqIds = array_keys($reqQuest))                    // apply quest-conditions as back-reference
-        {
-            $conditions = array(
-                'OR',
-                ['reqSourceItemId1', $reqIds], ['reqSourceItemId2', $reqIds],
-                ['reqSourceItemId3', $reqIds], ['reqSourceItemId4', $reqIds],
-                ['reqItemId1', $reqIds], ['reqItemId2', $reqIds], ['reqItemId3', $reqIds],
-                ['reqItemId4', $reqIds], ['reqItemId5', $reqIds], ['reqItemId6', $reqIds]
-            );
-
-            $reqQuests = new QuestList($conditions);
-            $this->extendGlobalData($reqQuests->getJSGlobals());
-
-            foreach ($reqQuests->iterate() as $qId => $__)
-            {
-                if (empty($reqQuests->requires[$qId][Type::ITEM]))
-                    continue;
-
-                foreach ($reqIds as $rId)
-                    if (in_array($rId, $reqQuests->requires[$qId][Type::ITEM]))
-                        $reqQuest[$rId] = $reqQuests->id;
+                $this->lvTabs[] = [ItemList::$brickFile, $tabData];
             }
         }
 
         // tab: Spell Focus for
         if ($sfId = $this->subject->getField('spellFocusId'))
         {
-            $focusSpells = new SpellList(array(['spellFocusObject', $sfId]));
+            $focusSpells = new SpellList(array(['spellFocusObject', $sfId]), ['calcTotal' => true]);
             if (!$focusSpells->error)
             {
                 $tabData = array(
@@ -472,14 +436,28 @@ class ObjectPage extends GenericPage
                 $this->extendGlobalData($focusSpells->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
                 // create note if search limit was exceeded
-                if ($focusSpells->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+                if ($focusSpells->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
                 {
-                    $tabData['note']  = sprintf(Util::$tryNarrowingString, 'LANG.lvnote_spellsfound', $focusSpells->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+                    $tabData['note']  = sprintf(Util::$tryNarrowingString, 'LANG.lvnote_spellsfound', $focusSpells->getMatches(), Cfg::get('SQL_LIMIT_DEFAULT'));
                     $tabData['_truncated'] = 1;
                 }
 
-                $this->lvTabs[] = ['spell', $tabData];
+                $this->lvTabs[] = [SpellList::$brickFile, $tabData];
             }
+        }
+
+        // tab: trap for X
+        $trigger = new GameObjectList(array(['linkedTrap', $this->typeId]));
+        if (!$trigger->error)
+        {
+            $this->extendGlobalData($trigger->getJSGlobals());
+
+            $this->lvTabs[] = [GameObjectList::$brickFile, array(
+                'data' => array_values($trigger->getListviewData()),
+                'name' => Lang::gameObject('triggeredBy'),
+                'id'   => 'triggerd-by',
+                'note' => sprintf(Util::$filterResultString, '?objects=6')
+            )];
         }
 
         // tab: Same model as .. whats the fucking point..?
@@ -488,11 +466,20 @@ class ObjectPage extends GenericPage
         {
             $this->extendGlobalData($sameModel->getJSGlobals());
 
-            $this->lvTabs[] = ['object', array(
+            $this->lvTabs[] = [GameObjectList::$brickFile, array(
                 'data' => array_values($sameModel->getListviewData()),
                 'name' => '$LANG.tab_samemodelas',
                 'id'   => 'same-model-as'
             )];
+        }
+
+        // tab: condition-for
+        $cnd = new Conditions();
+        $cnd->getByCondition(Type::OBJECT, $this->typeId)->prepare();
+        if ($tab = $cnd->toListviewTab('condition-for', '$LANG.tab_condition_for'))
+        {
+            $this->extendGlobalData($cnd->getJsGlobals());
+            $this->lvTabs[] = $tab;
         }
     }
 
@@ -501,12 +488,12 @@ class ObjectPage extends GenericPage
         $power = new StdClass();
         if (!$this->subject->error)
         {
-            $power->{'name_'.User::$localeString}    = $this->subject->getField('name', true);
-            $power->{'tooltip_'.User::$localeString} = $this->subject->renderTooltip();
+            $power->{'name_'.Lang::getLocale()->json()}    = Lang::unescapeUISequences($this->subject->getField('name', true), Lang::FMT_RAW);
+            $power->{'tooltip_'.Lang::getLocale()->json()} = $this->subject->renderTooltip();
             $power->map                              = $this->subject->getSpawns(SPAWNINFO_SHORT);
         }
 
-        return sprintf($this->powerTpl, $this->typeId, User::$localeId, Util::toJSON($power, JSON_AOWOW_POWER));
+        return sprintf($this->powerTpl, $this->typeId, Lang::getLocale()->value, Util::toJSON($power, JSON_AOWOW_POWER));
     }
 }
 

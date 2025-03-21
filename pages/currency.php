@@ -17,7 +17,7 @@ class CurrencyPage extends GenericPage
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
 
-    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkDomain']];
+    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'Locale::tryFromDomain']];
 
     private   $powerTpl      = '$WowheadPower.registerCurrency(%d, %d, %s);';
 
@@ -27,7 +27,7 @@ class CurrencyPage extends GenericPage
 
         // temp locale
         if ($this->mode == CACHE_TYPE_TOOLTIP && $this->_get['domain'])
-            Util::powerUseLocale($this->_get['domain']);
+            Lang::load($this->_get['domain']);
 
         $this->typeId = intVal($id);
 
@@ -50,7 +50,7 @@ class CurrencyPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         $_itemId = $this->subject->getField('itemId');
 
@@ -75,9 +75,13 @@ class CurrencyPage extends GenericPage
         /* Main Content */
         /****************/
 
+        $hi = $this->subject->getJSGlobals()[Type::CURRENCY][$this->typeId]['icon'];
+        if ($hi[0] == $hi[1])
+            unset($hi[1]);
+
         $this->infobox    = $infobox ? '[ul][li]'.implode('[/li][li]', $infobox).'[/li][/ul]' : null;
         $this->name       = $this->subject->getField('name', true);
-        $this->headIcons  = $this->typeId == 104 ? ['inv_bannerpvp_02', 'inv_bannerpvp_01'] : [$this->subject->getField('iconString')];
+        $this->headIcons  = $hi;
         $this->redButtons = array(
             BUTTON_WOWHEAD => true,
             BUTTON_LINKS   => true
@@ -114,9 +118,7 @@ class CurrencyPage extends GenericPage
                 if (!$soldBy->error)
                 {
                     $sbData    = $soldBy->getListviewData();
-                    $extraCols = ['$Listview.extraCols.stock', "\$Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack')", '$Listview.extraCols.cost'];
-                    $holidays  = [];
-
+                    $extraCols = ['$Listview.extraCols.stock', "\$Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack')", '$Listview.extraCols.cost', '$Listview.extraCols.condition'];
                     foreach ($sbData as $k => &$row)
                     {
                         $items  = [];
@@ -133,14 +135,9 @@ class CurrencyPage extends GenericPage
                                 $items[] = [-$id, $qty];
                         }
 
-                        if ($vendors[$k][0]['event'])
-                        {
-                            if (count($extraCols) == 3)             // not already pushed
-                                $extraCols[] = '$Listview.extraCols.condition';
-
-                            $this->extendGlobalIds(Type::WORLDEVENT, $vendors[$k][0]['event']);
-                            $row['condition'][0][$this->typeId][] = [[CND_ACTIVE_EVENT, $vendors[$k][0]['event']]];
-                        }
+                        if ($e = $vendors[$k][0]['event'])
+                            if (Conditions::extendListviewRow($row, Conditions::SRC_NONE, $k, [Conditions::ACTIVE_EVENT, $e]))
+                                $this->extendGlobalIds(Type::WORLDEVENT, $e);
 
                         $row['stock'] = $vendors[$k][0]['stock'];
                         $row['stack'] = $itemObj->getField('buyCount');
@@ -151,7 +148,11 @@ class CurrencyPage extends GenericPage
                         );
                     }
 
-                    $this->lvTabs[] = ['creature', array(
+                    // no conditions > remove conditions column
+                    if (!array_column($sbData, 'condition'))
+                        array_pop($extraCols);
+
+                    $this->lvTabs[] = [CreatureList::$brickFile, array(
                         'data'       => array_values($sbData),
                         'name'       => '$LANG.tab_soldby',
                         'id'         => 'sold-by-npc',
@@ -176,14 +177,15 @@ class CurrencyPage extends GenericPage
                     'id'   => 'created-by',
                 );
 
-                if ($createdBy->hasSetFields(['reagent1']))
+                if ($createdBy->hasSetFields('reagent1', 'reagent2', 'reagent3', 'reagent4', 'reagent5', 'reagent6', 'reagent7', 'reagent8'))
                     $tabData['visibleCols'] = ['reagents'];
 
-                $this->lvTabs[] = ['spell', $tabData];
+                $this->lvTabs[] = [SpellList::$brickFile, $tabData];
             }
         }
 
         // tab: currency for
+        $n = $w = null;
         if ($this->typeId == 103)
         {
             $n = '?items&filter=cr=145;crs=1;crv=0';
@@ -195,10 +197,10 @@ class CurrencyPage extends GenericPage
             $w = 'reqHonorPoints > 0';
         }
         else
-        {
-            $n = in_array($this->typeId, [42, 61, 81, 241, 121, 122, 123, 125, 126, 161, 201, 101, 102, 221, 301, 341]) ? '?items&filter=cr=158;crs='.$_itemId.';crv=0' : null;
             $w = 'reqItemId1 = '.$_itemId.' OR reqItemId2 = '.$_itemId.' OR reqItemId3 = '.$_itemId.' OR reqItemId4 = '.$_itemId.' OR reqItemId5 = '.$_itemId;
-        }
+
+        if (!$n && (new ItemListFilter())->isCurrencyFor($_itemId))
+            $n = '?items&filter=cr=158;crs='.$_itemId.';crv=0';
 
         $xCosts   = DB::Aowow()->selectCol('SELECT id FROM ?_itemextendedcost WHERE '.$w);
         $boughtBy = $xCosts ? DB::World()->selectCol('SELECT item FROM npc_vendor WHERE extendedCost IN (?a) UNION SELECT item FROM game_event_npc_vendor WHERE extendedCost IN (?a)', $xCosts, $xCosts) : [];
@@ -211,13 +213,13 @@ class CurrencyPage extends GenericPage
                     'data'      => array_values($boughtBy->getListviewData(ITEMINFO_VENDOR, [Type::CURRENCY => $this->typeId])),
                     'name'      => '$LANG.tab_currencyfor',
                     'id'        => 'currency-for',
-                    'extraCols' => ["\$Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack')", '$Listview.extraCols.cost'],
+                    'extraCols' => ["\$Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack')", '$Listview.extraCols.cost']
                 );
 
-                if ($boughtBy->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+                if ($n)
                     $tabData['note'] = sprintf(Util::$filterResultString, $n);
 
-                $this->lvTabs[] = ['item', $tabData];
+                $this->lvTabs[] = [ItemList::$brickFile, $tabData];
 
                 $this->extendGlobalData($boughtBy->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
             }
@@ -229,12 +231,12 @@ class CurrencyPage extends GenericPage
         $power = new StdClass();
         if (!$this->subject->error)
         {
-            $power->{'name_'.User::$localeString}    = $this->subject->getField('name', true);
-            $power->icon                             = rawurlencode($this->subject->getField('iconString', true, true));
-            $power->{'tooltip_'.User::$localeString} = $this->subject->renderTooltip();
+            $power->{'name_'.Lang::getLocale()->json()}    = $this->subject->getField('name', true);
+            $power->icon                                   = rawurlencode($this->subject->getField('iconString', true, true));
+            $power->{'tooltip_'.Lang::getLocale()->json()} = $this->subject->renderTooltip();
         }
 
-        return sprintf($this->powerTpl, $this->typeId, User::$localeId, Util::toJSON($power, JSON_AOWOW_POWER));
+        return sprintf($this->powerTpl, $this->typeId, Lang::getLocale()->value, Util::toJSON($power, JSON_AOWOW_POWER));
     }
 }
 

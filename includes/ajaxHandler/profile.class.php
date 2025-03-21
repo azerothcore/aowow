@@ -11,14 +11,14 @@ class AjaxProfile extends AjaxHandler
     protected $_get        = array(
         'id'         => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkIdList'  ],
         'items'      => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxProfile::checkItemList'],
-        'size'       => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW     ],
+        'size'       => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkTextLine'],
         'guild'      => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkEmptySet'],
         'arena-team' => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkEmptySet'],
         'user'       => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxProfile::checkUser'    ]
     );
 
     protected $_post        = array(
-        'name'         => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkFulltext'],
+        'name'         => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkTextLine'],
         'level'        => ['filter' => FILTER_SANITIZE_NUMBER_INT],
         'class'        => ['filter' => FILTER_SANITIZE_NUMBER_INT],
         'race'         => ['filter' => FILTER_SANITIZE_NUMBER_INT],
@@ -28,12 +28,12 @@ class AjaxProfile extends AjaxHandler
         'talenttree2'  => ['filter' => FILTER_SANITIZE_NUMBER_INT],
         'talenttree3'  => ['filter' => FILTER_SANITIZE_NUMBER_INT],
         'activespec'   => ['filter' => FILTER_SANITIZE_NUMBER_INT],
-        'talentbuild1' => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'glyphs1'      => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'talentbuild2' => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'glyphs2'      => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'icon'         => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'description'  => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkFulltext'],
+        'talentbuild1' => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxProfile::checkTalentString'],
+        'glyphs1'      => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxProfile::checkGlyphString' ],
+        'talentbuild2' => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxProfile::checkTalentString'],
+        'glyphs2'      => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxProfile::checkGlyphString' ],
+        'icon'         => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkTextLine'    ],
+        'description'  => ['filter' => FILTER_CALLBACK, 'options' => 'AjaxHandler::checkTextBlob'    ],
         'source'       => ['filter' => FILTER_SANITIZE_NUMBER_INT],
         'copy'         => ['filter' => FILTER_SANITIZE_NUMBER_INT],
         'public'       => ['filter' => FILTER_SANITIZE_NUMBER_INT],
@@ -48,7 +48,7 @@ class AjaxProfile extends AjaxHandler
         if (!$this->params)
             return;
 
-        if (!CFG_PROFILER_ENABLE)
+        if (!Cfg::get('PROFILER_ENABLE'))
             return;
 
         switch ($this->params[0])
@@ -501,13 +501,16 @@ class AjaxProfile extends AjaxHandler
             if ($rId == $pBase['realm'])
                 break;
 
+        if (!$rData)                                        // realm doesn't exist or access is restricted
+            return '';
+
         $profile = array(
             'id'                => $pBase['id'],
             'source'            => $pBase['id'],
             'level'             => $pBase['level'],
             'classs'            => $pBase['class'],
             'race'              => $pBase['race'],
-            'faction'           => Game::sideByRaceMask(1 << ($pBase['race'] - 1)) - 1,
+            'faction'           => ChrRace::tryFrom($pBase['race'])?->getTeam() ?? TEAM_NEUTRAL,
             'gender'            => $pBase['gender'],
             'skincolor'         => $pBase['skincolor'],
             'hairstyle'         => $pBase['hairstyle'],
@@ -560,7 +563,7 @@ class AjaxProfile extends AjaxHandler
         if ($pBase['realm'])
         {
             $profile['region']      = [$rData['region'], Lang::profiler('regions', $rData['region'])];
-            $profile['battlegroup'] = [Profiler::urlize(CFG_BATTLEGROUP), CFG_BATTLEGROUP];
+            $profile['battlegroup'] = [Profiler::urlize(Cfg::get('BATTLEGROUP')), Cfg::get('BATTLEGROUP')];
             $profile['realm']       = [Profiler::urlize($rData['name'], true), $rData['name']];
         }
 
@@ -573,7 +576,7 @@ class AjaxProfile extends AjaxHandler
             $profile['arenateams'] = $at;
 
         // pets if hunter fields: [name:name, family:petFamily, npc:npcId, displayId:modelId, talents:talentString]
-        if ($pets = DB::Aowow()->select('SELECT name, family, npc, displayId, talents FROM ?_profiler_pets WHERE owner = ?d', $pBase['id']))
+        if ($pets = DB::Aowow()->select('SELECT `name`, `family`, `npc`, `displayId`, CONCAT("$\"", `talents`, "\"") AS "talents" FROM ?_profiler_pets WHERE `owner` = ?d', $pBase['id']))
             $profile['pets'] = $pets;
 
         // source for custom profiles; profileId => [name, ownerId, iconString(optional)]
@@ -598,60 +601,42 @@ class AjaxProfile extends AjaxHandler
         */
 
 
-        $completion = DB::Aowow()->select('SELECT type AS ARRAY_KEY, typeId AS ARRAY_KEY2, cur, max FROM ?_profiler_completion WHERE id = ?d', $pBase['id']);
-        foreach ($completion as $type => $data)
+        // questId => [cat1, cat2]
+        $profile['quests'] = [];
+        if ($quests = DB::Aowow()->selectCol('SELECT `questId` FROM ?_profiler_completion_quests WHERE `id` = ?d', $pBase['id']))
         {
-            switch ($type)
-            {
-                case Type::FACTION:                          // factionId => amount
-                    $profile['reputation'] = array_combine(array_keys($data), array_column($data, 'cur'));
-                    break;
-                case Type::TITLE:
-                    foreach ($data as &$d)
-                        $d = 1;
-
-                    $profile['titles'] = $data;
-                    break;
-                case Type::QUEST:
-                    foreach ($data as &$d)
-                        $d = 1;
-
-                    $profile['quests'] = $data;
-                    break;
-                case Type::SPELL:
-                    foreach ($data as &$d)
-                        $d = 1;
-
-                    $profile['spells'] = $data;
-                    break;
-                case Type::ACHIEVEMENT:
-                    $achievements = array_filter($data, function ($x) { return $x['max'] === null; });
-                    $statistics   = array_filter($data, function ($x) { return $x['max'] !== null; });
-
-                    // achievements
-                    $profile['achievements']      = array_combine(array_keys($achievements), array_column($achievements, 'cur'));
-                    $profile['achievementpoints'] = DB::Aowow()->selectCell('SELECT SUM(points) FROM ?_achievement WHERE id IN (?a)', array_keys($achievements));
-
-                    // raid progression
-                    $activity = array_filter($statistics, function ($x) { return $x['cur'] > (time() - MONTH); });
-                    foreach ($activity as &$r)
-                        $r = 1;
-
-                    // ony .. subtract 10-man from 25-man
-
-                    $profile['statistics'] = array_combine(array_keys($statistics), array_column($statistics, 'max'));
-                    $profile['activity']   = $activity;
-                    break;
-                case Type::SKILL:
-                    foreach ($data as &$d)
-                        $d = [$d['cur'], $d['max']];
-
-                    $profile['skills'] = $data;
-                    break;
-            }
+            $qList = new QuestList(array(['id', $quests], Cfg::get('SQL_LIMIT_NONE')));
+            if (!$qList->error)
+                foreach ($qList->iterate() as $id => $__)
+                    $profile['quests'][$id] = [$qList->getField('cat1'), $qList->getField('cat2')];
         }
 
-        $buff = '';
+        // skillId => [value, max]
+        $profile['skills'] = DB::Aowow()->select('SELECT `skillId` AS ARRAY_KEY, `value` AS "0", `max` AS "1" FROM ?_profiler_completion_skills WHERE `id` = ?d', $pBase['id']);
+
+        // factionId => amount
+        $profile['reputation'] = DB::Aowow()->selectCol('SELECT `factionId` AS ARRAY_KEY, `standing` FROM ?_profiler_completion_reputation WHERE `id` = ?d', $pBase['id']);
+
+        // titleId => 1
+        $profile['titles'] = DB::Aowow()->selectCol('SELECT `titleId` AS ARRAY_KEY, 1 FROM ?_profiler_completion_titles WHERE `id` = ?d', $pBase['id']);
+
+        // achievementId => js date object
+        $profile['achievements'] = DB::Aowow()->selectCol('SELECT `achievementId` AS ARRAY_KEY, CONCAT("$new Date(", `date` * 1000, ")") FROM ?_profiler_completion_achievements WHERE `id` = ?d', $pBase['id']);
+
+        // just points
+        $profile['achievementpoints'] = $profile['achievements'] ? DB::Aowow()->selectCell('SELECT SUM(`points`) FROM ?_achievement WHERE `id` IN (?a)', array_keys($profile['achievements'])) : 0;
+
+        // achievementId => counter
+        $profile['statistics'] = DB::Aowow()->selectCol('SELECT `achievementId` AS ARRAY_KEY, `counter` FROM ?_profiler_completion_statistics WHERE `id` = ?d', $pBase['id']);
+
+        // achievementId => 1
+        $profile['activity'] = DB::Aowow()->selectCol('SELECT `achievementId` AS ARRAY_KEY, 1 FROM ?_profiler_completion_statistics WHERE `id` = ?d AND `date` > ?d', $pBase['id'], time() - MONTH);
+
+        // spellId => 1
+        $profile['spells'] = DB::Aowow()->selectCol('SELECT `spellId` AS ARRAY_KEY, 1 FROM ?_profiler_completion_spells WHERE `id` = ?d', $pBase['id']);
+
+
+        $gItems = [];
 
         $usedSlots = [];
         if ($this->_get['items'])
@@ -668,7 +653,12 @@ class AjaxProfile extends AjaxHandler
                         if (in_array($sl, $invTypes) && !in_array($slot, $usedSlots))
                         {
                             // get and apply inventory
-                            $buff .= 'g_items.add('.$iId.', {name_'.User::$localeString.":'".Util::jsEscape($phItems->getField('name', true))."', quality:".$phItems->getField('quality').", icon:'".$phItems->getField('iconString')."', jsonequip:".Util::toJSON($data[$iId])."});\n";
+                            $gItems[$iId] = array(
+                                'name_'.Lang::getLocale()->json() => $phItems->getField('name', true),
+                                'quality'                         => $phItems->getField('quality'),
+                                'icon'                            => $phItems->getField('iconString'),
+                                'jsonequip'                       => $data[$iId]
+                            );
                             $profile['inventory'][$slot] = [$iId, 0, 0, 0, 0, 0, 0, 0];
 
                             $usedSlots[] = $slot;
@@ -681,30 +671,36 @@ class AjaxProfile extends AjaxHandler
 
         if ($items = DB::Aowow()->select('SELECT * FROM ?_profiler_items WHERE id = ?d', $pBase['id']))
         {
-            $itemz = new ItemList(array(['id', array_column($items, 'item')], CFG_SQL_LIMIT_NONE));
+            $itemz = new ItemList(array(['id', array_column($items, 'item')], Cfg::get('SQL_LIMIT_NONE')));
             if (!$itemz->error)
             {
-                $data  = $itemz->getListviewData(ITEMINFO_JSON | ITEMINFO_SUBITEMS);
+                $data = $itemz->getListviewData(ITEMINFO_JSON | ITEMINFO_SUBITEMS);
 
                 foreach ($items as $i)
                 {
                     if ($itemz->getEntry($i['item']) && !in_array($i['slot'], $usedSlots))
                     {
                         // get and apply inventory
-                        $buff .= 'g_items.add('.$i['item'].', {name_'.User::$localeString.":'".Util::jsEscape($itemz->getField('name', true))."', quality:".$itemz->getField('quality').", icon:'".$itemz->getField('iconString')."', jsonequip:".Util::toJSON($data[$i['item']])."});\n";
+                        $gItems[$i['item']] = array(
+                            'name_'.Lang::getLocale()->json() => $itemz->getField('name', true),
+                            'quality'                         => $itemz->getField('quality'),
+                            'icon'                            => $itemz->getField('iconString'),
+                            'jsonequip'                       => $data[$i['item']]
+                        );
                         $profile['inventory'][$i['slot']] = [$i['item'], $i['subItem'], $i['permEnchant'], $i['tempEnchant'], $i['gem1'], $i['gem2'], $i['gem3'], $i['gem4']];
                     }
                 }
             }
         }
 
-        if ($buff)
-            $buff .= "\n";
+        $buff = '';
+        foreach ($gItems as $id => $item)
+            $buff .= 'g_items.add('.$id.', '.Util::toJSON($item, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE).");\n";
 
 
         // if ($au = $char->getField('auras'))
         // {
-            // $auraz = new SpellList(array(['id', $char->getField('auras')], CFG_SQL_LIMIT_NONE));
+            // $auraz = new SpellList(array(['id', $char->getField('auras')], Cfg::get('SQL_LIMIT_NONE')));
             // $dataz = $auraz->getListviewData();
             // $modz  = $auraz->getProfilerMods();
 
@@ -723,7 +719,7 @@ class AjaxProfile extends AjaxHandler
                     // }
                 // }
 
-                // $buff .= 'g_spells.add('.$id.", {id:".$id.", name:'".Util::jsEscape(mb_substr($data['name'], 1))."', icon:'".$data['icon']."', modifier:".Util::toJSON($mods)."});\n";
+                // $buff .= 'g_spells.add('.$id.", {id:".$id.", name:'".Util::jsEscape(mb_substr($data['name'], 1))."', icon:'".$data['icon']."', callback:".Util::toJSON($mods)."});\n";
             // }
             // $buff .= "\n";
         // }
@@ -758,6 +754,22 @@ class AjaxProfile extends AjaxHandler
     protected static function checkUser(string $val) : string
     {
         if (User::isValidName($val))
+            return $val;
+
+        return '';
+    }
+
+    protected static function checkTalentString(string $val) : string
+    {
+        if (preg_match('/^\d+$/', $val))
+            return $val;
+
+        return '';
+    }
+
+    protected static function checkGlyphString(string $val) : string
+    {
+        if (preg_match('/^\d+(:\d+)*$/', $val))
             return $val;
 
         return '';

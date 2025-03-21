@@ -10,29 +10,30 @@ class QuestPage extends GenericPage
 {
     use TrDetailPage;
 
+    protected $objectiveList = [];
+    protected $providedItem  = [];
+    protected $series        = [];
+    protected $gains         = [];
+    protected $mail          = [];
+    protected $rewards       = [];
+    protected $objectives    = '';
+    protected $details       = '';
+    protected $offerReward   = '';
+    protected $requestItems  = '';
+    protected $completed     = '';
+    protected $end           = '';
+    protected $suggestedPl   = 1;
+    protected $unavailable   = false;
+
     protected $type          = Type::QUEST;
     protected $typeId        = 0;
     protected $tpl           = 'quest';
     protected $path          = [0, 3];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'ShowOnMap.js']];
-    protected $css           = [[CSS_FILE, 'Book.css']];
+    protected $scripts       = [[SC_JS_FILE, 'js/ShowOnMap.js'], [SC_CSS_FILE, 'css/Book.css']];
 
-    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkDomain']];
-
-    private   $catExtra      = array(
-                                3526 => 3524,
-                                363  =>   14,
-                                220  =>  215,
-                                188  =>  141,
-                                1769 =>  361,
-                                25   =>   46,
-                                132  =>    1,
-                                3431 => 3430,
-                                154  =>   85,
-                                9    =>   12
-                            );
+    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'Locale::tryFromDomain']];
 
     private   $powerTpl      = '$WowheadPower.registerQuest(%d, %d, %s);';
 
@@ -42,7 +43,7 @@ class QuestPage extends GenericPage
 
         // temp locale
         if ($this->mode == CACHE_TYPE_TOOLTIP && $this->_get['domain'])
-            Util::powerUseLocale($this->_get['domain']);
+            Lang::load($this->_get['domain']);
 
         $this->typeId = intVal($id);
 
@@ -51,26 +52,27 @@ class QuestPage extends GenericPage
             $this->notFound(Lang::game('quest'), Lang::quest('notFound'));
 
         // may contain htmlesque tags
-        $this->name = Util::htmlEscape($this->subject->getField('name', true));
+        $this->name = Lang::unescapeUISequences(Util::htmlEscape($this->subject->getField('name', true)), Lang::FMT_HTML);
     }
 
     protected function generatePath()
     {
         // recreate path
         $this->path[] = $this->subject->getField('cat2');
-        if ($_ = $this->subject->getField('cat1'))
+        if ($cat = $this->subject->getField('cat1'))
         {
-            if (isset($this->catExtra[$_]))
-                $this->path[] = $this->catExtra[$_];
+            foreach (Game::$questSubCats as $parent => $children)
+                if (in_array($cat, $children))
+                    $this->path[] = $parent;
 
-            $this->path[] = $_;
+            $this->path[] = $cat;
         }
     }
 
     protected function generateTitle()
     {
         // page title already escaped
-        array_unshift($this->title, $this->subject->getField('name', true), Util::ucFirst(Lang::game('quest')));
+        array_unshift($this->title, Lang::unescapeUISequences($this->subject->getField('name', true), Lang::FMT_RAW), Util::ucFirst(Lang::game('quest')));
     }
 
     protected function generateContent()
@@ -79,7 +81,7 @@ class QuestPage extends GenericPage
         $_minLevel     = $this->subject->getField('minLevel');
         $_flags        = $this->subject->getField('flags');
         $_specialFlags = $this->subject->getField('specialFlags');
-        $_side         = Game::sideByRaceMask($this->subject->getField('reqRaceMask'));
+        $_side         = ChrRace::sideFromMask($this->subject->getField('reqRaceMask'));
 
         /***********/
         /* Infobox */
@@ -119,7 +121,7 @@ class QuestPage extends GenericPage
             $loremaster = new AchievementList($conditions);
             $this->extendGlobalData($loremaster->getJSGlobals(GLOBALINFO_SELF));
 
-            switch ($loremaster->getMatches())
+            switch (count($loremaster->getFoundIds()))
             {
                 case 0:
                     break;
@@ -162,7 +164,7 @@ class QuestPage extends GenericPage
 
         $jsg = [];
         // races
-        if ($_ = Lang::getRaceString($this->subject->getField('reqRaceMask'), $jsg, false))
+        if ($_ = Lang::getRaceString($this->subject->getField('reqRaceMask'), $jsg, Lang::FMT_MARKUP))
         {
             $this->extendGlobalIds(Type::CHR_RACE, ...$jsg);
             $t = count($jsg) == 1 ? Lang::game('race') : Lang::game('races');
@@ -170,7 +172,7 @@ class QuestPage extends GenericPage
         }
 
         // classes
-        if ($_ = Lang::getClassString($this->subject->getField('reqClassMask'), $jsg, false))
+        if ($_ = Lang::getClassString($this->subject->getField('reqClassMask'), $jsg, Lang::FMT_MARKUP))
         {
             $this->extendGlobalIds(Type::CHR_CLASS, ...$jsg);
             $t = count($jsg) == 1 ? Lang::game('class') : Lang::game('classes');
@@ -278,7 +280,7 @@ class QuestPage extends GenericPage
                     'side'    => $_side,
                     'typeStr' => Type::getFileString(Type::QUEST),
                     'typeId'  => $this->typeId,
-                    'name'    => $this->name,
+                    'name'    => Util::htmlEscape($this->subject->getField('name', true)),
                     '_next'   => $this->subject->getField('nextQuestIdChain')
                 )
             )
@@ -287,7 +289,7 @@ class QuestPage extends GenericPage
         $_ = $chain[0][0];
         while ($_)
         {
-            if ($_ = DB::Aowow()->selectRow('SELECT id AS typeId, IF(id = nextQuestIdChain, 1, 0) AS error, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8, reqRaceMask FROM ?_quests WHERE nextQuestIdChain = ?d', $_['typeId']))
+            if ($_ = DB::Aowow()->selectRow('SELECT `id` AS `typeId`, IF(`id` = `nextQuestIdChain`, 1, 0) AS `error`, `name_loc0`, `name_loc2`, `name_loc3`, `name_loc4`, `name_loc6`, `name_loc8`, `reqRaceMask` FROM ?_quests WHERE `nextQuestIdChain` = ?d', $_['typeId']))
             {
                 if ($_['error'])
                 {
@@ -298,7 +300,7 @@ class QuestPage extends GenericPage
                 $n = Util::localizedString($_, 'name');
                 array_unshift($chain, array(
                     array(
-                        'side'    => Game::sideByRaceMask($_['reqRaceMask']),
+                        'side'    => ChrRace::sideFromMask($_['reqRaceMask']),
                         'typeStr' => Type::getFileString(Type::QUEST),
                         'typeId'  => $_['typeId'],
                         'name'    => Util::htmlEscape(Lang::trimTextClean($n, 40)),
@@ -310,7 +312,7 @@ class QuestPage extends GenericPage
         $_ = end($chain)[0];
         while ($_)
         {
-            if ($_ = DB::Aowow()->selectRow('SELECT id AS typeId, IF(id = nextQuestIdChain, 1, 0) AS error, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8, reqRaceMask, nextQuestIdChain AS _next FROM ?_quests WHERE id = ?d', $_['_next']))
+            if ($_ = DB::Aowow()->selectRow('SELECT `id` AS `typeId`, IF(`id` = `nextQuestIdChain`, 1, 0) AS `error`, `name_loc0`, `name_loc2`, `name_loc3`, `name_loc4`, `name_loc6`, `name_loc8`, `reqRaceMask`, `nextQuestIdChain` AS `_next` FROM ?_quests WHERE `id` = ?d', $_['_next']))
             {
                 if ($_['error'])                                // error already triggered
                     break;
@@ -318,7 +320,7 @@ class QuestPage extends GenericPage
                 $n = Util::localizedString($_, 'name');
                 array_push($chain, array(
                     array(
-                        'side'    => Game::sideByRaceMask($_['reqRaceMask']),
+                        'side'    => ChrRace::sideFromMask($_['reqRaceMask']),
                         'typeStr' => Type::getFileString(Type::QUEST),
                         'typeId'  => $_['typeId'],
                         'name'    => Util::htmlEscape(Lang::trimTextClean($n, 40)),
@@ -344,7 +346,7 @@ class QuestPage extends GenericPage
             {
                 $n = $list->getField('name', true);
                 $chain[] = array(array(
-                    'side'    => Game::sideByRaceMask($list->getField('reqRaceMask')),
+                    'side'    => ChrRace::sideFromMask($list->getField('reqRaceMask')),
                     'typeStr' => Type::getFileString(Type::QUEST),
                     'typeId'  => $id,
                     'name'    => Util::htmlEscape(Lang::trimTextClean($n, 40))
@@ -381,9 +383,6 @@ class QuestPage extends GenericPage
         /*******************/
         /* Objectives List */
         /*******************/
-
-        $this->objectiveList = [];
-        $this->providedItem  = [];
 
         // gather ids for lookup
         $olItems    = $olNPCs    = $olGOs    = $olFactions = [];
@@ -423,7 +422,7 @@ class QuestPage extends GenericPage
                 $this->objectiveList[] = array(
                     'typeStr'   => Type::getFileString(Type::ITEM),
                     'id'        => $itemId,
-                    'name'      => $olItemData->json[$itemId]['name'],
+                    'name'      => Lang::unescapeUISequences($olItemData->json[$itemId]['name'], Lang::FMT_HTML),
                     'qty'       => $qty > 1 ? $qty : 0,
                     'quality'   => 7 - $olItemData->json[$itemId]['quality'],
                     'extraText' => $provided ? '&nbsp;('.Lang::quest('provided').')' : ''
@@ -435,7 +434,7 @@ class QuestPage extends GenericPage
             {
                 $this->providedItem = array(
                     'id'        => $olItems[0][0],
-                    'name'      => $olItemData->json[$olItems[0][0]]['name'],
+                    'name'      => Lang::unescapeUISequences($olItemData->json[$olItems[0][0]]['name'], Lang::FMT_HTML),
                     'qty'       => $olItems[0][1] > 1 ? $olItems[0][1] : 0,
                     'quality'   => 7 - $olItemData->json[$olItems[0][0]]['quality']
                 );
@@ -507,7 +506,7 @@ class QuestPage extends GenericPage
                 $this->objectiveList[] = array(
                     'typeStr'   => Type::getFileString(Type::OBJECT),
                     'id'        => $i,
-                    'name'      => $pair[1] ?: Util::localizedString($olGOData->getEntry($i), 'name'),
+                    'name'      => $pair[1] ?: Lang::unescapeUISequences(Util::localizedString($olGOData->getEntry($i), 'name'), Lang::FMT_HTML),
                     'qty'       => $pair[0] > 1 ? $pair[0] : 0,
                     'extraText' => ''
                 );
@@ -570,7 +569,7 @@ class QuestPage extends GenericPage
         /* Mapper */
         /**********/
 
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         // gather points of interest
         $mapNPCs = $mapGOs = [];                            // [typeId, start|end|objective, startItemId]
@@ -614,7 +613,7 @@ class QuestPage extends GenericPage
 
                         switch ($file)
                         {
-                            case 'creature':
+                            case 'npc':
                                 $mapNPCs[] = [$data['id'], $method, $itemId];
                                 break;
                             case 'object':
@@ -885,16 +884,26 @@ class QuestPage extends GenericPage
         // ..process zone data
         if ($mObjectives)
         {
+            // sort zones by amount of mapper points most -> least
+            $zoneOrder = [];
+            foreach ($mObjectives as $zoneId => $data)
+                $zoneOrder[$zoneId] = array_reduce($data['levels'], function($carry, $spawns) { foreach ($spawns as $s) { $carry += count($s['coords']); } return $carry; });
+
+            arsort($zoneOrder);
+            $zoneOrder = array_flip(array_keys($zoneOrder));
+
             $areas = new ZoneList(array(['id', array_keys($mObjectives)]));
             if (!$areas->error)
             {
-                $someIDX = 0;                               // todo (low): UNK value ... map priority, floor, mapId..? values seen: 0 - 3; doesn't seem to affect anything
                 foreach ($areas->iterate() as $id => $__)
                 {
+                    // [zoneId, selectionPriority] - determines which map link is preselected. (highest index)
+                    $mZones[$zoneOrder[$id]]  = [$id, count($zoneOrder) - $zoneOrder[$id]];
                     $mObjectives[$id]['zone'] = $areas->getField('name', true);
-                    $mZones[] = [$id, ++$someIDX];
                 }
             }
+
+            ksort($mZones);
         }
 
         // has start & end?
@@ -945,7 +954,7 @@ class QuestPage extends GenericPage
             BUTTON_LINKS   => array(
                 'linkColor' => 'ffffff00',
                 'linkId'    => 'quest:'.$this->typeId.':'.$_level,
-                'linkName'  => $this->name,
+                'linkName'  => Util::jsEscape($this->subject->getField('name', true)),
                 'type'      => $this->type,
                 'typeId'    => $this->typeId
             )
@@ -972,11 +981,11 @@ class QuestPage extends GenericPage
         /**************/
 
         // tab: see also
-        $seeAlso = new QuestList(array(['name_loc'.User::$localeId, '%'.$this->name.'%'], ['id', $this->typeId, '!']));
+        $seeAlso = new QuestList(array(['name_loc'.Lang::getLocale()->value, '%'.Util::htmlEscape($this->subject->getField('name', true)).'%'], ['id', $this->typeId, '!']));
         if (!$seeAlso->error)
         {
             $this->extendGlobalData($seeAlso->getJSGlobals());
-            $this->lvTabs[] = ['quest', array(
+            $this->lvTabs[] = [QuestList::$brickFile, array(
                 'data' => array_values($seeAlso->getListviewData()),
                 'name' => '$LANG.tab_seealso',
                 'id'   => 'see-also'
@@ -988,7 +997,7 @@ class QuestPage extends GenericPage
         if (!$criteriaOf->error)
         {
             $this->extendGlobalData($criteriaOf->getJSGlobals());
-            $this->lvTabs[] = ['achievement', array(
+            $this->lvTabs[] = [AchievementList::$brickFile, array(
                 'data' => array_values($criteriaOf->getListviewData()),
                 'name' => '$LANG.tab_criteriaof',
                 'id'   => 'criteria-of'
@@ -1003,7 +1012,7 @@ class QuestPage extends GenericPage
             if (!$pooledQuests->error)
             {
                 $this->extendGlobalData($pooledQuests->getJSGlobals());
-                $this->lvTabs[] = ['quest', array(
+                $this->lvTabs[] = [QuestList::$brickFile, array(
                     'data' => array_values($pooledQuests->getListviewData()),
                     'name' => 'Quest Pool',
                     'id'   => 'quest-pool',
@@ -1013,49 +1022,21 @@ class QuestPage extends GenericPage
         }
 
         // tab: conditions
-        $cnd = [];
+        $cnd = new Conditions();
+        $cnd->getBySourceEntry($this->typeId, Conditions::SRC_QUEST_AVAILABLE, Conditions::SRC_QUEST_SHOW_MARK)
+            ->getByCondition(Type::QUEST, $this->typeId)
+            ->prepare();
+
         if ($_ = $this->subject->getField('reqMinRepFaction'))
-        {
-            $cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0][] = [CND_REPUTATION_RANK, $_, 1 << Game::getReputationLevelForPoints($this->subject->getField('reqMinRepValue'))];
-            $this->extendGlobalIds(Type::FACTION, $_);
-        }
+            $cnd->addExternalCondition(Conditions::SRC_QUEST_AVAILABLE, '0:'.$this->typeId, [Conditions::REPUTATION_RANK, $_, 1 << Game::getReputationLevelForPoints($this->subject->getField('reqMinRepValue'))]);
 
         if ($_ = $this->subject->getField('reqMaxRepFaction'))
+            $cnd->addExternalCondition(Conditions::SRC_QUEST_AVAILABLE, '0:'.$this->typeId, [-Conditions::REPUTATION_RANK, $_, 1 << Game::getReputationLevelForPoints($this->subject->getField('reqMaxRepValue'))]);
+
+        if ($tab = $cnd->toListviewTab())
         {
-            $cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0][] = [-CND_REPUTATION_RANK, $_, 1 << Game::getReputationLevelForPoints($this->subject->getField('reqMaxRepValue'))];
-            $this->extendGlobalIds(Type::FACTION, $_);
-        }
-
-        $_ = Util::getServerConditions([CND_SRC_QUEST_ACCEPT, CND_SRC_QUEST_SHOW_MARK], null, $this->typeId);
-        if (!empty($_[0]))
-        {
-            // awkward merger
-            if (isset($_[0][CND_SRC_QUEST_ACCEPT][$this->typeId][0]))
-            {
-                if (isset($cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0]))
-                    $cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0] = array_merge($cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0], $_[0][CND_SRC_QUEST_ACCEPT][$this->typeId][0]);
-                else
-                    $cnd[CND_SRC_QUEST_ACCEPT] = $_[0][CND_SRC_QUEST_ACCEPT];
-            }
-
-            if (isset($_[0][CND_SRC_QUEST_SHOW_MARK]))
-                $cnd[CND_SRC_QUEST_SHOW_MARK] = $_[0][CND_SRC_QUEST_SHOW_MARK];
-
-            $this->extendGlobalData($_[1]);
-        }
-
-        if ($cnd)
-        {
-            $tab = "<script type=\"text/javascript\">\n" .
-                   "var markup = ConditionList.createTab(".Util::toJSON($cnd).");\n" .
-                   "Markup.printHtml(markup, 'tab-conditions', { allow: Markup.CLASS_STAFF })" .
-                   "</script>";
-
-            $this->lvTabs[] = [null, array(
-                'data'   => $tab,
-                'id'   => 'conditions',
-                'name' => '$LANG.requires'
-            )];
+            $this->extendGlobalData($cnd->getJsGlobals());
+            $this->lvTabs[] = $tab;
         }
     }
 
@@ -1064,13 +1045,13 @@ class QuestPage extends GenericPage
         $power = new StdClass();
         if (!$this->subject->error)
         {
-            $power->{'name_'.User::$localeString}    = $this->subject->getField('name', true);
-            $power->{'tooltip_'.User::$localeString} = $this->subject->renderTooltip();
+            $power->{'name_'.Lang::getLocale()->json()}    = Lang::unescapeUISequences($this->subject->getField('name', true), Lang::FMT_RAW);
+            $power->{'tooltip_'.Lang::getLocale()->json()} = $this->subject->renderTooltip();
             if ($this->subject->isDaily())
                 $power->daily = 1;
         }
 
-        return sprintf($this->powerTpl, $this->typeId, User::$localeId, Util::toJSON($power, JSON_AOWOW_POWER));
+        return sprintf($this->powerTpl, $this->typeId, Lang::getLocale()->value, Util::toJSON($power, JSON_AOWOW_POWER));
     }
 
     private function createRewards($side)
@@ -1125,7 +1106,7 @@ class QuestPage extends GenericPage
                     $rewards['items'][] = array(
                         'typeStr'   => Type::getFileString(Type::ITEM),
                         'id'        => $id,
-                        'name'      => $rewItems->getField('name', true),
+                        'name'      => Lang::unescapeUISequences($rewItems->getField('name', true), Lang::FMT_HTML),
                         'quality'   => $rewItems->getField('quality'),
                         'qty'       => $ri[$id],
                         'globalStr' => Type::getJSGlobalString(Type::ITEM)

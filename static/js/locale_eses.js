@@ -325,7 +325,8 @@ var mn_objects = [
     [-3,"Hierbas"],
     [-4,"Venas de minerales"],
     [-2,"Misión"],
-    [-6,"Herramientas"]
+    [-6,"Herramientas"],
+    [6,"Trampas"]
 ];
 var mn_quests = [
     [,"Continentes"],
@@ -426,7 +427,7 @@ var mn_quests = [
         [1176, "Zul'Farrak"],
         [1196, "Pináculo de Utgarde"],
         [1337, "Uldaman"],
-        [1417, "Templo Sumergido"],
+        [1477, "Templo Sumergido"],
         [1581, "Las Minas de la Muerte"],
         [1583, "Cumbre de Roca Negra"],
         [1584, "Profundidades de Roca Negra"],
@@ -1449,6 +1450,7 @@ var g_object_types = {
        0: 'Otros',
        9: 'Libro',
        3: 'Contenedore',
+       6: 'Trampa',
     "-5": 'Cofre',
       25: '[Fishing Pool]',
     "-3": 'Hierba',
@@ -1591,7 +1593,7 @@ var g_quest_sorts = {
        1196: 'Pináculo de Utgarde',
        1337: 'Uldaman',
        1377: 'Silithus',
-       1417: 'Templo Sumergido',
+       1477: 'Templo Sumergido',
        1497: 'Entrañas',
        1517: 'Uldaman',
        1519: 'Ciudad de Ventormenta',
@@ -2131,46 +2133,6 @@ var g_zones = {
     4987: 'El Sagrario Rubí'
 };
 
-/* todo (high): add translation */
-var g_zone_areas = {
-     206: ['Preparación Norndir', 'Ascenso de los Desuelladragones', 'Bancal de Tyr'],
-     209: ['El Patio', 'Comedor', 'El Cubil Vacío', 'Observatorio inferior', 'Observatorio superior', 'Cámara de Lord Godfrey', 'El Camino de la Muralla'],
-     719: ['La Alberca de Ask\'ar', 'Sagrario Lunar', 'Las Charcas del Olvido'],
-     721: ['La Sala de Máquinas', 'Los Dormitorios', 'Aeropuerto', 'Cámara Manitas'],
-     796: ['[Cementerio]', '[Biblioteca]', '[Armería]', '[Catedral]'],
-    1196: ['Pináculo inferior', 'Pináculo superior'],
-    1337: ['Sala de los Guardianes', 'Trono de Khaz\'goroth'],
-    1581: ['Las Minas de la Muerte', 'Cala del Acorazado'],
-    1583: ['Tazz\'Alaor', 'Túneles de Arácnidas', 'Ciudad Hordemar', 'Sala de Puño Negro', 'Sala Dracopico', 'El Grajero', 'Estadio de Roca Negra'],
-    1584: ['Bloque de Detención', 'Ciudad Forjatiniebla'],
-    2017: ['Plaza de los Cruzados', 'El Guantelete'],
-    2057: ['El Relicario', 'Cámara de la Invocación', 'Sala Rectoral', '[Barov Family Vault]'],
-    2100: ['Cavernas de Maraudon', 'Tumba de Zaetar'],
-    2557: ['Ágora de Gordok', 'Jardines de la Capital', 'Corte de los Altonato', 'Prisión de Immol\'thar', 'Barrio Alabeo', 'Santuario de Eldretharr'],
-    2677: ['Cuartel Faucedraco', 'Salas de los Conflictos', 'Laboratorios Carmesí', 'Guarida de Nefarian'],
-    3428: ['El Subterráneo de la Colmena', 'Las Puertas del Templo', 'Cámara de C\'Thun'],
-    3456: ['El arrabal de los ensamblajes', 'El arrabal arácnido', 'El arrabal militar', 'El arrabal de la peste', 'La Necrópolis inferior', 'La Necrópolis superior'],
-    3457: ['Alcobas de los Sirvientes', 'Caballerizas superiores', 'La Sala de Banquetes', 'Los Aposentos de los Invitados', 'Balcón de la Sala de la Ópera', 'El Bancal del Maestro', 'La Escalera Quebrada inferior', 'La Escalera Quebrada superior', 'La Sala de las Fieras', 'Biblioteca del Guardián', 'El Repositorio', 'La Biblioteca superior', 'El Mirador Celestial', 'Sala del Tablero', 'Estancias de Medivh', 'La Central Eléctrica', 'Espacio Abisal'],
-    3715: ['La Cámara de Vapor', 'Las Charcas Refrescantes'],
-    3790: ['Salas del Más Allá', 'Puente de las Almas'],
-    3791: ['Velo Sethekk', 'Salas del Luto'],
-    3848: ['Bloque de Estasis: Trion', 'Bloque de Estasis: Maximus', 'Pabellón de Aislamiento'],
-    3849: ['El Mechanar', 'Estancias de Calculación'],
-    3959: ['Campo de entrenamiento Illidari', 'Cloacas de Karabor', 'Santuario de las Sombras', 'Salas de Angustia', 'Vigilia de Sanguino', 'Guarida de los Placeres Mortales', 'Cámara de Mando', 'Cima del Templo'],
-    4075: ['Meseta de La Fuente del Sol', 'Santuario del Eclipse'],
-    4100: ['El Camino a Stratholme', 'Stratholme'],
-    4131: ['Asilo del Gran Magister', 'Sector de Observación'],
-    4196: ['El vestíbulo de Drak\'Tharon', 'Centinela de Drak\'Tharon'],
-    4228: ['Sortija de discrepancia', 'Sortija de Aceleración', 'Sortija de transmutación', 'Sortija de alineación'],
-    4272: ['El Cuartel Implacable', 'Camino de los Creadores'],
-    4273: ['El Gran Acceso', 'La Antecámara de Ulduar', 'El Sagrario Interior de Ulduar', 'La Prisión de Yogg-Saron', 'La Chispa de la Imaginación', 'El Ojo de la Mente'],
-    4277: ['El Foso del Linaje', 'Guarida de Hadronox', 'La Puerta dorada'],
-    4395: ['Ciudad de Dalaran', 'Los Bajos Fondos'],
-    4494: ['Ahn\'kahet', 'Nivel 2'],
-    4722: ['El Coliseo Argenta', 'Las profundidades heladas'],
-    4812: ['La ciudadela inferior', 'La Muralla de las Calaveras', 'Ascenso del Libramorte', 'La guarida de la Reina de Escarcha', 'Los Confines superiores', 'Cuarteles Reales', 'El Trono Helado', 'Agonía de Escarcha']
-};
-
 var g_zone_categories = {
      0: 'Reinos del Este',
      1: 'Kalimdor',
@@ -2190,8 +2152,8 @@ var g_zone_instancetypes = {
     4: 'Campo de batalla',
     5: 'Mazmorra',          // Heroic
     6: 'Arena',
-    7: 'Banda 10-25',             // 10-25
-    8: 'Banda 10-25 Heroico'              // 10-25 Heroic
+    7: 'Banda 10-25',       // 10-25
+    8: 'Banda 10-25 Heroico'// 10-25 Heroic
 };
 
 var g_zone_territories = {
@@ -2406,67 +2368,158 @@ var g_world_object_types = {
     7: 'Cadaver de Jugador'
 };
 
-var g_condition_types = {
-     1: ['Looting',        'Si las condiciones se cumplen, este objeto puede ser arrojado por [npc=$1].'],                          // CND_SRC_CREATURE_LOOT_TEMPLATE
-     2: ['Disenchanting',  'Si las condiciones se cumplen, este objeto puede ser encontrado al momento de desencantar [item=$1].'], // CND_SRC_DISENCHANT_LOOT_TEMPLATE
-     3: ['Fishing',        'Si las condiciones se cumplen, pescando en [zone=$1] puede obtener el objeto'],                         // CND_SRC_FISHING_LOOT_TEMPLATE
-     4: ['Object Opening', 'Si las condiciones se cumplen, este objeto puede ser encontrado en [object=$1].'],                                // CND_SRC_GAMEOBJECT_LOOT_TEMPLATE
-     5: ['Item Opening',   'Si las condiciones se cumplen, este objeto puede ser encontrado en [item=$1].'],                                  // CND_SRC_ITEM_LOOT_TEMPLATE
-     6: ['Mail Attachm.',  'Si las condiciones se cumplen, este objeto puede adjuntado a este correo.'],                               // CND_SRC_MAIL_LOOT_TEMPLATE
-     7: ['Milling',        'Si las condiciones se cumplen, este objeto puede ser molido de [item=$1].'],                               // CND_SRC_MILLING_LOOT_TEMPLATE
-     8: ['Pickpocketing',  'Si las condiciones se cumplen, este objeto puede ser tomado de [npc=$1].'],                                // CND_SRC_PICKPOCKETING_LOOT_TEMPLATE
-     9: ['Prospecting',    'Si las condiciones se cumplen, este objeto puede ser prospectado de [item=$1].'],                           // CND_SRC_PROSPECTING_LOOT_TEMPLATE
-    10: ['Ref. Looting',   ''],                                                                                                 // CND_SRC_REFERENCE_LOOT_TEMPLATE
-    11: ['Skinning',       'Si las condiciones se cumplen, este objeto puede ser desollado por [npc=$1].'],                               // CND_SRC_SKINNING_LOOT_TEMPLATE
-    12: ['Crafting',       'Si las condiciones se cumplen, al lanzar [spell=$1] tambien puede crear este objeto.'],                         // CND_SRC_SPELL_LOOT_TEMPLATE
-    13: ['Auto Target',    'Solo los blancos que cumplan las condiciones, pueden ser afectados por el hechizo.'],                               // CND_SRC_SPELL_IMPLICIT_TARGET
-    14: ['Gossip',         'Muestra el texto relacionado del NPC [npc=$2], si las condiciones se cumplen.'],                         // CND_SRC_GOSSIP_MENU
-    15: ['Gossip Menu',    'Muestra el menú relacionado, si las condiciones se cumplen.'],                                      // CND_SRC_GOSSIP_MENU_OPTION
-    16: ['Vehicle',        'Esta criatura puede ser usada como vehículo, si las condiciones se cumplen.'],                               // CND_SRC_CREATURE_TEMPLATE_VEHICLE
-    17: ['Spell',          'Este hechizo solo puede ser lanzado, si las condiciones se cumplen.'],                                          // CND_SRC_SPELL
-    18: ['Spell Click',    'Si las condiciones se cumplen, [npc=$2] lanzará [spell=$1] si ha sido cliqueado.'],                              // CND_SRC_SPELL_CLICK_EVENT
-    19: ['Quest Accept',   'El Jugador puede aceptar esta misión, si las condiciones se cumplen.'],                                       // CND_SRC_QUEST_SHOW_MARK
-    20: ['Quest Sign',     'El [icon name=quest_startend]&nbsp;[/icon] será mostrado para esta misión, si las condiciones se cumplen.'], // CND_SRC_QUEST_ACCEPT
-    21: ['Vehicle Spell',  'Si las condiciones se cumplen, el vehículo [npc=$2] tendrá disponible [spell=$1].'],                            // CND_SRC_VEHICLE_SPELL
-    22: ['SmartAI',        'Si las condiciones se cumplen, la criatura con IA puede realizar acciones adicionales.'],                      // CND_SRC_SMART_EVENT
-    23: ['Vendor',         'Si las condiciones se cumplen, el vendedor tendrá este objeto disponible.'],                             // CND_SRC_NPC_VENDOR
-    24: ['Spell Proc',     'Si las condiciones se cumplen, el hechizó tendrá permiso a tener chance en uso.']                                          // CND_SRC_SPELL_PROC
+var g_instance_info = {
+    0: 'Data',
+    1: 'GUID',
+    2: 'Boss State',
+    3: 'Data64'
+};
+
+var g_unit_states = {
+     0: 'Died',
+     1: 'Melee attacking',
+     2: 'Charmed',
+     3: 'Stunned',
+     4: 'Roaming',
+     5: 'Chase',
+     6: 'Focusing',
+     7: 'Fleeing',
+     8: 'In flight',
+     9: 'Follow',
+    10: 'Root',
+    11: 'Confused',
+    12: 'Distracted',
+    13: 'Isolated',
+    14: 'Attack player',
+    15: 'Casting',
+    16: 'Possessed',
+    17: 'Charging',
+    18: 'Jumping',
+    19: 'Follow formation',
+    20: 'Move',
+    21: 'Rotating',
+    22: 'Evade',
+    23: 'Roaming move',
+    24: 'Confused move',
+    25: 'Fleeing move',
+    26: 'Chase move',
+    27: 'Follow move',
+    28: 'Ignore pathfinding',
+    29: 'Follow formation move'
+};
+
+var g_relation_types = {
+    0: 'is$N: not; itself',
+    1: 'is$N: not; in a group with $3',
+    2: 'is$N: not; in a raid or party with $3',
+    3: 'is$N: not; owned by $3',
+    4: 'is$N: not; a passenger of $3',
+    5: 'was$N: not; summoned by $3'
+};
+
+var g_stand_states = {
+    0: 'standing',
+    1: 'sitting',
+    2: 'sitting on a chair',
+    3: 'sleeping',
+    4: 'sitting on a low chair',
+    5: 'sitting on a medium chair',
+    6: 'sitting on a high chair',
+    7: 'dead',
+    8: 'kneeling',
+    9: 'submerged'
+};
+
+var g_quest_states = {
+    0: 'not yet seen',
+    1: 'completed',
+    3: 'taken',
+    5: 'failed',
+    6: 'been rewarded',
+};
+
+var g_condition_sources = {
+     0: [['player', null],       ''],
+     1: [['player', null],       'If the conditions are met, [item=$2] can be dropped by [npc=$1].'],                                 // 'Si las condiciones se cumplen, este objeto puede ser arrojado por [npc=$1].'
+     2: [['player', null],       'If the conditions are met, [item=$2] can be found when disenchanting [item=$1].'],                  // 'Si las condiciones se cumplen, este objeto puede ser encontrado al momento de desencantar [item=$1].'
+     3: [['player', null],       'If the conditions are met, fishing in [zone=$1] can yield [item=$2].'],                             // 'Si las condiciones se cumplen, pescando en [zone=$1] puede obtener el objeto'
+     4: [['player', null],       'If the conditions are met, [item=$2] can be found in [object=$1].'],                                // 'Si las condiciones se cumplen, este objeto puede ser encontrado en [object=$1].'
+     5: [['player', null],       'If the conditions are met, [item=$2] can be found in [item=$1].'],                                  // 'Si las condiciones se cumplen, este objeto puede ser encontrado en [item=$1].'
+     6: [['player', null],       'If the conditions are met, [item=$2] can be attached to the mail from [quest=$1].'],                // 'Si las condiciones se cumplen, este objeto puede adjuntado a este correo.'
+     7: [['player', null],       'If the conditions are met, [item=$2] can be milled from [item=$1].'],                               // 'Si las condiciones se cumplen, este objeto puede ser molido de [item=$1].'
+     8: [['player', null],       'If the conditions are met, [item=$2] can be picked from [npc=$1].'],                                // 'Si las condiciones se cumplen, este objeto puede ser tomado de [npc=$1].'
+     9: [['player', null],       'If the conditions are met, [item=$2] can be prospected from [item=$1].'],                           // 'Si las condiciones se cumplen, este objeto puede ser prospectado de [item=$1].'
+    10: [['player', null],       'If the conditions are met, [item=$2] will be referenced in template #$1.'],
+    11: [['player', null],       'If the conditions are met, [item=$2] can be gathered from [npc=$1].'],                              // 'Si las condiciones se cumplen, este objeto puede ser desollado por [npc=$1].'
+    12: [['player', null],       'If the conditions are met, casting [spell=$1] may also create [item=$2].'],                         // 'Si las condiciones se cumplen, al lanzar [spell=$1] tambien puede crear este objeto.'
+    13: [['target', 'caster'],   'Only a $T%:spell%; matching the conditions can be affected by [spell=$2].'],                        // 'Solo los blancos que cumplan las condiciones, pueden ser afectados por el hechizo.'
+    14: [['player', 'entity'],   'Display Gossip text #$2 from menu #$1, if the conditions on the $T%:%; are met.'],                  // 'Muestra el texto relacionado del NPC [npc=$2], si las condiciones se cumplen.'
+    15: [['player', 'entity'],   'Display Gossip option #$2 from menu #$1, if the conditions on the $T%:%; are met.'],                // 'Muestra el menú relacionado, si las condiciones se cumplen.'
+    16: [['player', 'creature'], '[npc=$2] can be used as a vehicle, if $Tthe %s:its; conditions are met.'],                          // 'Esta criatura puede ser usada como vehículo, si las condiciones se cumplen.'
+    17: [['caster', 'target'],   '[spell=$2] can only be cast, if the $Tspell%s:%s; conditions are met.'],                            // 'Este hechizo solo puede ser lanzado, si las condiciones se cumplen.'
+    18: [['player', 'creature'], 'If the $T%s:%s; conditions are met, [npc=$1] casts [spell=$2] if clicked on.'],                     // 'Si las condiciones se cumplen, [npc=$2] lanzará [spell=$1] si ha sido cliqueado.'
+    19: [['player', null],       'The Player can accept [quest=$2], if the condition is met.'],                                       // 'El Jugador puede aceptar esta misión, si las condiciones se cumplen.'
+    20: [['player', null],       'A [icon name=quest_startend]&nbsp;[/icon] will be shown for [quest=$2], if the condition is met.'], // 'El [icon name=quest_startend]&nbsp;[/icon] será mostrado para esta misión, si las condiciones se cumplen.'
+    21: [['player', 'creature'], 'If the $T%s:%s; conditions are met, vehicle [npc=$1] has [spell=$2] available.'],                   // 'Si las condiciones se cumplen, el vehículo [npc=$2] tendrá disponible [spell=$1].'
+    22: [['invoker', 'entity'],  'If the conditions for the $T%:%; are met, the AI may perform additional actions.'],                 // 'Si las condiciones se cumplen, la criatura con IA puede realizar acciones adicionales.'
+    23: [['player', 'creature'], 'If the conditions for the $T%:%; are met, [npc=$1] will have [item=$2] for sale.'],                 // 'Si las condiciones se cumplen, el vendedor tendrá este objeto disponible.'
+    24: [['caster', 'target'],   'If the conditions for the $Tspell%:%; are met, the [spell=$2] is allowed to proc.'],                // 'Si las condiciones se cumplen, el hechizó tendrá permiso a tener chance en uso.'
+    30: [['player', null],       'If the conditions are met, [url=?areatrigger=$2]Areatrigger #$2[/url] is allowed to trigger.']
 };
 
 var g_conditions = {
-     1: 'El Jugador $tiene:no tiene; un aura de $1',
-     2: 'El Jugador $posee: no posee; $1',
-     3: 'El Jugador $tiene:no tiene ; $1 equipado',
-     4: 'El Jugador es$: no; en $1',                       // also used by 22, 23
-     5: 'El/Los Jugador/es que tienen $1 es$: no; $2',
-     6: 'El Jugador es$: no; $1',
-     7: 'El Jugador $sabe: no sabe; $1',
-     8: 'El Jugador tiene$: no; finalizado $1',
-     9: 'El Jugador tiene$: no; aceptado $1',
-    10: 'El Jugador es$: no; $1',
-    11: 'WorldState #$1 es$: no; $2',
-    12: '$1 debe$: no; estar activo',
-    13: 'La instancia $debe:no debe; en cierto estado', // nyi
-    14: 'El Jugador tiene $nunca:; ha interactuado con $1',
-    15: 'El Jugador es$: no; un $1',                        // also used by 16
-    17: 'El Jugador tiene$: no; alcanzado $1',
-    18: 'El Jugador tiene$: no; obtenido $1',
-    20: 'El/Los genero/s del/los Jugador/es es$: no; [span class=icon-$2]$1[/span]',
-    21: 'El objetivo $tiene:no tiene; un cierto estado',   // nyi
-    24: '',                                                 // not used
-    25: 'El Jugador $sabe: no sabe; $1',
-    26: 'La criatura es$: no; en fase $1',
-    27: 'El/Los nivel/es del/los objetivo/s es/son$: no; $2 $1',
-    28: 'El Jugador tiene$: no; completado $1',
-    29: 'El Jugador esta$: no; entre $2yardas de $1',           // also used by 30
-    31: 'El/los objetivo/s del lanzador esta$: no; $1',                   // also used by 32
-    33: 'El Jugador $tiene:no tiene; cierta relación con el objetivo',  // nyi
-    34: 'El objetivo $tiene:no tiene; cierta reacción al Jugador',  // nyi
-    35: 'El objetivo esta$: no; $2 $1yarda cerca',
-    36: 'El objetivo esta$: no; vivo',
-    37: 'La salud del objetivo/s esta$: no; $2 $1',
-    38: 'La salud del objetivo/s esta$: no; $2 $1%'
+     0: 'Always $Ntrue:false;',
+     1: 'The target $Nhas:does not have; an aura of [spell=$1]',                            // 'El Jugador $tiene:no tiene; un aura de $1'
+     2: 'The Player $Nhas:does not have; $2 [item=$1] in their inventory$C$3 or bank:;',    // 'El Jugador $posee: no posee; $1',
+     3: 'The Player $Nhas:does not have; [item=$1] equipped',                               // 'El Jugador $tiene:no tiene ; $1 equipado',
+     4: 'The Player is$N: not; in [zone=$1]',                                               // 'El Jugador es$: no; en $1',
+     5: 'The Player\'s standing with [faction=$1] is$N: not; $2',                           // 'El/Los Jugador/es que tienen $1 es$: no; $2',
+     6: 'The Player is$N: not; a member of the $1',                                         // 'El Jugador es$: no; $1',
+     7: 'The Player is$N: not; proficient in [skill=$1]$C$2 (min. $2):;',                   // 'El Jugador $sabe: no sabe; $1',
+     8: 'The Player was$N: not; rewarded [quest=$1]',                                       // 'El Jugador tiene$: no; finalizado $1',
+     9: 'The Player has$N: not; accepted [quest=$1]',                                       // 'El Jugador tiene$: no; aceptado $1',
+    10: 'The Player is$N: not; $1',                                                         // 'El Jugador es$: no; $1',
+    11: 'WorldState #$1 is$N: not; $2',                                                     // 'WorldState #$1 es$: no; $2',
+    12: '[event=$1] must$N: not; be active',                                                // '$1 debe$: no; estar activo',
+    13: 'The instance\'s $3 at index #$1 is$N: not; equal to "$2"',                         // 'La instancia $debe:no debe; en cierto estado', // nyi
+    14: 'The Player has $Nnever:; interacted with [quest=$1]',                              // 'El Jugador tiene $nunca:; ha interactuado con $1',
+    15: 'The Player is$N: not; a $1',                                                       // 'El Jugador es$: no; un $1',
+    16: 'The Player is$N: not; a $1',
+    17: 'The Player has$N: not; achieved [achievement=$1]',                                 // 'El Jugador tiene$: no; alcanzado $1',
+    18: 'The Player has$N: not; obtained [title=$1]',                                       // 'El Jugador tiene$: no; obtenido $1',
+    19: 'The entity\'s SpawnMask is$N: not; equal to "$1"',
+    20: 'The Player\'s gender is$N: not; $1',                                               // 'El/Los genero/s del/los Jugador/es es$: no; [span class=icon-$2]$1[/span]',
+    21: 'The unit\'s state is$N: not; $1',                                                  // 'El objetivo $tiene:no tiene; un cierto estado',
+    22: 'The target is$N: not; in $1',
+    23: 'The target is$N: not; in [zone=$1]',
+    24: 'The creature is$N: not; a $1',
+    25: 'The Player $Nknows: does not know; [spell=$1]',                                    // 'El Jugador $sabe: no sabe; $1',
+    26: 'The entity is$N: not; in phase $1',                                                // 'La criatura es$: no; en fase $1',
+    27: 'The target\'s level is$N: not; $2 $1',                                             // 'El/Los nivel/es del/los objetivo/s es/son$: no; $2 $1',
+    28: 'The Player has$N: not; completed [quest=$1]',                                      // 'El Jugador tiene$: no; completado $1',
+    29: 'The target is$N: not; within $2yd of $C$3deceased:alive; [npc=$1]',                // 'El Jugador esta$: no; entre $2yardas de $1',
+    30: 'The target is$N: not; within $2yd of [object=$1]',
+    31: 'The entity is$N: not; $C$2: a; $1$C$3 (GUID $3):;',                                // 'El/los objetivo/s del lanzador esta$: no; $1',
+    32: 'The entity is$N: not; a $1',
+    33: '$1 $2',                                                                            // 'El Jugador $tiene:no tiene; cierta relación con el objetivo',
+    34: 'The unit is$N: not; $2 to $1',                                                     // 'El objetivo $tiene:no tiene; cierta reacción al Jugador',
+    35: 'The distance between unit and $1 is$N: not; $3 $2yd',                              // 'El objetivo esta$: no; $2 $1yarda cerca',
+    36: 'The unit is$N: not; alive',                                                        // 'El objetivo esta$: no; vivo',
+    37: 'The unit\'s health is$N: not; $2 $1 points',                                       // 'La salud del objetivo/s esta$: no; $2 $1',
+    38: 'The unit\'s health is$N: not; $2 $1%',                                             // 'La salud del objetivo/s esta$: no; $2 $1%'
+    39: '[achievement=$1] $Nwas:is yet to be; achieved on this realm',
+    40: 'The unit is$N: not; swimming',
+    42: 'The creature is$N: not; $1',
+    43: 'The Player has$N: not yet; done [quest=$1] for the day',
+    44: 'The unit is$N: not; charmed',
+    45: 'The Player $Nhas:doesn\'t have; an active $C$1hunter:summoned; pet',
+    46: 'The Player is$N: not; riding a taxi',
+    47: 'The Player has$N: not; $2 [quest=$1]',
+    48: 'The Player has$N: not; collected $3 towards objective #$2 of [quest=$1]',
+    49: 'The current map difficulty is #$1',
+    50: 'The Player $C$1$Ncan:can\'t; be:is$N: not;; a Gamemaster'
 };
+
 /* end aowow custom */
 
 var LANG = {
@@ -3177,6 +3230,7 @@ var LANG = {
     tab_weaponskills:        "Habilidades con armas",
     tab_world:               "Mundo",
     tab_zones:               "Zonas",
+    tab_bonusloot:           "Bonus de botín",              // aowow - custom from BONUS_LOOT_LABEL
 
     numberofupvotesreceived_tip: "Número de valoraciones positivas recibidas ",
     deletethisreply_stc:         "Borrar esta respuesta",
@@ -3645,7 +3699,7 @@ var LANG = {
                             [4603, "La Cámara de Archavon"],        [3456, "Naxxramas"],                    [4722, "Prueba del Cruzado"],           [4273, "Ulduar"]
                         ],
         event:          [
-                            [335, "Amor en el aire"],               [424, "Competición de pesca Kalu'ak"],  [398, "Día de los Piratas"],            [141, "El festín del Festival de Invierno"],
+                            [423, "Amor en el aire"],               [424, "Competición de pesca Kalu'ak"],  [398, "Día de los Piratas"],            [141, "El festín del Festival de Invierno"],
                             [374, "Feria de la Luna Negra"],        [327, "Festival Lunar"],                [341, "Festival de Fuego del Solsticio de Verano"],                             [321, "Festival de la Cosecha"],
                             [409, "Festividad de los Muertos"],     [372, "Fiesta de la cerveza"],          [404, "Generosidad del Peregrino"],     [301, "Gran espectáculo de pesca de Tuercespina"],
                             [324, "Halloween"],                     [181, "Jardín Noble"],                  [285, "Llamamiento a las armas: Cuenca de Arathi"],                             [284, "Llamamiento a las armas: Garganta Grito de Guerra"],
@@ -3724,7 +3778,8 @@ var LANG = {
                         ],
         itemsource:     [
                             [1, "Cualquiera"],                      [11, "Logro"],                          [3, "Creado"],                          [4, "Encontrado"],                      [10, "Evento"],
-                            [5, "JcJ"],                             [6, "Misión"],                          [9, "Habilidad Inicial"],               [7, "Vendedor"],                        [2, "Ninguno"]
+                            [5, "JcJ"],                             [6, "Misión"],                          [9, "Habilidad Inicial"],               [7, "Vendedor"],                        [12, "Pescado"],
+                            [2, "Ninguno"]
                         ],
         glyphtype:      [   [1, "Sublime"],                         [2, "Menor"]                            ],
         classs:         [
@@ -4841,6 +4896,11 @@ var LANG = {
     },
 
     /* AoWoW: start custom */
+
+    tab_conditions:    '[Conditions]',
+    tab_condition_for: '[Condition for]',
+    cnd_either:        '[Either]',
+    cnd_or:            '[Or]',
 
     // Guide
     myguides:          'Mis Guías',

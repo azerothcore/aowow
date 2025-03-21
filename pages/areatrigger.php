@@ -20,8 +20,6 @@ class AreaTriggerPage extends GenericPage
 
     public function __construct($pageCall, $id)
     {
-        $this->contribute    = CONTRIBUTE_NONE;
-
         parent::__construct($pageCall, $id);
 
         $this->typeId = intVal($id);
@@ -45,7 +43,7 @@ class AreaTriggerPage extends GenericPage
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=zones']);
 
         $_type = $this->subject->getField('type');
 
@@ -58,36 +56,7 @@ class AreaTriggerPage extends GenericPage
         $map = null;
         if ($spawns = $this->subject->getSpawns(SPAWNINFO_FULL))
         {
-            $ta = $this->subject->getField('teleportA');
-            $tf = $this->subject->getField('teleportF');
-            $tx = $this->subject->getField('teleportX');
-            $ty = $this->subject->getField('teleportY');
-            $to = $this->subject->getField('teleportO');
-
-            // add teleport target
-            if ($ta && $tx && $ty)
-            {
-                $o = Util::O2Deg($to);
-                $endPoint = array($tx, $ty, array(
-                    'type' => 4,
-                    'tooltip' => array(
-                        'Teleport Destination' => array(
-                            'info' => ['Orientation'.Lang::main('colon').$o[0].'° ('.$o[1].')']
-                        )
-                    )
-                ));
-
-                if (isset($spawns[$ta][$tf]))
-                    $spawns[$ta][$tf]['coords'][] = $endPoint;
-                else
-                    $spawns[$ta][$tf]['coords'] = [$endPoint];
-            }
-
-            $map = array(
-                'data'       => ['parent' => 'mapper-generic'],
-                'mapperData' => &$spawns
-            );
-
+            $map = ['data' => ['parent' => 'mapper-generic'], 'mapperData' => &$spawns];
             foreach ($spawns as $areaId => &$areaData)
                 $map['extra'][$areaId] = ZoneList::getName($areaId);
         }
@@ -96,15 +65,14 @@ class AreaTriggerPage extends GenericPage
         $sai = null;
         if ($_type == AT_TYPE_SMART)
         {
-            $sai = new SmartAI(SAI_SRC_TYPE_AREATRIGGER, $this->typeId, ['name' => $this->name, 'teleportA' => $this->subject->getField('teleportA')]);
+            $sai = new SmartAI(SmartAI::SRC_TYPE_AREATRIGGER, $this->typeId, ['teleportTargetArea' => $this->subject->getField('areaId')]);
             if ($sai->prepare())
                 $this->extendGlobalData($sai->getJSGlobals());
         }
 
-
         $this->map        = $map;
         $this->infobox    = false;
-        $this->smartAI    = $sai ? $sai->getMarkdown() : null;
+        $this->smartAI    = $sai?->getMarkdown();
         $this->redButtons = array(
             BUTTON_LINKS   => false,
             BUTTON_WOWHEAD => false
@@ -115,21 +83,30 @@ class AreaTriggerPage extends GenericPage
         /* Extra Tabs */
         /**************/
 
+        // tab: conditions
+        $cnd = new Conditions();
+        $cnd->getBySourceEntry($this->typeId, Conditions::SRC_AREATRIGGER_CLIENT)->prepare();
+        if ($tab = $cnd->toListviewTab())
+        {
+            $this->extendGlobalData($cnd->getJsGlobals());
+            $this->lvTabs[] = $tab;
+        }
+
         if ($_type == AT_TYPE_OBJECTIVE)
         {
             $relQuest = new QuestList(array(['id', $this->subject->getField('quest')]));
             if (!$relQuest->error)
             {
                 $this->extendGlobalData($relQuest->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_REWARDS));
-                $this->lvTabs[] = ['quest', ['data' => array_values($relQuest->getListviewData())]];
+                $this->lvTabs[] = [QuestList::$brickFile, ['data' => array_values($relQuest->getListviewData())]];
             }
         }
         else if ($_type == AT_TYPE_TELEPORT)
         {
-            $relZone = new ZoneList(array(['id', $this->subject->getField('teleportA')]));
+            $relZone = new ZoneList(array(['id', $this->subject->getField('areaId')]));
             if (!$relZone->error)
             {
-                $this->lvTabs[] = ['zone', ['data' => array_values($relZone->getListviewData())]];
+                $this->lvTabs[] = [ZoneList::$brickFile, ['data' => array_values($relZone->getListviewData())]];
             }
         }
         else if ($_type == AT_TYPE_SCRIPT)
@@ -137,7 +114,7 @@ class AreaTriggerPage extends GenericPage
             $relTrigger = new AreaTriggerList(array(['id', $this->typeId, '!'], ['name', $this->subject->getField('name')]));
             if (!$relTrigger->error)
             {
-                $this->lvTabs[] = ['areatrigger', ['data' => array_values($relTrigger->getListviewData()), 'name' => Util::ucFirst(Lang::game('areatrigger'))], 'areatrigger'];
+                $this->lvTabs[] = [AreaTriggerList::$brickFile, ['data' => array_values($relTrigger->getListviewData()), 'name' => Util::ucFirst(Lang::game('areatrigger'))], 'areatrigger'];
             }
         }
     }

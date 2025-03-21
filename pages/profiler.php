@@ -10,20 +10,23 @@ class ProfilerPage extends GenericPage
     protected $tabId    = 1;
     protected $tpl      = 'profiler';
     protected $gDataKey = true;
-    protected $js       = [[JS_FILE, 'profile_all.js'], [JS_FILE, 'profile.js']];
-    protected $css      = [[CSS_FILE, 'Profiler.css']];
+    protected $scripts  = array(
+        [SC_JS_FILE,  'js/profile_all.js'],
+        [SC_JS_FILE,  'js/profile.js'],
+        [SC_CSS_FILE, 'css/Profiler.css']
+    );
 
     public function __construct($pageCall, $pageParam)
     {
-        if (!CFG_PROFILER_ENABLE)
-            $this->error();
-
         parent::__construct($pageCall, $pageParam);
+
+        if (!Cfg::get('PROFILER_ENABLE'))
+            $this->error();
     }
 
     protected function generateContent()
     {
-        $this->addScript([JS_FILE, '?data=realms&locale='.User::$localeId.'&t='.$_SESSION['dataKey']]);
+        $this->addScript([SC_JS_FILE, '?data=realms']);
     }
 
     protected function generatePath() { }

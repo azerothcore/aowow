@@ -8,15 +8,10 @@
 // echo "index.php is being executed.<br>";
 // debugging END
 
-require 'includes/shared.php';
+require 'includes/kernel.php';
 
 if (CLI)
     die("this script must not be run from CLI.\nto setup aowow use 'php aowow'\n");
-
-
-// maybe add additional setup checks?
-if (!DB::isConnectable(DB_AOWOW) || !DB::isConnectable(DB_WORLD))
-    (new GenericPage($pageCall))->maintenance();
 
 
 $altClass = '';
@@ -134,7 +129,7 @@ switch ($pageCall)
             if (is_callable([$classInstance, 'display']))
                 $classInstance->display();
             else if (isset($_GET['power']))
-                die('$WowheadPower.register(0, '.User::$localeId.', {})');
+                die('$WowheadPower.register(0, '.Lang::getLocale()->value.', {})');
             else                                            // in conjunction with a proper rewriteRule in .htaccess...
                 (new GenericPage($pageCall))->error();
         }
@@ -166,7 +161,7 @@ switch ($pageCall)
         break;
     default:                                                // unk parameter given -> ErrorPage
         if (isset($_GET['power']))
-            die('$WowheadPower.register(0, '.User::$localeId.', {})');
+            die('$WowheadPower.register(0, '.Lang::getLocale()->value.', {})');
         else                                                // in conjunction with a proper rewriteRule in .htaccess...
             (new GenericPage($pageCall))->error();
         break;

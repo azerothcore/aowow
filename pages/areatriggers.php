@@ -16,14 +16,14 @@ class AreaTriggersPage extends GenericPage
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
     protected $validCats     = [0, 1, 2, 3, 4, 5];
-    protected $js            = [[JS_FILE, 'filters.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/filters.js']];
     protected $reqUGroup     = U_GROUP_STAFF;
 
     protected $_get          = ['filter' => ['filter' => FILTER_UNSAFE_RAW]];
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
         if (isset($this->category[0]))
             header('Location: ?areatriggers&filter=ty='.$this->category[0], true, 302);
 
@@ -49,15 +49,15 @@ class AreaTriggersPage extends GenericPage
             $conditions[] = $_;
 
         $tabData = [];
-        $trigger = new AreaTriggerList($conditions);
+        $trigger = new AreaTriggerList($conditions, ['calcTotal' => true]);
         if (!$trigger->error)
         {
             $tabData['data'] = array_values($trigger->getListviewData());
 
             // create note if search limit was exceeded; overwriting 'note' is intentional
-            if ($trigger->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+            if ($trigger->getMatches() > Cfg::get('SQL_LIMIT_DEFAULT'))
             {
-                $tabData['note'] = sprintf(Util::$tryFilteringEntityString, $trigger->getMatches(), '"'.Lang::game('areatriggers').'"', CFG_SQL_LIMIT_DEFAULT);
+                $tabData['note'] = sprintf(Util::$tryFilteringEntityString, $trigger->getMatches(), '"'.Lang::game('areatriggers').'"', Cfg::get('SQL_LIMIT_DEFAULT'));
                 $tabData['_truncated'] = 1;
             }
 
@@ -66,7 +66,7 @@ class AreaTriggersPage extends GenericPage
 
         }
 
-        $this->lvTabs[] = ['areatrigger', $tabData, 'areatrigger'];
+        $this->lvTabs[] = [AreaTriggerList::$brickFile, $tabData, 'areatrigger'];
     }
 
     protected function generateTitle()

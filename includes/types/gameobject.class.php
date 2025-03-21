@@ -21,7 +21,7 @@ class GameObjectList extends BaseType
                         's'   => ['j' => '?_spawns s ON s.type = 2 AND s.typeId = o.id']
                     );
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -73,7 +73,7 @@ class GameObjectList extends BaseType
         {
             $data[$this->id] = array(
                 'id'       => $this->id,
-                'name'     => $this->getField('name', true),
+                'name'     => Lang::unescapeUISequences($this->getField('name', true), Lang::FMT_RAW),
                 'type'     => $this->curTpl['typeCat'],
                 'location' => $this->getSpawns(SPAWNINFO_ZONES)
             );
@@ -95,7 +95,7 @@ class GameObjectList extends BaseType
             return array();
 
         $x  = '<table>';
-        $x .= '<tr><td><b class="q">'.$this->getField('name', true).'</b></td></tr>';
+        $x .= '<tr><td><b class="q">'.Lang::unescapeUISequences($this->getField('name', true), Lang::FMT_HTML).'</b></td></tr>';
         if ($this->curTpl['typeCat'])
             if ($_ = Lang::gameObject('type', $this->curTpl['typeCat']))
                 $x .= '<tr><td>'.$_.'</td></tr>';
@@ -115,23 +115,24 @@ class GameObjectList extends BaseType
         $data = [];
 
         foreach ($this->iterate() as $__)
-            $data[Type::OBJECT][$this->id] = ['name' => $this->getField('name', true)];
+            $data[Type::OBJECT][$this->id] = ['name' => Lang::unescapeUISequences($this->getField('name', true), Lang::FMT_RAW)];
 
         return $data;
     }
 
-    public function getSourceData()
+    public function getSourceData(int $id = 0) : array
     {
         $data = [];
 
         foreach ($this->iterate() as $__)
         {
+            if ($id && $id != $this->id)
+                continue;
+
             $data[$this->id] = array(
                 'n'  => $this->getField('name', true),
                 't'  => Type::OBJECT,
                 'ti' => $this->id
-             // 'bd' => bossdrop
-             // 'dd' => dungeondifficulty
             );
         }
 
@@ -144,49 +145,33 @@ class GameObjectListFilter extends Filter
 {
     public    $extraOpts     = [];
     protected $enums         = array(
-        50 => array(
-            null, 1, 2, 3, 4,
-            663 => 663,
-            883 => 883,
-            FILTER_ENUM_ANY => true,
-            FILTER_ENUM_NONE => false
-        )
+         1 => parent::ENUM_ZONE,
+        16 => parent::ENUM_EVENT,
+        50 => [1, 2, 3, 4, 663, 883]
     );
 
     protected $genericFilter = array(
-         1 => [FILTER_CR_ENUM,     's.areaId',        null                      ], // foundin
-         2 => [FILTER_CR_CALLBACK, 'cbQuestRelation', 'startsQuests',       0x1 ], // startsquest [side]
-         3 => [FILTER_CR_CALLBACK, 'cbQuestRelation', 'endsQuests',         0x2 ], // endsquest [side]
-         4 => [FILTER_CR_CALLBACK, 'cbOpenable',      null,                 null], // openable [yn]
-         5 => [FILTER_CR_NYI_PH,   null,              null                      ], // averagemoneycontained [op] [int] - GOs don't contain money, match against 0
-         7 => [FILTER_CR_NUMERIC,  'reqSkill',        NUM_CAST_INT              ], // requiredskilllevel
-        11 => [FILTER_CR_FLAG,     'cuFlags',         CUSTOM_HAS_SCREENSHOT     ], // hasscreenshots
-        13 => [FILTER_CR_FLAG,     'cuFlags',         CUSTOM_HAS_COMMENT        ], // hascomments
-        15 => [FILTER_CR_NUMERIC,  'id',              NUM_CAST_INT              ], // id
-        16 => [FILTER_CR_CALLBACK, 'cbRelEvent',      null,                 null], // relatedevent (ignore removed by event)
-        18 => [FILTER_CR_FLAG,     'cuFlags',         CUSTOM_HAS_VIDEO          ], // hasvideos
-        50 => [FILTER_CR_ENUM,     'spellFocusId',    null,                     ], // SpellFocus
+         1 => [parent::CR_ENUM,     's.areaId',        false,                true], // foundin
+         2 => [parent::CR_CALLBACK, 'cbQuestRelation', 'startsQuests',       0x1 ], // startsquest [side]
+         3 => [parent::CR_CALLBACK, 'cbQuestRelation', 'endsQuests',         0x2 ], // endsquest [side]
+         4 => [parent::CR_CALLBACK, 'cbOpenable',      null,                 null], // openable [yn]
+         5 => [parent::CR_NYI_PH,   null,              0                         ], // averagemoneycontained [op] [int] - GOs don't contain money, match against 0
+         7 => [parent::CR_NUMERIC,  'reqSkill',        NUM_CAST_INT              ], // requiredskilllevel
+        11 => [parent::CR_FLAG,     'cuFlags',         CUSTOM_HAS_SCREENSHOT     ], // hasscreenshots
+        13 => [parent::CR_FLAG,     'cuFlags',         CUSTOM_HAS_COMMENT        ], // hascomments
+        15 => [parent::CR_NUMERIC,  'id',              NUM_CAST_INT              ], // id
+        16 => [parent::CR_CALLBACK, 'cbRelEvent',      null,                 null], // relatedevent (ignore removed by event)
+        18 => [parent::CR_FLAG,     'cuFlags',         CUSTOM_HAS_VIDEO          ], // hasvideos
+        50 => [parent::CR_ENUM,     'spellFocusId',    true,                 true], // spellfocus
     );
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'  => [FILTER_V_LIST,  [[1, 5], 7, 11, 13, 15, 16, 18, 50],            true ], // criteria ids
-        'crs' => [FILTER_V_LIST,  [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 5000]], true ], // criteria operators
-        'crv' => [FILTER_V_RANGE, [0, 99999],                                     true ], // criteria values - only numeric input values expected
-        'na'  => [FILTER_V_REGEX, '/[\p{C};%\\\\]/ui',                            false], // name - only printable chars, no delimiter
-        'ma'  => [FILTER_V_EQUAL, 1,                                              false]  // match any / all filter
+        'cr'  => [parent::V_LIST,  [[1, 5], 7, 11, 13, 15, 16, 18, 50],              true ], // criteria ids
+        'crs' => [parent::V_LIST,  [parent::ENUM_NONE, parent::ENUM_ANY, [0, 5000]], true ], // criteria operators
+        'crv' => [parent::V_REGEX, parent::PATTERN_INT,                              true ], // criteria values - only numeric input values expected
+        'na'  => [parent::V_REGEX, parent::PATTERN_NAME,                             false], // name - only printable chars, no delimiter
+        'ma'  => [parent::V_EQUAL, 1,                                                false]  // match any / all filter
     );
-
-    protected function createSQLForCriterium(&$cr)
-    {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCR = $this->genericCriterion($cr))
-                return $genCR;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
-    }
 
     protected function createSQLForValues()
     {
@@ -195,65 +180,68 @@ class GameObjectListFilter extends Filter
 
         // name
         if (isset($_v['na']))
-            if ($_ = $this->modularizeString(['name_loc'.User::$localeId]))
+            if ($_ = $this->modularizeString(['name_loc'.Lang::getLocale()->value]))
                 $parts[] = $_;
 
         return $parts;
     }
 
-    protected function cbOpenable($cr)
+    protected function cbOpenable(int $cr, int $crs, string $crv) : ?array
     {
-        if ($this->int2Bool($cr[1]))
-            return $cr[1] ? ['OR', ['flags', 0x2, '&'], ['type', 3]] : ['AND', [['flags', 0x2, '&'], 0], ['type', 3, '!']];
+        if ($this->int2Bool($crs))
+            return $crs ? ['OR', ['flags', 0x2, '&'], ['type', 3]] : ['AND', [['flags', 0x2, '&'], 0], ['type', 3, '!']];
 
-        return false;
+        return null;
     }
 
-    protected function cbQuestRelation($cr, $field, $value)
+    protected function cbQuestRelation(int $cr, int $crs, string $crv, $field, $value) : ?array
     {
-        switch ($cr[1])
+        switch ($crs)
         {
             case 1:                                 // any
                 return ['AND', ['qse.method', $value, '&'], ['qse.questId', null, '!']];
             case 2:                                 // alliance only
-                return ['AND', ['qse.method', $value, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', RACE_MASK_HORDE, '&'], 0], ['qt.reqRaceMask', RACE_MASK_ALLIANCE, '&']];
+                return ['AND', ['qse.method', $value, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', ChrRace::MASK_HORDE, '&'], 0], ['qt.reqRaceMask', ChrRace::MASK_ALLIANCE, '&']];
             case 3:                                 // horde only
-                return ['AND', ['qse.method', $value, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', RACE_MASK_ALLIANCE, '&'], 0], ['qt.reqRaceMask', RACE_MASK_HORDE, '&']];
+                return ['AND', ['qse.method', $value, '&'], ['qse.questId', null, '!'], [['qt.reqRaceMask', ChrRace::MASK_ALLIANCE, '&'], 0], ['qt.reqRaceMask', ChrRace::MASK_HORDE, '&']];
             case 4:                                 // both
-                return ['AND', ['qse.method', $value, '&'], ['qse.questId', null, '!'], ['OR', ['AND', ['qt.reqRaceMask', RACE_MASK_ALLIANCE, '&'], ['qt.reqRaceMask', RACE_MASK_HORDE, '&']], ['qt.reqRaceMask', 0]]];
+                return ['AND', ['qse.method', $value, '&'], ['qse.questId', null, '!'], ['OR', ['AND', ['qt.reqRaceMask', ChrRace::MASK_ALLIANCE, '&'], ['qt.reqRaceMask', ChrRace::MASK_HORDE, '&']], ['qt.reqRaceMask', 0]]];
             case 5:                                 // none         todo (low): broken, if entry starts and ends quests...
                 $this->extraOpts['o']['h'][] = $field.' = 0';
                 return [1];
         }
 
-        return false;
+        return null;
     }
 
-    protected function cbRelEvent($cr)
+    protected function cbRelEvent(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[1], NUM_REQ_INT))
-            return false;;
+        if ($crs == parent::ENUM_ANY)
+        {
+            if ($eventIds = DB::Aowow()->selectCol('SELECT `id` FROM ?_events WHERE `holidayId` <> 0'))
+                if ($goGuids  = DB::World()->selectCol('SELECT DISTINCT `guid` FROM game_event_gameobject WHERE `eventEntry` IN (?a)', $eventIds))
+                    return ['s.guid', $goGuids];
 
-        if ($cr[1] == FILTER_ENUM_ANY)
-        {
-            $eventIds = DB::Aowow()->selectCol('SELECT id FROM ?_events WHERE holidayId <> 0');
-            $goGuids  = DB::World()->selectCol('SELECT DISTINCT guid FROM game_event_gameobject WHERE eventEntry IN (?a)', $eventIds);
-            return ['s.guid', $goGuids];
+            return [0];
         }
-        else if ($cr[1] == FILTER_ENUM_NONE)
+        else if ($crs == parent::ENUM_NONE)
         {
-            $eventIds = DB::Aowow()->selectCol('SELECT id FROM ?_events WHERE holidayId <> 0');
-            $goGuids  = DB::World()->selectCol('SELECT DISTINCT guid FROM game_event_gameobject WHERE eventEntry IN (?a)', $eventIds);
-            return ['s.guid', $goGuids, '!'];
+            if ($eventIds = DB::Aowow()->selectCol('SELECT `id` FROM ?_events WHERE `holidayId` <> 0'))
+                if ($goGuids  = DB::World()->selectCol('SELECT DISTINCT `guid` FROM game_event_gameobject WHERE `eventEntry` IN (?a)', $eventIds))
+                    return ['s.guid', $goGuids, '!'];
+
+            return [0];
         }
-        else if ($cr[1])
+        else if (in_array($crs, $this->enums[$cr]))
         {
-            $eventIds = DB::Aowow()->selectCol('SELECT id FROM ?_events WHERE holidayId = ?d', $cr[1]);
-            $goGuids  = DB::World()->selectCol('SELECT DISTINCT guid FROM game_event_gameobject WHERE eventEntry IN (?a)', $eventIds);
-            return ['s.guid', $goGuids];
+            if ($eventIds = DB::Aowow()->selectCol('SELECT `id` FROM ?_events WHERE `holidayId` = ?d', $crs))
+                if ($goGuids  = DB::World()->selectCol('SELECT DISTINCT `guid` FROM game_event_gameobject WHERE `eventEntry` IN (?a)', $eventIds))
+                    return ['s.guid', $goGuids];
+
+            return [0];
         }
 
-        return false;
+        return null;
     }
 }
 

@@ -8,6 +8,8 @@ class ProfileList extends BaseType
 {
     use profilerHelper, listviewHelper;
 
+    public static $contribute = CONTRIBUTE_NONE;
+
     public function getListviewData($addInfo = 0, array $reqCols = [])
     {
         $data = [];
@@ -29,13 +31,13 @@ class ProfileList extends BaseType
                 'classs'            => $this->getField('class'),
                 'gender'            => $this->getField('gender'),
                 'level'             => $this->getField('level'),
-                'faction'           => (1 << ($this->getField('race') - 1)) & RACE_MASK_ALLIANCE ? 0 : 1,
+                'faction'           => ChrRace::tryFrom($this->getField('race'))?->isAlliance() ? 0 : 1,
                 'talenttree1'       => $this->getField('talenttree1'),
                 'talenttree2'       => $this->getField('talenttree2'),
                 'talenttree3'       => $this->getField('talenttree3'),
                 'talentspec'        => $this->getField('activespec') + 1,                       // 0 => 1; 1 => 2
                 'achievementpoints' => $this->getField('achievementpoints'),
-                'guild'             => '$"'.str_replace ('"', '', $this->curTpl['guildname']).'"',// force this to be a string
+                'guild'             => $this->curTpl['guildname'] ? '$"'.str_replace ('"', '', $this->curTpl['guildname']).'"' : '', // force this to be a string
                 'guildrank'         => $this->getField('guildrank'),
                 'realm'             => Profiler::urlize($this->getField('realmName'), true),
                 'realmname'         => $this->getField('realmName'),
@@ -240,64 +242,53 @@ class ProfileListFilter extends Filter
 
     private   $realms       = [];
 
-    protected $enums        = array(
-        -1 => array(                                        // arena team sizes
-        //  by name     by rating   by contrib
-            12 => 2,    13 => 2,    14 => 2,
-            15 => 3,    16 => 3,    17 => 3,
-            18 => 5,    19 => 5,    20 => 5
-        )
+    protected $genericFilter = array(
+         2 => [parent::CR_NUMERIC,  'gearscore',         NUM_CAST_INT              ], // gearscore [num]
+         3 => [parent::CR_CALLBACK, 'cbAchievs',         null,                 null], // achievementpoints [num]
+         5 => [parent::CR_NUMERIC,  'talenttree1',       NUM_CAST_INT              ], // talenttree1 [num]
+         6 => [parent::CR_NUMERIC,  'talenttree2',       NUM_CAST_INT              ], // talenttree2 [num]
+         7 => [parent::CR_NUMERIC,  'talenttree3',       NUM_CAST_INT              ], // talenttree3 [num]
+         9 => [parent::CR_STRING,   'g.name'                                       ], // guildname
+        10 => [parent::CR_CALLBACK, 'cbHasGuildRank',    null,                 null], // guildrank
+        12 => [parent::CR_CALLBACK, 'cbTeamName',        2,                    null], // teamname2v2
+        15 => [parent::CR_CALLBACK, 'cbTeamName',        3,                    null], // teamname3v3
+        18 => [parent::CR_CALLBACK, 'cbTeamName',        5,                    null], // teamname5v5
+        13 => [parent::CR_CALLBACK, 'cbTeamRating',      2,                    null], // teamrtng2v2
+        16 => [parent::CR_CALLBACK, 'cbTeamRating',      3,                    null], // teamrtng3v3
+        19 => [parent::CR_CALLBACK, 'cbTeamRating',      5,                    null], // teamrtng5v5
+        14 => [parent::CR_NYI_PH,   null,                0 /* 2 */                 ], // teamcontrib2v2 [num]
+        17 => [parent::CR_NYI_PH,   null,                0 /* 3 */                 ], // teamcontrib3v3 [num]
+        20 => [parent::CR_NYI_PH,   null,                0 /* 5 */                 ], // teamcontrib5v5 [num]
+        21 => [parent::CR_CALLBACK, 'cbWearsItems',      null,                 null], // wearingitem [str]
+        23 => [parent::CR_CALLBACK, 'cbCompletedAcv',    null,                 null], // completedachievement
+        25 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_ALCHEMY,        null], // alchemy [num]
+        26 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_BLACKSMITHING,  null], // blacksmithing [num]
+        27 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_ENCHANTING,     null], // enchanting [num]
+        28 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_ENGINEERING,    null], // engineering [num]
+        29 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_HERBALISM,      null], // herbalism [num]
+        30 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_INSCRIPTION,    null], // inscription [num]
+        31 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_JEWELCRAFTING,  null], // jewelcrafting [num]
+        32 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_LEATHERWORKING, null], // leatherworking [num]
+        33 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_MINING,         null], // mining [num]
+        34 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_SKINNING,       null], // skinning [num]
+        35 => [parent::CR_CALLBACK, 'cbProfession',      SKILL_TAILORING,      null], // tailoring [num]
+        36 => [parent::CR_CALLBACK, 'cbHasGuild',        null,                 null]  // hasguild [yn]
     );
 
-    protected $genericFilter = array(                       // misc (bool): _NUMERIC => useFloat; _STRING => localized; _FLAG => match Value; _BOOLEAN => stringSet
-         2 => [FILTER_CR_NUMERIC,  'gearscore',         NUM_CAST_INT              ], // gearscore [num]
-         3 => [FILTER_CR_CALLBACK, 'cbAchievs',         null,                 null], // achievementpoints [num]
-         5 => [FILTER_CR_NUMERIC,  'talenttree1',       NUM_CAST_INT              ], // talenttree1 [num]
-         6 => [FILTER_CR_NUMERIC,  'talenttree2',       NUM_CAST_INT              ], // talenttree2 [num]
-         7 => [FILTER_CR_NUMERIC,  'talenttree3',       NUM_CAST_INT              ], // talenttree3 [num]
-         9 => [FILTER_CR_STRING,   'g.name',                                      ], // guildname
-        10 => [FILTER_CR_CALLBACK, 'cbHasGuildRank',    null,                 null], // guildrank
-        12 => [FILTER_CR_CALLBACK, 'cbTeamName',        null,                 null], // teamname2v2
-        15 => [FILTER_CR_CALLBACK, 'cbTeamName',        null,                 null], // teamname3v3
-        18 => [FILTER_CR_CALLBACK, 'cbTeamName',        null,                 null], // teamname5v5
-        13 => [FILTER_CR_CALLBACK, 'cbTeamRating',      null,                 null], // teamrtng2v2
-        16 => [FILTER_CR_CALLBACK, 'cbTeamRating',      null,                 null], // teamrtng3v3
-        19 => [FILTER_CR_CALLBACK, 'cbTeamRating',      null,                 null], // teamrtng5v5
-        14 => [FILTER_CR_NYI_PH,   0                                              ], // teamcontrib2v2 [num]
-        17 => [FILTER_CR_NYI_PH,   0                                              ], // teamcontrib3v3 [num]
-        20 => [FILTER_CR_NYI_PH,   0                                              ], // teamcontrib5v5 [num]
-        21 => [FILTER_CR_CALLBACK, 'cbWearsItems',      null,                 null], // wearingitem [str]
-        23 => [FILTER_CR_CALLBACK, 'cbCompletedAcv',    null,                 null], // completedachievement
-        25 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_ALCHEMY,        null], // alchemy [num]
-        26 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_BLACKSMITHING,  null], // blacksmithing [num]
-        27 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_ENCHANTING,     null], // enchanting [num]
-        28 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_ENGINEERING,    null], // engineering [num]
-        29 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_HERBALISM,      null], // herbalism [num]
-        30 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_INSCRIPTION,    null], // inscription [num]
-        31 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_JEWELCRAFTING,  null], // jewelcrafting [num]
-        32 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_LEATHERWORKING, null], // leatherworking [num]
-        33 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_MINING,         null], // mining [num]
-        34 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_SKINNING,       null], // skinning [num]
-        35 => [FILTER_CR_CALLBACK, 'cbProfession',      SKILL_TAILORING,      null], // tailoring [num]
-        36 => [FILTER_CR_CALLBACK, 'cbHasGuild',        null,                 null]  // hasguild [yn]
-    );
-
-
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'     => [FILTER_V_RANGE,    [1, 36],                                        true ], // criteria ids
-        'crs'    => [FILTER_V_LIST,     [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 5000]], true ], // criteria operators
-        'crv'    => [FILTER_V_REGEX,    '/[\p{C}:;%\\\\]/ui',                           true ], // criteria values
-        'na'     => [FILTER_V_REGEX,    '/[\p{C};%\\\\]/ui',                            false], // name - only printable chars, no delimiter
-        'ma'     => [FILTER_V_EQUAL,    1,                                              false], // match any / all filter
-        'ex'     => [FILTER_V_EQUAL,    'on',                                           false], // only match exact
-        'si'     => [FILTER_V_LIST,     [1, 2],                                         false], // side
-        'ra'     => [FILTER_V_LIST,     [[1, 8], 10, 11],                               true ], // race
-        'cl'     => [FILTER_V_LIST,     [[1, 9], 11],                                   true ], // class
-        'minle'  => [FILTER_V_RANGE,    [1, MAX_LEVEL],                                 false], // min level
-        'maxle'  => [FILTER_V_RANGE,    [1, MAX_LEVEL],                                 false], // max level
-        'rg'     => [FILTER_V_CALLBACK, 'cbRegionCheck',                                false], // region
-        'sv'     => [FILTER_V_CALLBACK, 'cbServerCheck',                                false], // server
+        'cr'    => [parent::V_RANGE,    [1, 36],                                          true ], // criteria ids
+        'crs'   => [parent::V_LIST,     [parent::ENUM_NONE, parent::ENUM_ANY, [0, 5000]], true ], // criteria operators
+        'crv'   => [parent::V_REGEX,    parent::PATTERN_CRV,                              true ], // criteria values
+        'na'    => [parent::V_REGEX,    parent::PATTERN_NAME,                             false], // name - only printable chars, no delimiter
+        'ma'    => [parent::V_EQUAL,    1,                                                false], // match any / all filter
+        'ex'    => [parent::V_EQUAL,    'on',                                             false], // only match exact
+        'si'    => [parent::V_LIST,     [SIDE_ALLIANCE, SIDE_HORDE],                      false], // side
+        'ra'    => [parent::V_LIST,     [[1, 8], 10, 11],                                 true ], // race
+        'cl'    => [parent::V_LIST,     [[1, 9], 11],                                     true ], // class
+        'minle' => [parent::V_RANGE,    [1, MAX_LEVEL],                                   false], // min level
+        'maxle' => [parent::V_RANGE,    [1, MAX_LEVEL],                                   false], // max level
+        'rg'    => [parent::V_CALLBACK, 'cbRegionCheck',                                  false], // region
+        'sv'    => [parent::V_CALLBACK, 'cbServerCheck',                                  false], // server
     );
 
     /*  heads up!
@@ -317,17 +308,6 @@ class ProfileListFilter extends Filter
         if (!empty($this->fiData['c']['cr']))
             if (array_intersect($this->fiData['c']['cr'], [2, 5, 6, 7, 21]))
                 $this->useLocalList = true;
-    }
-
-    protected function createSQLForCriterium(&$cr)
-    {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCR = $this->genericCriterion($cr))
-                return $genCR;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
     }
 
     protected function createSQLForValues()
@@ -352,10 +332,10 @@ class ProfileListFilter extends Filter
         // side [list]
         if (!empty($_v['si']))
         {
-            if ($_v['si'] == 1)
-                $parts[] = [$k.'.race', [1, 3, 4, 7, 11]];
-            else if ($_v['si'] == 2)
-                $parts[] = [$k.'.race', [2, 5, 6, 8, 10]];
+            if ($_v['si'] == SIDE_ALLIANCE)
+                $parts[] = [$k.'.race', ChrRace::fromMask(ChrRace::MASK_ALLIANCE)];
+            else if ($_v['si'] == SIDE_HORDE)
+                $parts[] = [$k.'.race', ChrRace::fromMask(ChrRace::MASK_HORDE)];
         }
 
         // race [list]
@@ -377,7 +357,7 @@ class ProfileListFilter extends Filter
         return $parts;
     }
 
-    protected function cbRegionCheck(&$v)
+    protected function cbRegionCheck(string &$v) : bool
     {
         if (in_array($v, Util::$regions))
         {
@@ -390,7 +370,7 @@ class ProfileListFilter extends Filter
         return false;
     }
 
-    protected function cbServerCheck(&$v)
+    protected function cbServerCheck(string &$v) : bool
     {
         foreach (Profiler::getRealms() as $realm)
             if ($realm['name'] == $v)
@@ -404,10 +384,10 @@ class ProfileListFilter extends Filter
         return false;
     }
 
-    protected function cbProfession($cr, $skillId)
+    protected function cbProfession(int $cr, int $crs, string $crv, $skillId) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
         $k   = 'sk_'.Util::createHash(12);
         $col = 'skill'.$skillId;
@@ -417,104 +397,104 @@ class ProfileListFilter extends Filter
         if ($this->useLocalList)
         {
             $this->extraOpts[$k] = array(
-                'j' => ['?_profiler_completion '.$k.' ON '.$k.'.id = p.id AND '.$k.'.`type` = '.Type::SKILL.' AND '.$k.'.typeId = '.$skillId.' AND '.$k.'.cur '.$cr[1].' '.$cr[2], true],
-                's' => [', '.$k.'.cur AS '.$col]
+                'j' => [sprintf('?_profiler_completion_skills %1$s ON `%1$s`.`id` = p.`id` AND `%1$s`.`skillId` = %2$d AND `%1$s`.`value` %3$s %4$d', $k, $skillId, $crs, $crv), true],
+                's' => [', '.$k.'.`value` AS '.$col]
             );
-            return [$k.'.typeId', null, '!'];
+            return [$k.'.skillId', null, '!'];
         }
         else
         {
             $this->extraOpts[$k] = array(
-                'j' => ['character_skills '.$k.' ON '.$k.'.guid = c.guid AND '.$k.'.skill = '.$skillId.' AND '.$k.'.value '.$cr[1].' '.$cr[2], true],
-                's' => [', '.$k.'.value AS '.$col]
+                'j' => [sprintf('character_skills %1$s ON `%1$s`.`guid` = c.`guid` AND `%1$s`.`skill` = %2$d AND `%1$s`.`value` %3$s %4$d', $k, $skillId, $crs, $crv), true],
+                's' => [', '.$k.'.`value` AS '.$col]
             );
             return [$k.'.skill', null, '!'];
         }
     }
 
-    protected function cbCompletedAcv($cr)
+    protected function cbCompletedAcv(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT))
+            return null;
 
-        if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_achievement WHERE id = ?d', $cr[2]))
-            return false;
+        if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_achievement WHERE `id` = ?d', $crv))
+            return null;
 
         $k = 'acv_'.Util::createHash(12);
 
         if ($this->useLocalList)
         {
-            $this->extraOpts[$k] = ['j' => ['?_profiler_completion '.$k.' ON '.$k.'.id = p.id AND '.$k.'.`type` = '.Type::ACHIEVEMENT.' AND '.$k.'.typeId = '.$cr[2], true]];
-            return [$k.'.typeId', null, '!'];
+            $this->extraOpts[$k] = ['j' => [sprintf('?_profiler_completion_achievements %1$s ON `%1$s`.`id` = p.`id` AND `%1$s`.`achievementId` = %2$d', $k, $crv), true]];
+            return [$k.'.achievementId', null, '!'];
         }
         else
         {
-            $this->extraOpts[$k] = ['j' => ['character_achievement '.$k.' ON '.$k.'.guid = c.guid AND '.$k.'.achievement = '.$cr[2], true]];
+            $this->extraOpts[$k] = ['j' => [sprintf('character_achievement %1$s ON `%1$s`.`guid` = c.`guid` AND `%1$s`.`achievement` = %2$d', $k, $crv), true]];
             return [$k.'.achievement', null, '!'];
         }
     }
 
-    protected function cbWearsItems($cr)
+    protected function cbWearsItems(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT))
+            return null;
 
-        if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_items WHERE id = ?d', $cr[2]))
-            return false;
+        if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_items WHERE `id` = ?d', $crv))
+            return null;
 
         $k = 'i_'.Util::createHash(12);
 
-        $this->extraOpts[$k] = ['j' => ['?_profiler_items '.$k.' ON '.$k.'.id = p.id AND '.$k.'.item = '.$cr[2], true]];
+        $this->extraOpts[$k] = ['j' => [sprintf('?_profiler_items %1$s ON `%1$s`.`id` = p.`id` AND `%1$s`.`item` = %2$d', $k, $crv), true]];
         return [$k.'.item', null, '!'];
     }
 
-    protected function cbHasGuild($cr)
+    protected function cbHasGuild(int $cr, int $crs, string $crv) : ?array
     {
-        if (!$this->int2Bool($cr[1]))
-            return false;
+        if (!$this->int2Bool($crs))
+            return null;
 
         if ($this->useLocalList)
-            return ['p.guild', null, $cr[1] ? '!' : null];
+            return ['p.guild', null, $crs ? '!' : null];
         else
-            return ['gm.guildId', null, $cr[1] ? '!' : null];
+            return ['gm.guildId', null, $crs ? '!' : null];
     }
 
-    protected function cbHasGuildRank($cr)
+    protected function cbHasGuildRank(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
         if ($this->useLocalList)
-            return ['p.guildrank', $cr[2], $cr[1]];
+            return ['p.guildrank', $crv, $crs];
         else
-            return ['gm.rank', $cr[2], $cr[1]];
+            return ['gm.rank', $crv, $crs];
     }
 
-    protected function cbTeamName($cr)
+    protected function cbTeamName(int $cr, int $crs, string $crv, $size) : ?array
     {
-        if ($_ = $this->modularizeString(['at.name'], $cr[2]))
-            return ['AND', ['at.type', $this->enums[-1][$cr[0]]], $_];
+        if ($_ = $this->modularizeString(['at.name'], $crv))
+            return ['AND', ['at.type', $size], $_];
 
-        return false;
+        return null;
     }
 
-    protected function cbTeamRating($cr)
+    protected function cbTeamRating(int $cr, int $crs, string $crv, $size) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
-        return ['AND', ['at.type', $this->enums[-1][$cr[0]]], ['at.rating', $cr[2], $cr[1]]];
+        return ['AND', ['at.type', $size], ['at.rating', $crv, $crs]];
     }
 
-    protected function cbAchievs($cr)
+    protected function cbAchievs(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
         if ($this->useLocalList)
-            return ['p.achievementpoints', $cr[2], $cr[1]];
+            return ['p.achievementpoints', $crv, $crs];
         else
-            return ['cap.counter', $cr[2], $cr[1]];
+            return ['cap.counter', $crv, $crs];
     }
 }
 
@@ -531,7 +511,9 @@ class RemoteProfileList extends ProfileList
                     'at'  => [['atm'], 'j' => 'arena_team at ON atm.arenaTeamId = at.arenaTeamId', 's' => ', at.name AS arenateam, IF(at.captainGuid = c.guid, 1, 0) AS captain']
                 );
 
-    public function __construct($conditions = [], $miscData = null)
+    private     $rnItr     = [];                            // rename iterator [name => nCharsWithThisName]
+
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         // select DB by realm
         if (!$this->selectRealms($miscData))
@@ -551,7 +533,7 @@ class RemoteProfileList extends ProfileList
         $talentSpells = [];
         $talentLookup = [];
         $distrib      = null;
-        $limit        = CFG_SQL_LIMIT_DEFAULT;
+        $limit        = Cfg::get('SQL_LIMIT_DEFAULT');
 
         foreach ($conditions as $c)
             if (is_int($c))
@@ -561,7 +543,7 @@ class RemoteProfileList extends ProfileList
         foreach ($this->iterate() as $guid => &$curTpl)
         {
             // battlegroup
-            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
+            $curTpl['battlegroup'] = Cfg::get('BATTLEGROUP');
 
             // realm
             [$r, $g] = explode(':', $guid);
@@ -595,7 +577,7 @@ class RemoteProfileList extends ProfileList
             $curTpl['activespec'] = $curTpl['activeTalentGroup'];
 
             // equalize distribution
-            if ($limit != CFG_SQL_LIMIT_NONE)
+            if ($limit != Cfg::get('SQL_LIMIT_NONE'))
             {
                 if (empty($distrib[$curTpl['realm']]))
                     $distrib[$curTpl['realm']] = 1;
@@ -679,8 +661,11 @@ class RemoteProfileList extends ProfileList
         $baseData = $guildData = [];
         foreach ($this->iterate() as $guid => $__)
         {
+            $realmId   = $this->getField('realm');
+            $guildGUID = $this->getField('guild');
+
             $baseData[$guid] = array(
-                'realm'     => $this->getField('realm'),
+                'realm'     => $realmId,
                 'realmGUID' => $this->getField('guid'),
                 'name'      => $this->getField('name'),
                 'renameItr' => $this->getField('renameItr'),
@@ -688,15 +673,15 @@ class RemoteProfileList extends ProfileList
                 'class'     => $this->getField('class'),
                 'level'     => $this->getField('level'),
                 'gender'    => $this->getField('gender'),
-                'guild'     => $this->getField('guild') ?: null,
-                'guildrank' => $this->getField('guild') ? $this->getField('guildrank') : null,
+                'guild'     => $guildGUID ?: null,
+                'guildrank' => $guildGUID ? $this->getField('guildrank') : null,
                 'cuFlags'   => PROFILER_CU_NEEDS_RESYNC
             );
 
-            if ($this->getField('guild'))
-                $guildData[] = array(
-                    'realm'     => $this->getField('realm'),
-                    'realmGUID' => $this->getField('guild'),
+            if ($guildGUID && empty($guildData[$realmId.'-'.$guildGUID]))
+                $guildData[$realmId.'-'.$guildGUID] = array(
+                    'realm'     => $realmId,
+                    'realmGUID' => $guildGUID,
                     'name'      => $this->getField('guildname'),
                     'nameUrl'   => Profiler::urlize($this->getField('guildname')),
                     'cuFlags'   => PROFILER_CU_NEEDS_RESYNC
@@ -707,7 +692,7 @@ class RemoteProfileList extends ProfileList
         if ($guildData)
         {
             foreach (Util::createSqlBatchInsert($guildData) as $ins)
-                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_guild (?#) VALUES '.$ins, array_keys(reset($guildData)));
+                DB::Aowow()->query('INSERT INTO ?_profiler_guild (?#) VALUES '.$ins.' ON DUPLICATE KEY UPDATE `id` = `id`', array_keys(reset($guildData)));
 
             // merge back local ids
             $localGuilds = DB::Aowow()->selectCol('SELECT realm AS ARRAY_KEY, realmGUID AS ARRAY_KEY2, id FROM ?_profiler_guild WHERE realm IN (?a) AND realmGUID IN (?a)',
@@ -722,8 +707,8 @@ class RemoteProfileList extends ProfileList
         // basic char data (enough for tooltips)
         if ($baseData)
         {
-            foreach (Util::createSqlBatchInsert($baseData) as $ins)
-                DB::Aowow()->query('INSERT INTO ?_profiler_profiles (?#) VALUES '.$ins.' ON DUPLICATE KEY UPDATE name = VALUES(name), renameItr = VALUES(renameItr)', array_keys(reset($baseData)));
+            foreach ($baseData as $ins)
+                DB::Aowow()->query('INSERT INTO ?_profiler_profiles (?#) VALUES (?a) ON DUPLICATE KEY UPDATE `name` = ?, `renameItr` = ?d', array_keys($ins), array_values($ins), $ins['name'], $ins['renameItr']);
 
             // merge back local ids
             $localIds = DB::Aowow()->select(
@@ -752,7 +737,7 @@ class LocalProfileList extends ProfileList
                         'g'   => ['j' => ['?_profiler_guild g ON g.id = p.guild', true], 's' => ', g.name AS guildname']
                     );
 
-    public function __construct($conditions = [], $miscData = null)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
         parent::__construct($conditions, $miscData);
 
@@ -760,9 +745,6 @@ class LocalProfileList extends ProfileList
             return;
 
         $realms = Profiler::getRealms();
-
-        // post processing
-        $acvPoints = DB::Aowow()->selectCol('SELECT pc.id AS ARRAY_KEY, SUM(a.points) FROM ?_profiler_completion pc LEFT JOIN ?_achievement a ON a.id = pc.typeId WHERE pc.`type` = ?d AND pc.id IN (?a) GROUP BY pc.id', Type::ACHIEVEMENT, $this->getFoundIDs());
 
         foreach ($this->iterate() as $id => &$curTpl)
         {
@@ -776,9 +758,7 @@ class LocalProfileList extends ProfileList
             }
 
             // battlegroup
-            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
-
-            $curTpl['achievementpoints'] = isset($acvPoints[$id]) ? $acvPoints[$id] : 0;
+            $curTpl['battlegroup'] = Cfg::get('BATTLEGROUP');
         }
     }
 

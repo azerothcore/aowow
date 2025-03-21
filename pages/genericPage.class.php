@@ -15,14 +15,22 @@ trait TrDetailPage
 
     protected $subject    = null;                           // so it will not get cached
 
-    protected $contribute = CONTRIBUTE_ANY;
+    // template vars
+    protected $extraText  = '';
+    protected $infobox    = [];
+    protected $transfer   = [];                             // faction transfer equivalent data
+    protected $redButtons = [];                             // see template/redButtons.tpl.php
+    protected $smartAI    = null;
+    protected $map        = null;
+    protected $headIcons  = [];
+    protected $expansion  = EXP_CLASSIC;
 
     protected function generateCacheKey(bool $withStaff = true) : string
     {
         $staff = intVal($withStaff && User::isInGroup(U_GROUP_EMPLOYEE));
 
         //     mode,         type,        typeId,        employee-flag, localeId,        category, filter
-        $key = [$this->mode, $this->type, $this->typeId, $staff,        User::$localeId, '-1',     '-1'];
+        $key = [$this->mode, $this->type, $this->typeId, $staff,        Lang::getLocale()->value, '-1',     '-1'];
 
         // item special: can modify tooltips
         if (isset($this->enhancedTT))
@@ -49,9 +57,11 @@ trait TrDetailPage
 
 trait TrListPage
 {
-    protected $category  = null;
-    protected $filter    = [];
-    protected $lvTabs    = [];                              // most pages have this
+    protected $category   = null;
+    protected $subCat     = '';
+    protected $filter     = [];
+    protected $lvTabs     = [];                             // most pages have this
+    protected $redButtons = [];                             // see template/redButtons.tpl.php
 
     private   $filterObj = null;
 
@@ -60,7 +70,7 @@ trait TrListPage
         $staff = intVal($withStaff && User::isInGroup(U_GROUP_EMPLOYEE));
 
         //     mode,         type,        typeId, employee-flag, localeId,
-        $key = [$this->mode, $this->type, '-1',   $staff,        User::$localeId];
+        $key = [$this->mode, $this->type, '-1',   $staff,        Lang::getLocale()->value];
 
         //category
         $key[] = $this->category ? implode('.', $this->category) : '-1';
@@ -90,7 +100,7 @@ trait TrProfiler
         $staff = intVal($withStaff && User::isInGroup(U_GROUP_EMPLOYEE));
 
         //     mode,         type,        typeId,                         employee-flag, localeId,        category, filter
-        $key = [$this->mode, $this->type, $this->subject->getField('id'), $staff,        User::$localeId, '-1',     '-1'];
+        $key = [$this->mode, $this->type, $this->subject->getField('id'), $staff,        Lang::getLocale()->value, '-1',     '-1'];
 
         return implode('_', $key);
     }
@@ -103,7 +113,7 @@ trait TrProfiler
         // cat[0] is always region
         // cat[1] is realm or bGroup (must be realm if cat[2] is set)
         // cat[2] is arena-team, guild or player
-        $cat = explode('.', $pageParam, 3);
+        $cat = explode('.', mb_strtolower($pageParam), 3);
 
         $cat = array_map('urldecode', $cat);
 
@@ -112,8 +122,8 @@ trait TrProfiler
 
         $this->region = $cat[0];
 
-        // if ($cat[1] == Profiler::urlize(CFG_BATTLEGROUP))
-            // $this->battlegroup = CFG_BATTLEGROUP;
+        // if ($cat[1] == Profiler::urlize(Cfg::get('BATTLEGROUP')))
+            // $this->battlegroup = Cfg::get('BATTLEGROUP');
         if (isset($cat[1]))
         {
             foreach (Profiler::getRealms() as $rId => $r)
@@ -131,11 +141,10 @@ trait TrProfiler
         }
     }
 
-    protected function initialSync() : void
+    protected function initialSync() : never
     {
         $this->prepareContent();
 
-        $this->contribute = CONTRIBUTE_NONE;
         $this->notFound   = array(
             'title' => sprintf(Lang::profiler('firstUseTitle'), $this->subjectName, $this->realm),
             'msg'   => ''
@@ -159,7 +168,7 @@ trait TrProfiler
             if ($this->realm)
                 $this->path[] = Profiler::urlize($this->realm, true);
             // else
-                // $this->path[] = Profiler::urlize(CFG_BATTLEGROUP);
+                // $this->path[] = Profiler::urlize(Cfg::get('BATTLEGROUP'));
         }
     }
 }
@@ -173,33 +182,55 @@ class GenericPage
     protected $reqUGroup    = U_GROUP_NONE;
     protected $reqAuth      = false;
     protected $mode         = CACHE_TYPE_NONE;
- // protected $contribute;                                  // defined in __construct()
+    protected $contribute   = CONTRIBUTE_NONE;
+
+    protected $wowheadLink  = 'https://wowhead.com/';
 
     protected $jsGlobals    = [];
     protected $lvData       = [];
-    protected $title        = [CFG_NAME];                   // for title-Element
+    protected $title        = [];                           // for title-Element
     protected $name         = '';                           // for h1-Element
     protected $tabId        = null;
     protected $gDataKey     = false;                        // adds the dataKey to the user vars
-    protected $js           = [];
-    protected $css          = [];
+    protected $notFound     = [];
+    protected $pageTemplate = [];
+    protected $article      = null;
+    protected $articleUrl   = '';
+    protected $editAccess   = null;                         // 0 is valid access value, so null
+
+    protected $scripts      = array(
+        [SC_JS_FILE,  'js/jquery-3.7.0.min.js',  SC_FLAG_NO_TIMESTAMP                        ],
+        [SC_JS_FILE,  'js/basic.js'                                                          ],
+        [SC_JS_FILE,  'widgets/power.js',        SC_FLAG_NO_TIMESTAMP | SC_FLAG_APPEND_LOCALE],
+        [SC_JS_FILE,  'js/locale_%s.js',         SC_FLAG_LOCALIZED                           ],
+        [SC_JS_FILE,  'js/global.js'                                                         ],
+        [SC_JS_FILE,  'js/locale.js'                                                         ],
+        [SC_JS_FILE,  'js/Markup.js'                                                         ],
+        [SC_CSS_FILE, 'css/basic.css'                                                        ],
+        [SC_CSS_FILE, 'css/global.css'                                                       ],
+        [SC_CSS_FILE, 'css/aowow.css'                                                        ],
+        [SC_CSS_FILE, 'css/locale_%s.css',       SC_FLAG_LOCALIZED                           ]
+    );
 
     // private vars don't get cached
-    private   $time         = 0;
-    private   $cacheDir     = 'cache/template/';
-    private   $jsgBuffer    = [];
-    private   $gPageInfo    = [];
-    private   $gUser        = [];
-    private   $pageTemplate = [];
-    private   $community    = ['co' => [], 'sc' => [], 'vi' => []];
+    private   $time          = 0;
+    private   $cacheDir      = 'cache/template/';
+    private   $jsgBuffer     = [];
+    private   $gPageInfo     = [];
+    private   $gUser         = [];
+    private   $gFavorites    = [];
+    private   $community     = ['co' => [], 'sc' => [], 'vi' => []];
+    private   $announcements = [];
 
-    private   $cacheLoaded  = [];
-    private   $skipCache    = 0x0;
-    private   $memcached    = null;
-    private   $mysql        = ['time' => 0, 'count' => 0];
+    private   $cacheLoaded   = [];
+    private   $skipCache     = 0x0;
+    private   $memcached     = null;
+    private   $mysql         = ['time' => 0, 'count' => 0];
 
-    private   $headerLogo   = '';
-    private   $fullParams   = '';
+    private   $js            = [];
+    private   $css           = [];
+    private   $headerLogo    = '';
+    private   $fullParams    = '';
 
     private   $lvTemplates  = array(
         'achievement'       => ['template' => 'achievement',       'id' => 'achievements',    'parent' => 'lv-generic', 'data' => [], 'name' => '$LANG.tab_achievements'  ],
@@ -207,7 +238,7 @@ class GenericPage
         'calendar'          => ['template' => 'holidaycal',        'id' => 'calendar',        'parent' => 'lv-generic', 'data' => [], 'name' => '$LANG.tab_calendar'      ],
         'class'             => ['template' => 'classs',            'id' => 'classes',         'parent' => 'lv-generic', 'data' => [], 'name' => '$LANG.tab_classes'       ],
         'commentpreview'    => ['template' => 'commentpreview',    'id' => 'comments',        'parent' => 'lv-generic', 'data' => [], 'name' => '$LANG.tab_comments'      ],
-        'creature'          => ['template' => 'npc',               'id' => 'npcs',            'parent' => 'lv-generic', 'data' => [], 'name' => '$LANG.tab_npcs'          ],
+        'npc'               => ['template' => 'npc',               'id' => 'npcs',            'parent' => 'lv-generic', 'data' => [], 'name' => '$LANG.tab_npcs'          ],
         'currency'          => ['template' => 'currency',          'id' => 'currencies',      'parent' => 'lv-generic', 'data' => [], 'name' => '$LANG.tab_currencies'    ],
         'emote'             => ['template' => 'emote',             'id' => 'emotes',          'parent' => 'lv-generic', 'data' => []                                      ],
         'enchantment'       => ['template' => 'enchantment',       'id' => 'enchantments',    'parent' => 'lv-generic', 'data' => []                                      ],
@@ -243,15 +274,15 @@ class GenericPage
 
         $this->initRequestData();
 
-        if (!isset($this->contribute))
-            $this->contribute = CONTRIBUTE_NONE;
+        $this->title[] = Cfg::get('NAME');
 
         $this->fullParams = $pageCall;
         if ($pageParam)
             $this->fullParams .= '='.$pageParam;
 
-        if (CFG_CACHE_DIR && Util::writeDir(CFG_CACHE_DIR))
-            $this->cacheDir = mb_substr(CFG_CACHE_DIR, -1) != '/' ? CFG_CACHE_DIR.'/' : CFG_CACHE_DIR;
+        $cacheDir = Cfg::get('CACHE_DIR');
+        if ($cacheDir && Util::writeDir($cacheDir))
+            $this->cacheDir = mb_substr($cacheDir, -1) != '/' ? $cacheDir.'/' : $cacheDir;
 
         // force page refresh
         if (isset($_GET['refresh']) && User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU | U_GROUP_DEV))
@@ -263,6 +294,16 @@ class GenericPage
             else if ($_GET['refresh'] == '')
                 $this->skipCache = CACHE_MODE_FILECACHE | CACHE_MODE_MEMCACHED;
         }
+
+        // prep js+css includes
+        $parentVars = get_class_vars(__CLASS__);
+        if ($parentVars['scripts'] != $this->scripts)       // additions set in child class
+            $this->scripts = array_merge($parentVars['scripts'], $this->scripts);
+
+        $this->addScript(...$this->scripts);
+
+        if (User::isInGroup(U_GROUP_STAFF | U_GROUP_SCREENSHOT | U_GROUP_VIDEO))
+            $this->addScript([SC_CSS_FILE, 'css/staff.css'], [SC_JS_FILE,  'js/staff.js']);
 
         // display modes
         if (isset($_GET['power']) && method_exists($this, 'generateTooltip'))
@@ -278,6 +319,8 @@ class GenericPage
             $this->gUser      = User::getUserGlobals();
             $this->gFavorites = User::getFavorites();
             $this->pageTemplate['pageName'] = strtolower($pageCall);
+
+            $this->wowheadLink = sprintf(WOWHEAD_LINK,Lang::getLocale()->domain(), $pageCall, $pageParam);
 
             if (!$this->isValidPage())
                 $this->error();
@@ -296,10 +339,10 @@ class GenericPage
                 $this->forwardToSignIn($_SERVER['QUERY_STRING'] ?? '');
         }
 
-        if (CFG_MAINTENANCE && !User::isInGroup(U_GROUP_EMPLOYEE))
+        if (Cfg::get('MAINTENANCE') && !User::isInGroup(U_GROUP_EMPLOYEE))
             $this->maintenance();
-        else if (CFG_MAINTENANCE && User::isInGroup(U_GROUP_EMPLOYEE))
-            Util::addNote(U_GROUP_EMPLOYEE, 'Maintenance mode enabled!');
+        else if (Cfg::get('MAINTENANCE') && User::isInGroup(U_GROUP_EMPLOYEE))
+            Util::addNote('Maintenance mode enabled!');
 
         // get errors from previous page from session and apply to template
         if (method_exists($this, 'applyCCErrors'))
@@ -395,7 +438,7 @@ class GenericPage
         {
             $this->gPageInfo = array(
                 'articleUrl' => $this->fullParams,          // is actually be the url-param
-                'editAccess' => isset($this->editAccess) ? $this->editAccess : (U_GROUP_ADMIN | U_GROUP_EDITOR | U_GROUP_BUREAU)
+                'editAccess' => $this->editAccess ?? (U_GROUP_ADMIN | U_GROUP_EDITOR | U_GROUP_BUREAU)
             );
         }
 
@@ -409,7 +452,7 @@ class GenericPage
             $this->postCache();
 
         // determine contribute tabs
-        if (isset($this->subject) && !isset($this->contribute))
+        if (isset($this->subject))
         {
             $x = get_class($this->subject);
             $this->contribute = $x::$contribute;
@@ -425,7 +468,7 @@ class GenericPage
             $this->community['vi'] = CommunityContent::getVideos($this->type, $this->typeId);
 
         // as comments are not cached, those globals cant be either
-        if ($this->contribute)
+        if ($this->contribute != CONTRIBUTE_NONE)
         {
             $this->extendGlobalData(CommunityContent::getJSGlobals());
             $this->applyGlobals();
@@ -437,33 +480,59 @@ class GenericPage
 
     public function addScript(array ...$structs) : void
     {
-        foreach ($structs as $s)                            // iType, sContent, bFront, sIeCnd
+        array_walk($structs, function(&$x) { $x = array_pad($x, 3, 0); });
+
+        foreach ($structs as [$type, $str, $flags])
         {
-            if (empty($s[1]))
+            if (empty($str))
             {
                 trigger_error('GenericPage::addScript - content empty', E_USER_WARNING);
                 continue;
             }
 
-            $s = array_pad($s, 4, '');
-            switch ($s[0])
+            $dynData = strpos($str, '?data=') === 0;
+            $app = [];
+
+            // insert locale string
+            if ($flags & SC_FLAG_LOCALIZED)
+                $str = sprintf($str, Lang::getLocale()->json());
+
+            if ($dynData)
             {
-                case JS_FILE:
-                case JS_STRING:
-                    if (empty($s[2]))
-                        $this->js[] = $s;
+                $app[] = 'locale='.Lang::getLocale()->value;
+                $app[] = 't='.$_SESSION['dataKey'];
+            }
+            else if (($flags & SC_FLAG_APPEND_LOCALE) && Lang::getLocale() != Locale::EN)
+                $app[] = 'lang='.Lang::getLocale()->domain();
+
+            // append anti-cache timestamp
+            if (!($flags & SC_FLAG_NO_TIMESTAMP) && !$dynData)
+                if ($type == SC_JS_FILE || $type == SC_CSS_FILE)
+                    $app[] = filemtime('static/'.$str) ?: 0;
+
+            if ($app)
+                $str .= ($dynData ? '&' : '?').implode('&', $app);
+
+            switch ($type)
+            {
+                case SC_JS_FILE:
+                    $str = ($dynData ? Cfg::get('HOST_URL') : Cfg::get('STATIC_URL')).'/'.$str;
+                case SC_JS_STRING:
+                    if ($flags & SC_FLAG_PREFIX)
+                        array_unshift($this->js, [$type, $str]);
                     else
-                        array_unshift($this->js, $s);
+                        $this->js[] = [$type, $str];
                     break;
-                case CSS_FILE:
-                case CSS_STRING:
-                    if (empty($s[2]))
-                        $this->css[] = $s;
+                case SC_CSS_FILE:
+                    $str = Cfg::get('STATIC_URL').'/'.$str;
+                case SC_CSS_STRING:
+                    if ($flags & SC_FLAG_PREFIX)
+                        array_unshift($this->css, [$type, $str]);
                     else
-                        array_unshift($this->css, $s);
+                        $this->css[] = [$type, $str];
                     break;
                 default:
-                    trigger_error('GenericPage::addScript - unknown script type #'.$s[0], E_USER_WARNING);
+                    trigger_error('GenericPage::addScript - unknown script type #'.$type, E_USER_WARNING);
             }
         }
     }
@@ -479,11 +548,11 @@ class GenericPage
             $article = DB::Aowow()->selectRow('SELECT `article`, `quickInfo`, `locale`, `editAccess` FROM ?_articles WHERE `type` = ?d AND `typeId` = ?d AND `rev` = ?d',
                 Type::GUIDE, $this->typeId, $this->guideRevision);
         else if (!empty($this->articleUrl))
-            $article = DB::Aowow()->selectRow('SELECT `article`, `quickInfo`, `locale`, `editAccess` FROM ?_articles WHERE `url` = ? AND `locale` IN (?a) ORDER BY `locale`, `rev` DESC LIMIT 1',
-                $this->articleUrl, [User::$localeId, LOCALE_EN]);
+            $article = DB::Aowow()->selectRow('SELECT `article`, `quickInfo`, `locale`, `editAccess` FROM ?_articles WHERE `url` = ? AND `locale` IN (?a) ORDER BY `locale` DESC, `rev` DESC LIMIT 1',
+                $this->articleUrl, [Lang::getLocale()->value, Locale::EN->value]);
         else if (!empty($this->type) && isset($this->typeId))
-            $article = DB::Aowow()->selectRow('SELECT `article`, `quickInfo`, `locale`, `editAccess` FROM ?_articles WHERE `type` = ?d AND `typeId` = ?d AND `locale` IN (?a) ORDER BY `locale`, `rev` DESC LIMIT 1',
-                $this->type, $this->typeId, [User::$localeId, LOCALE_EN]);
+            $article = DB::Aowow()->selectRow('SELECT `article`, `quickInfo`, `locale`, `editAccess` FROM ?_articles WHERE `type` = ?d AND `typeId` = ?d AND `locale` IN (?a) ORDER BY `locale` DESC, `rev` DESC LIMIT 1',
+                $this->type, $this->typeId, [Lang::getLocale()->value, Locale::EN->value]);
 
         if ($article)
         {
@@ -501,13 +570,13 @@ class GenericPage
                 $this->article['params']['dbpage'] = true;
 
             // convert U_GROUP_* to MARKUP.CLASS_* (as seen in js-object Markup)
-            if($article['editAccess'] & (U_GROUP_ADMIN | U_GROUP_VIP | U_GROUP_DEV))
+            if ($article['editAccess'] & (U_GROUP_ADMIN | U_GROUP_VIP | U_GROUP_DEV))
                 $this->article['params']['allow'] = '$Markup.CLASS_ADMIN';
-            else if($article['editAccess'] & U_GROUP_STAFF)
+            else if ($article['editAccess'] & U_GROUP_STAFF)
                 $this->article['params']['allow'] = '$Markup.CLASS_STAFF';
-            else if($article['editAccess'] & U_GROUP_PREMIUM)
+            else if ($article['editAccess'] & U_GROUP_PREMIUM)
                 $this->article['params']['allow'] = '$Markup.CLASS_PREMIUM';
-            else if($article['editAccess'] & U_GROUP_PENDING)
+            else if ($article['editAccess'] & U_GROUP_PENDING)
                 $this->article['params']['allow'] = '$Markup.CLASS_PENDING';
             else
                 $this->article['params']['allow'] = '$Markup.CLASS_USER';
@@ -517,24 +586,29 @@ class GenericPage
             if (empty($this->infobox) && !empty($article['quickInfo']))
                 $this->infobox = $article['quickInfo'];
 
-            if ($article['locale'] != User::$localeId)
-                $this->article['params']['prepend'] = '<div class="notice-box"><span class="icon-bubble">'.Lang::main('englishOnly').'</span></div>';
+            if ($article['locale'] != Lang::getLocale()->value)
+                $this->article['params']['prepend'] = '<div class="notice-box"><span class="icon-bubble">'.Lang::main('langOnly', [Lang::lang($article['locale'])]).'</span></div>';
 
             if (method_exists($this, 'postArticle'))        // e.g. update variables in article
-                $this->postArticle();
+                $this->postArticle($this->article['text']);
         }
     }
 
     // get announcements and notes for user
-    private function addAnnouncements() : void
+    private function addAnnouncements(bool $pagespecific = true) : void
     {
         if (!isset($this->announcements))
             $this->announcements = [];
 
         // display occured notices
-        if ($_ = Util::getNotes())
+        if (([$notes, $level] = Util::getNotes()) && $notes)
         {
-            array_unshift($_, 'One or more errors occured, while generating this page.');
+            array_unshift($notes, 'One or more issues occured, while generating this page.');
+            $colors = array(   // [border, text]
+                CLI::LOG_ERROR => ['C50F1F', 'E51223'],
+                CLI::LOG_WARN  => ['C19C00', 'E5B700'],
+                CLI::LOG_INFO  => ['3A96DD', '42ADFF']
+            );
 
             $this->announcements[0] = array(
                 'parent' => 'announcement-0',
@@ -542,15 +616,15 @@ class GenericPage
                 'mode'   => 1,
                 'status' => 1,
                 'name'   => 'internal error',
-                'style'  => 'color: #ff3333; font-weight: bold; font-size: 14px; padding-left: 40px; background-image: url('.STATIC_URL.'/images/announcements/warn-small.png); background-size: 15px 15px; background-position: 12px center; border: dashed 2px #C03030;',
-                'text'   => '[span]'.implode("[br]", $_).'[/span]'
+                'style'  => 'color: #'.($colors[$level][1] ?? 'fff').'; font-weight: bold; font-size: 14px; padding-left: 40px; background-image: url('.Cfg::get('STATIC_URL').'/images/announcements/warn-small.png); background-size: 15px 15px; background-position: 12px center; border: dashed 2px #'.($colors[$level][0] ?? 'fff').';',
+                'text'   => '[span]'.implode("[br]", $notes).'[/span]'
             );
         }
 
         // fetch announcements
         if ($this->pageTemplate['pageName'])
         {
-            $ann = DB::Aowow()->Select('SELECT ABS(id) AS ARRAY_KEY, a.* FROM ?_announcements a WHERE status = 1 AND (page = ? OR page = "*") AND (groupMask = 0 OR groupMask & ?d)', $this->pageTemplate['pageName'], User::$groups);
+            $ann = DB::Aowow()->Select('SELECT ABS(id) AS ARRAY_KEY, a.* FROM ?_announcements a WHERE status = 1 AND (page = ? OR page = "*") AND (groupMask = 0 OR groupMask & ?d)', $pagespecific ? $this->pageTemplate['pageName'] : '', User::$groups);
             foreach ($ann as $k => $v)
             {
                 if ($t = Util::localizedString($v, 'text'))
@@ -602,7 +676,7 @@ class GenericPage
     /*******************/
 
     // unknown entry
-    public function notFound(string $title = '', string $msg = '') : void
+    public function notFound(string $title = '', string $msg = '') : never
     {
         if ($this->mode == CACHE_TYPE_TOOLTIP && method_exists($this, 'generateTooltip'))
         {
@@ -639,14 +713,14 @@ class GenericPage
     }
 
     // unknown page
-    public function error() : void
+    public function error() : never
     {
-        $this->path       = null;
-        $this->tabId      = null;
+        // $this->path       = null;
+        // $this->tabId      = null;
         $this->articleUrl = 'page-not-found';
         $this->title[]    = Lang::main('errPageTitle');
         $this->name       = Lang::main('errPageTitle');
-        $this->lvTabs     = [];
+        // $this->lvTabs     = [];
 
         $this->addArticle();
 
@@ -659,7 +733,7 @@ class GenericPage
     }
 
     // display brb gnomes
-    public function maintenance() : void
+    public function maintenance() : never
     {
         header('HTTP/1.0 503 Service Temporarily Unavailable', true, 503);
         header('Retry-After: '.(3 * HOUR));
@@ -674,7 +748,7 @@ class GenericPage
     /*******************/
 
     // load given template string or GenericPage::$tpl
-    public function display(string $override = '') : void
+    public function display(string $override = '') : never
     {
         // Heisenbug: IE11 and FF32 will sometimes (under unknown circumstances) cache 302 redirects and stop
         // re-requesting them from the server but load them from local cache, thus breaking menu features.
@@ -691,7 +765,7 @@ class GenericPage
 
             if ($override)
             {
-                $this->addAnnouncements();
+                $this->addAnnouncements(false);
 
                 include('template/pages/'.$override.'.tpl.php');
                 die();
@@ -708,6 +782,12 @@ class GenericPage
 
                 $this->addAnnouncements();
 
+                if (isset($this->lvTabs))
+                {
+                    $this->lvTabs = array_filter($this->lvTabs);
+                    array_walk($this->lvTabs, function (&$x) { $x = array_pad($x, 3, null); });
+                }
+
                 include('template/pages/'.$this->tpl.'.tpl.php');
                 die();
             }
@@ -717,7 +797,7 @@ class GenericPage
     }
 
     // generate and cache
-    public function displayExtra(callable $generator, string $mime = MIME_TYPE_JSON) : void
+    public function displayExtra(callable $generator, string $mime = MIME_TYPE_JSON) : never
     {
         $outString = '';
         if (!$this->loadCache($outString))
@@ -753,7 +833,7 @@ class GenericPage
                     // localizes expected fields .. except for icons .. icons are special
                     if (in_array($k, ['name', 'namefemale']) && $struct[0] != Type::getJSGlobalString(Type::ICON))
                     {
-                        $data[$k.'_'.User::$localeString] = $v;
+                        $data[$k.'_'.Lang::getLocale()->json()] = $v;
                         unset($data[$k]);
                     }
                 }
@@ -769,13 +849,13 @@ class GenericPage
 
                 // spell
                 if (!empty($x['tooltip']))                  // spell + item
-                    $buff .= "\n            _[".$x['id'].'].tooltip_'.User::$localeString.' = '.Util::toJSON($x['tooltip']).";\n";
+                    $buff .= "\n            _[".$x['id'].'].tooltip_'.Lang::getLocale()->json().' = '.Util::toJSON($x['tooltip']).";\n";
                 if (!empty($x['buff']))                     // spell
-                    $buff .= "            _[".$x['id'].'].buff_'.User::$localeString.' = '.Util::toJSON($x['buff']).";\n";
+                    $buff .= "            _[".$x['id'].'].buff_'.Lang::getLocale()->json().' = '.Util::toJSON($x['buff']).";\n";
                 if (!empty($x['spells']))                   // spell + item
-                    $buff .= "            _[".$x['id'].'].spells_'.User::$localeString.' = '.Util::toJSON($x['spells']).";\n";
+                    $buff .= "            _[".$x['id'].'].spells_'.Lang::getLocale()->json().' = '.Util::toJSON($x['spells']).";\n";
                 if (!empty($x['buffspells']))               // spell
-                    $buff .= "            _[".$x['id'].'].buffspells_'.User::$localeString.' = '.Util::toJSON($x['buffspells']).";\n";
+                    $buff .= "            _[".$x['id'].'].buffspells_'.Lang::getLocale()->json().' = '.Util::toJSON($x['buffspells']).";\n";
 
                 $buff .= "\n";
             }
@@ -784,8 +864,44 @@ class GenericPage
         return $buff;
     }
 
+    protected function fmtCreateIcon(int $iconIdx, int $type, int $typeId, int $pad = 0, string $element = 'icontab-icon', int $size = 1, string $num = '', string $qty = '') : string
+    {
+        // $element, $iconTabIdx,  [typeId, size, num, qty]
+        $createIconString = "\$WH.ge('%s%d').appendChild(%s.createIcon(%s));\n";
+
+        if ($size < 0 || $size > 3)
+        {
+            trigger_error('GenericPage::fmtCreateIcon - invalid icon size '.$size.'. Normalied to 1 [small]', E_USER_WARNING);
+            $size = 1;
+        }
+
+        $jsg = Type::getJSGlobalString($type);
+        if (!$jsg)
+        {
+            trigger_error('GenericPage::fmtCreateIcon - invalid type '.$type.'. Assumed '.Type::SPELL.' [spell]', E_USER_WARNING);
+            $jsg = Type::getJSGlobalString(Type::SPELL);
+        }
+
+        $params = [$typeId, $size];
+        if ($num || $qty)
+            $params[] = is_numeric($num) ? $num : "'".$num."'";
+        if ($qty)
+            $params[] = is_numeric($qty) ? $qty : "'".$qty."'";
+
+        // $WH.ge('icontab-icon1').appendChild(g_spells.createIcon(40120, 1, '1-4', 0));
+        return str_repeat(' ', $pad) . sprintf($createIconString, $element, $iconIdx, $jsg, implode(', ', $params));
+    }
+
+    protected function fmtStaffTip(string $text, string $tip) : string
+    {
+        if (User::isInGroup(U_GROUP_EMPLOYEE))
+            return sprintf(Util::$dfnString, $tip, $text);
+        else
+            return $text;
+    }
+
     // load brick
-    public function brick(string $file, array $localVars = []) : void
+    protected function brick(string $file, array $localVars = []) : void
     {
         foreach ($localVars as $n => $v)
             $$n = $v;
@@ -797,7 +913,7 @@ class GenericPage
     }
 
     // load listview addIns
-    public function lvBrick(string $file) : void
+    protected function lvBrick(string $file) : void
     {
         if (!$this->isSaneInclude('template/listviews/', $file))
             trigger_error('Nonexistant Listview addin requested: template/listviews/'.$file.'.tpl.php', E_USER_ERROR);
@@ -806,17 +922,17 @@ class GenericPage
     }
 
     // load brick with more text then vars
-    public function localizedBrick(string $file, int $loc = LOCALE_EN) : void
+    protected function localizedBrick(string $file, Locale $loc = Locale::EN) : void
     {
-        if (!$this->isSaneInclude('template/localized/', $file.'_'.$loc))
+        if (!$this->isSaneInclude('template/localized/', $file.'_'.$loc->value))
         {
-            if ($loc == LOCALE_EN || !$this->isSaneInclude('template/localized/', $file.'_'.LOCALE_EN))
-                trigger_error('Nonexistant template requested: template/localized/'.$file.'_'.$loc.'.tpl.php', E_USER_ERROR);
+            if ($loc == Locale::EN || !$this->isSaneInclude('template/localized/', $file.'_'.Locale::EN->value))
+                trigger_error('Nonexistant template requested: template/localized/'.$file.'_'.$loc->value.'.tpl.php', E_USER_ERROR);
             else
-                include('template/localized/'.$file.'_'.LOCALE_EN.'.tpl.php');
+                include('template/localized/'.$file.'_'.Locale::EN->value.'.tpl.php');
         }
         else
-            include('template/localized/'.$file.'_'.$loc.'.tpl.php');
+            include('template/localized/'.$file.'_'.$loc->value.'.tpl.php');
     }
 
 
@@ -889,7 +1005,7 @@ class GenericPage
 
             $this->initJSGlobal($type);
 
-            $obj = Type::newList($type, [CFG_SQL_LIMIT_NONE, ['id', array_unique($ids, SORT_NUMERIC)]]);
+            $obj = Type::newList($type, [Cfg::get('SQL_LIMIT_NONE'), ['id', array_unique($ids, SORT_NUMERIC)]]);
             if (!$obj)
                 continue;
 
@@ -911,7 +1027,7 @@ class GenericPage
         if ($this->mode == CACHE_TYPE_NONE)
             return;
 
-        if (!CFG_CACHE_MODE || CFG_DEBUG)
+        if (!Cfg::get('CACHE_MODE') || Cfg::get('DEBUG'))
             return;
 
         $noCache = ['coError', 'ssError', 'viError'];
@@ -934,7 +1050,7 @@ class GenericPage
         else
             $cache = $saveString;
 
-        if (CFG_CACHE_MODE & CACHE_MODE_MEMCACHED)
+        if (Cfg::get('CACHE_MODE') & CACHE_MODE_MEMCACHED)
         {
             // on &refresh also clear related
             if ($this->skipCache == CACHE_MODE_MEMCACHED)
@@ -960,7 +1076,7 @@ class GenericPage
             $this->memcached()->set($cKey, $data);
         }
 
-        if (CFG_CACHE_MODE & CACHE_MODE_FILECACHE)
+        if (Cfg::get('CACHE_MODE') & CACHE_MODE_FILECACHE)
         {
             $data  = time()." ".AOWOW_REVISION." ".($saveString ? '1' : '0')."\n";
             $data .= gzcompress($saveString ? $cache : serialize($cache), 9);
@@ -992,27 +1108,27 @@ class GenericPage
         if ($this->mode == CACHE_TYPE_NONE)
             return false;
 
-        if (!CFG_CACHE_MODE || CFG_DEBUG)
+        if (!Cfg::get('CACHE_MODE') || Cfg::get('DEBUG'))
             return false;
 
         $cKey = $this->generateCacheKey();
         $rev = $type = $cache = $data = null;
 
-        if ((CFG_CACHE_MODE & CACHE_MODE_MEMCACHED) && !($this->skipCache & CACHE_MODE_MEMCACHED))
+        if ((Cfg::get('CACHE_MODE') & CACHE_MODE_MEMCACHED) && !($this->skipCache & CACHE_MODE_MEMCACHED))
         {
             if ($cache = $this->memcached()->get($cKey))
             {
                 $type = $cache['isString'];
                 $data = $cache['data'];
 
-                if ($cache['timestamp'] + CFG_CACHE_DECAY <= time() || $cache['revision'] != AOWOW_REVISION)
+                if ($cache['timestamp'] + Cfg::get('CACHE_DECAY') <= time() || $cache['revision'] != AOWOW_REVISION)
                     $cache = null;
                 else
                     $this->cacheLoaded = [CACHE_MODE_MEMCACHED, $cache['timestamp']];
             }
         }
 
-        if (!$cache && (CFG_CACHE_MODE & CACHE_MODE_FILECACHE) && !($this->skipCache & CACHE_MODE_FILECACHE))
+        if (!$cache && (Cfg::get('CACHE_MODE') & CACHE_MODE_FILECACHE) && !($this->skipCache & CACHE_MODE_FILECACHE))
         {
             if (!file_exists($this->cacheDir.$cKey))
                 return false;
@@ -1028,7 +1144,7 @@ class GenericPage
 
             [$time, $rev, $type] = explode(' ', $cache[0]);
 
-            if ($time + CFG_CACHE_DECAY <= time() || $rev != AOWOW_REVISION)
+            if ($time + Cfg::get('CACHE_DECAY') <= time() || $rev != AOWOW_REVISION)
                 $cache = null;
             else
             {
@@ -1056,12 +1172,12 @@ class GenericPage
             return true;
         }
 
-        return false;;
+        return false;
     }
 
     private function memcached() : Memcached
     {
-        if (!$this->memcached && (CFG_CACHE_MODE & CACHE_MODE_MEMCACHED))
+        if (!$this->memcached && (Cfg::get('CACHE_MODE') & CACHE_MODE_MEMCACHED))
         {
             $this->memcached = new Memcached();
             $this->memcached->addServer('localhost', 11211);

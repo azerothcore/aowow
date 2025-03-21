@@ -10,15 +10,22 @@ class ItemsetPage extends GenericPage
 {
     use TrDetailPage;
 
+    protected $summary       = [];
+    protected $bonusExt      = '';
+    protected $description   = '';
+    protected $unavailable   = false;
+    protected $pieces        = [];
+    protected $spells        = [];
+
     protected $type          = Type::ITEMSET;
     protected $typeId        = 0;
     protected $tpl           = 'itemset';
     protected $path          = [0, 2];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $js            = [[JS_FILE, 'swfobject.js'], [JS_FILE, 'Summary.js']];
+    protected $scripts       = [[SC_JS_FILE, 'js/swfobject.js'], [SC_JS_FILE, 'js/Summary.js']];
 
-    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkDomain']];
+    protected $_get          = ['domain' => ['filter' => FILTER_CALLBACK, 'options' => 'Locale::tryFromDomain']];
 
     private   $powerTpl      = '$WowheadPower.registerItemSet(%d, %d, %s);';
 
@@ -28,7 +35,7 @@ class ItemsetPage extends GenericPage
 
         // temp locale
         if ($this->mode == CACHE_TYPE_TOOLTIP && $this->_get['domain'])
-            Util::powerUseLocale($this->_get['domain']);
+            Lang::load($this->_get['domain']);
 
         $this->typeId = intVal($id);
 
@@ -94,7 +101,7 @@ class ItemsetPage extends GenericPage
 
         // class
         $jsg = [];
-        if ($cl = Lang::getClassString($this->subject->getField('classMask'), $jsg, false))
+        if ($cl = Lang::getClassString($this->subject->getField('classMask'), $jsg, Lang::FMT_MARKUP))
         {
             $this->extendGlobalIds(Type::CHR_CLASS, ...$jsg);
             $t = count($jsg)== 1 ? Lang::game('class') : Lang::game('classes');
@@ -142,7 +149,7 @@ class ItemsetPage extends GenericPage
             $compare[] = $itemId;
 
             $pieces[$itemId] = array(
-                'name_'.User::$localeString => $iList->getField('name', true),
+                'name_'.Lang::getLocale()->json() => $iList->getField('name', true),
                 'quality'                   => $iList->getField('quality'),
                 'icon'                      => $iList->getField('iconString'),
                 'jsonequip'                 => $data[$itemId]
@@ -158,24 +165,25 @@ class ItemsetPage extends GenericPage
 
         $this->bonusExt    = $skill;
         $this->description = $_ta ? sprintf(Lang::itemset('_desc'), $this->name, Lang::itemset('notes', $_ta), $_cnt) : sprintf(Lang::itemset('_descTagless'), $this->name, $_cnt);
-        $this->unavailable = $this->subject->getField('cuFlags') & CUSTOM_UNAVAILABLE;
+        $this->unavailable = !!($this->subject->getField('cuFlags') & CUSTOM_UNAVAILABLE);
         $this->infobox     = $infobox ? '[ul][li]'.implode('[/li][li]', $infobox).'[/li][/ul]' : null;
         $this->pieces      = $pieces;
         $this->spells      = $this->subject->getBonuses();
-        $this->expansion   = 0;
+    //  $this->expansion   = $this->subject->getField('expansion'); NYI - todo: add col to table
         $this->redButtons  = array(
             BUTTON_WOWHEAD => $this->typeId > 0,            // bool only
             BUTTON_LINKS   => ['type' => $this->type, 'typeId' => $this->typeId],
             BUTTON_VIEW3D  => ['type' => Type::ITEMSET, 'typeId' => $this->typeId, 'equipList' => $eqList],
-            BUTTON_COMPARE => ['eqList' => implode(':', $compare), 'qty' => $_cnt]
+            BUTTON_COMPARE => $compare ? ['eqList' => implode(':', $compare), 'qty' => $_cnt] : false
         );
-        $this->summary     = array(
-            'id'       => 'itemset',
-            'template' => 'itemset',
-            'parent'   => 'summary-generic',
-            'groups'   => array_map(function ($v) { return [[$v]]; }, $compare),
-            'level'    => $this->subject->getField('reqLevel'),
-        );
+        if ($compare)
+            $this->summary = array(
+                'id'       => 'itemset',
+                'template' => 'itemset',
+                'parent'   => 'summary-generic',
+                'groups'   => array_map(function ($v) { return [[$v]]; }, $compare),
+                'level'    => $this->subject->getField('reqLevel'),
+            );
 
         /**************/
         /* Extra Tabs */
@@ -221,10 +229,10 @@ class ItemsetPage extends GenericPage
                     'name' => '$LANG.tab_seealso'
                 );
 
-                if (!$relSets->hasDiffFields(['classMask']))
+                if (!$relSets->hasDiffFields('classMask'))
                     $tabData['hiddenCols'] = ['classes'];
 
-                $this->lvTabs[] = ['itemset', $tabData];
+                $this->lvTabs[] = [ItemsetList::$brickFile, $tabData];
 
                 $this->extendGlobalData($relSets->getJSGlobals());
             }
@@ -236,11 +244,11 @@ class ItemsetPage extends GenericPage
         $power = new StdClass();
         if (!$this->subject->error)
         {
-            $power->{'name_'.User::$localeString}    = $this->subject->getField('name', true);
-            $power->{'tooltip_'.User::$localeString} = $this->subject->renderTooltip();
+            $power->{'name_'.Lang::getLocale()->json()}    = $this->subject->getField('name', true);
+            $power->{'tooltip_'.Lang::getLocale()->json()} = $this->subject->renderTooltip();
         }
 
-        return sprintf($this->powerTpl, $this->typeId, User::$localeId, Util::toJSON($power, JSON_AOWOW_POWER));
+        return sprintf($this->powerTpl, $this->typeId, Lang::getLocale()->value, Util::toJSON($power, JSON_AOWOW_POWER));
     }
 }
 

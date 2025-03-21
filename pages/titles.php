@@ -19,7 +19,7 @@ class TitlesPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getCategoryFromUrl($pageParam);;
+        $this->getCategoryFromUrl($pageParam);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -42,14 +42,14 @@ class TitlesPage extends GenericPage
         {
             $tabData['data'] = array_values($titles->getListviewData());
 
-            if ($titles->hasDiffFields(['category']))
+            if ($titles->hasDiffFields('category'))
                 $tabData['visibleCols'] = ['category'];
 
             if (!$titles->hasAnySource())
                 $tabData['hiddenCols'] = ['source'];
         }
 
-        $this->lvTabs[] = ['title', $tabData];
+        $this->lvTabs[] = [TitleList::$brickFile, $tabData];
     }
 
     protected function generateTitle()

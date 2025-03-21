@@ -18,12 +18,12 @@ Also, this project is not meant to be used for commercial puposes of any kind!
 
 ## Requirements
 
-- Webserver running PHP ≥ 8.0 including extensions:
+- Webserver running PHP ≥ 8.2 including extensions:
   - SimpleXML
   - GD
   - Mysqli
   - mbString
-- MySQL ≥ 5.6
+- MySQL ≥ 5.7.0 OR MariaDB ≥ 10.6.4 OR similar
 - Tools require cmake: Please refer to the individual repositories for detailed information
   - [MPQExtractor](https://github.com/Sarjuuk/MPQExtractor) / [FFmpeg](https://ffmpeg.org/download.html) / [BLPConverter](https://github.com/Sarjuuk/BLPConverter) (optional)
   - WIN users may find it easier to use these alternatives
@@ -84,11 +84,10 @@ Extract the following directories from the client archives into `setup/mpqdata/`
 .. once is enough (still apply the localeCode though):
 
 > \<localeCode>/Interface/TalentFrame/
-> \<localeCode>/Interface/Glues/Credits/
 > \<localeCode>/Interface/Icons/
 > \<localeCode>/Interface/Spellbook/
 > \<localeCode>/Interface/PaperDoll/
-> \<localeCode>/Interface/GLUES/CHARACTERCREATE/
+> \<localeCode>/Interface/Glues/CharacterCreate/
 > \<localeCode>/Interface/Pictures
 > \<localeCode>/Interface/PvPRankBadges
 > \<localeCode>/Interface/FlavorImages
@@ -97,7 +96,8 @@ Extract the following directories from the client archives into `setup/mpqdata/`
 
 .. optionaly (not used in AoWoW):
 
-> \<localeCode>/Interface/GLUES/LOADINGSCREENS/
+> \<localeCode>/Interface/Glues/Loadingscreens/
+> \<localeCode>/Interface/Glues/Credits/
 
 **PAY ATTENTION:** you have to create a directory in `setup/mpqdata/` like `enus` (LOWERCASE) containing the data listed above.
 

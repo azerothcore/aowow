@@ -16,9 +16,10 @@ class GuideList extends BaseType
         GUIDE_STATUS_ARCHIVED => '#FFD100'
     );
 
-    public static   $type      = Type::GUIDE;
-    public static   $brickFile = 'guide';
-    public static   $dataTable = '?_guides';
+    public static   $type       = Type::GUIDE;
+    public static   $brickFile  = 'guide';
+    public static   $dataTable  = '?_guides';
+    public static   $contribute = CONTRIBUTE_CO;
 
     private         $article   = [];
     private         $jsGlobals = [];
@@ -30,9 +31,9 @@ class GuideList extends BaseType
                         'c' => ['j' => ['?_comments c ON c.`type` = '.Type::GUIDE.' AND c.`typeId` = g.`id` AND (c.`flags` & '.CC_FLAG_DELETED.') = 0', true], 's' => ', COUNT(c.`id`) AS `comments`']
                     );
 
-    public function __construct($conditions = [])
+    public function __construct(array $conditions = [], array $miscData = [])
     {
-        parent::__construct($conditions);
+        parent::__construct($conditions, $miscData);
 
         if ($this->error)
             return;
@@ -103,6 +104,12 @@ class GuideList extends BaseType
                 'date'        => $this->getField('date'),   // ok
                 'when'        => date(Util::$dateFormatInternal, $this->getField('date'))
             );
+
+            if ($this->getField('category') == 1)
+            {
+                $data[$this->id]['classs'] = $this->getField('classId');
+                $data[$this->id]['spec']   = $this->getField('specId');
+            }
         }
 
         return $data;
@@ -137,19 +144,20 @@ class GuideList extends BaseType
 
         if ($this->getField('classId') && $this->getField('category') == 1)
         {
-            $c = $this->getField('classId');
-            if (($s = $this->getField('specId')) > -1)
+            if ($c = $this->getField('classId'))
             {
-                $i = Game::$specIconStrings[$c][$s];
-                $n = Lang::game('classSpecs', $c, $s);
-            }
-            else
-            {
-                $i = 'class_'.Game::$classFileStrings[$c];
                 $n = Lang::game('cl', $c);
-            }
+                $specStr .= '&nbsp;&nbsp;–&nbsp;&nbsp;<span class="icontiny c'.$c.'" style="background-image: url('.Cfg::get('STATIC_URL').'/images/wow/icons/tiny/class_'.ChrClass::tryFrom($c)->json().'.gif)">%s</span>';
 
-            $specStr = '&nbsp;&nbsp;–&nbsp;&nbsp;<span class="icontiny c'.$c.'" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/'.$i.'.gif)">'.$n.'</span>';
+                if (($s = $this->getField('specId')) > -1)
+                {
+                    $i = Game::$specIconStrings[$c][$s];
+                    $n = '';
+                    $specStr .= '<span class="icontiny c'.$c.'" style="background-image: url('.Cfg::get('STATIC_URL').'/images/wow/icons/tiny/'.$i.'.gif)">'.Lang::game('classSpecs', $c, $s).'</span>';
+                }
+
+                $specStr = sprintf($specStr, $n);
+            }
         }
 
         $tt  = '<table><tr><td><div style="max-width: 320px"><b class="q">'.$this->getField('title').'</b><br>';

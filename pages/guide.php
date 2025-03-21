@@ -17,6 +17,9 @@ class GuidePage extends GenericPage
 
     const VALID_URL      = '/^[a-z0-9=_&\.\/\-]{2,64}$/i';
 
+    protected /* array */  $guideRating  = [];
+    protected /* ?string */$extraHTML    = null;
+
     protected /* int */    $type          = Type::GUIDE;
     protected /* int */    $typeId        = 0;
     protected /* int */    $guideRevision = -1;
@@ -27,12 +30,12 @@ class GuidePage extends GenericPage
     protected /* string */ $author        = '';
     protected /* array */  $gPageInfo     = [];
     protected /* int */    $show          = self::SHOW_GUIDE;
-    protected /* int */    $articleUrl    = '';
 
     private   /* array */  $validCats     = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     private   /* string */ $extra         = '';
     private   /* string */ $powerTpl      = '$WowheadPower.registerGuide(%s, %d, %s);';
     private   /* array */  $editorFields  = [];
+    private   /* bool */   $save          = false;
 
     protected /* array */ $_get = array(
         'id'  => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkInt'],
@@ -42,11 +45,11 @@ class GuidePage extends GenericPage
     protected /* array */ $_post = array(
         'save'        => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkEmptySet'],
         'submit'      => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkEmptySet'],
-        'title'       => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'name'        => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'description' => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'changelog'   => ['filter' => FILTER_UNSAFE_RAW, 'flags' => FILTER_FLAG_STRIP_AOWOW],
-        'body'        => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkFulltext'],
+        'title'       => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkTextLine'],
+        'name'        => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkTextLine'],
+        'description' => ['filter' => FILTER_CALLBACK, 'options' => 'GuidePage::checkDescription'],
+        'changelog'   => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkTextBlob'],
+        'body'        => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkTextBlob'],
         'locale'      => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkInt'],
         'category'    => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkInt'],
         'specId'      => ['filter' => FILTER_CALLBACK, 'options' => 'GenericPage::checkInt'],
@@ -55,8 +58,6 @@ class GuidePage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->contribute = CONTRIBUTE_CO;
-
         $guide = explode( "&", $pageParam, 2);
 
         parent::__construct($pageCall, $pageParam);
@@ -85,7 +86,7 @@ class GuidePage extends GenericPage
 
                     // main container should be tagged: <div class="text guide-changelog">
                     // why is this here: is there a mediawiki like diff function for staff?
-                    $this->addScript([CSS_STRING, 'li input[type="radio"] {margin:0}']);
+                    $this->addScript([SC_CSS_STRING, 'li input[type="radio"] {margin:0}']);
 
                     $this->typeId = $this->_get['id'];      // just to display sensible not-found msg
                     if ($id = DB::Aowow()->selectCell('SELECT `id` FROM ?_guides WHERE `id` = ?d', $this->typeId))
@@ -179,7 +180,7 @@ class GuidePage extends GenericPage
     {
         // init required template vars
         $this->editorFields = array(
-            'locale' => User::$localeId,
+            'locale' => Lang::getLocale()->value,
             'status' => GUIDE_STATUS_DRAFT
         );
     }
@@ -202,7 +203,7 @@ class GuidePage extends GenericPage
 
             // insert Article
             DB::Aowow()->query('INSERT INTO ?_articles (`type`, `typeId`, `locale`, `rev`, `editAccess`, `article`) VALUES (?d, ?d, ?d, ?d, ?d, ?)',
-                Type::GUIDE, $this->typeId, $this->_post['locale'], $rev, User::$groups, $this->_post['body']);
+                Type::GUIDE, $this->typeId, $this->_post['locale'], $rev, User::$groups & U_GROUP_STAFF ? User::$groups : User::$groups | U_GROUP_BLOGGER, $this->_post['body']);
 
             // link to Guide
             $guideData = array(
@@ -296,7 +297,7 @@ class GuidePage extends GenericPage
                         if ($this->subject->getField('nvotes') < 5)
                             $qf[] = Lang::guide('rating').Lang::main('colon').Lang::guide('noVotes');
                         else
-                            $qf[] = Lang::guide('rating').Lang::main('colon').Lang::guide('votes', [round($this->rating['avg'], 1), $this->rating['n']]);
+                            $qf[] = Lang::guide('rating').Lang::main('colon').Lang::guide('votes', [round($this->subject->getField('rating'), 1), $this->subject->getField('nvotes')]);
                     }
                     break;
                 case GUIDE_STATUS_ARCHIVED:
@@ -308,7 +309,7 @@ class GuidePage extends GenericPage
 
             if ($this->subject->getField('status') == GUIDE_STATUS_REVIEW && User::isInGroup(U_GROUP_STAFF) && $this->_get['rev'])
             {
-                $this->addScript([JS_STRING, '
+                $this->addScript([SC_JS_STRING, '
                     DomContentLoaded.addEvent(function() {
                         let send = function (status)
                         {
@@ -364,7 +365,7 @@ class GuidePage extends GenericPage
 
     private function displayChangelog() : void
     {
-        $this->addScript([JS_STRING, '
+        $this->addScript([SC_JS_STRING, '
             $(document).ready(function() {
                 var radios = $("input[type=radio]");
                 function limit(col, val) {
@@ -419,21 +420,21 @@ class GuidePage extends GenericPage
     private function initNew() : void
     {
         $this->addScript(
-            [JS_FILE,  'article-description.js'],
-            [JS_FILE,  'article-editing.js'],
-            [JS_FILE,  'guide-editing.js'],
-            [JS_FILE,  'fileuploader.js'],
-            [JS_FILE,  'toolbar.js'],
-            [JS_FILE,  'AdjacentPreview.js'],
-            [CSS_FILE, 'article-editing.css'],
-            [CSS_FILE, 'fileuploader.css'],
-            [CSS_FILE, 'guide-edit.css'],
-            [CSS_FILE,  'AdjacentPreview.css'],
+            [SC_JS_FILE,    'js/article-description.js'],
+            [SC_JS_FILE,    'js/article-editing.js'],
+            [SC_JS_FILE,    'js/guide-editing.js'],
+            [SC_JS_FILE,    'js/fileuploader.js'],
+            [SC_JS_FILE,    'js/toolbar.js'],
+            [SC_JS_FILE,    'js/AdjacentPreview.js'],
+            [SC_CSS_FILE,   'css/article-editing.css'],
+            [SC_CSS_FILE,   'css/fileuploader.css'],
+            [SC_CSS_FILE,   'css/guide-edit.css'],
+            [SC_CSS_FILE,   'css/AdjacentPreview.css'],
 
-            [CSS_STRING, '#upload-result input[type=text] { padding: 0px 2px; font-size: 12px; }'],
-            [CSS_STRING, '#upload-result > span { display:block; height: 22px; }'],
-            [CSS_STRING, '#upload-result { display: inline-block; text-align:right; }'],
-            [CSS_STRING, '#upload-progress { display: inline-block; margin-right:8px; }']
+            [SC_CSS_STRING, '#upload-result input[type=text] { padding: 0px 2px; font-size: 12px; }'],
+            [SC_CSS_STRING, '#upload-result > span { display:block; height: 22px; }'],
+            [SC_CSS_STRING, '#upload-result { display: inline-block; text-align:right; }'],
+            [SC_CSS_STRING, '#upload-progress { display: inline-block; margin-right:8px; }']
         );
 
         $this->articleUrl = 'new';
@@ -448,21 +449,21 @@ class GuidePage extends GenericPage
     private function initEdit() : bool
     {
         $this->addScript(
-            [JS_FILE,  'article-description.js'],
-            [JS_FILE,  'article-editing.js'],
-            [JS_FILE,  'guide-editing.js'],
-            [JS_FILE,  'fileuploader.js'],
-            [JS_FILE,  'toolbar.js'],
-            [JS_FILE,  'AdjacentPreview.js'],
-            [CSS_FILE, 'article-editing.css'],
-            [CSS_FILE, 'fileuploader.css'],
-            [CSS_FILE, 'guide-edit.css'],
-            [CSS_FILE,  'AdjacentPreview.css'],
+            [SC_JS_FILE,   'js/article-description.js'],
+            [SC_JS_FILE,   'js/article-editing.js'],
+            [SC_JS_FILE,   'js/guide-editing.js'],
+            [SC_JS_FILE,   'js/fileuploader.js'],
+            [SC_JS_FILE,   'js/toolbar.js'],
+            [SC_JS_FILE,   'js/AdjacentPreview.js'],
+            [SC_CSS_FILE,  'css/article-editing.css'],
+            [SC_CSS_FILE,  'css/fileuploader.css'],
+            [SC_CSS_FILE,  'css/guide-edit.css'],
+            [SC_CSS_FILE,  'css/AdjacentPreview.css'],
 
-            [CSS_STRING, '#upload-result input[type=text] { padding: 0px 2px; font-size: 12px; }'],
-            [CSS_STRING, '#upload-result > span { display:block; height: 22px; }'],
-            [CSS_STRING, '#upload-result { display: inline-block; text-align:right; }'],
-            [CSS_STRING, '#upload-progress { display: inline-block; margin-right:8px; }']
+            [SC_CSS_STRING, '#upload-result input[type=text] { padding: 0px 2px; font-size: 12px; }'],
+            [SC_CSS_STRING, '#upload-result > span { display:block; height: 22px; }'],
+            [SC_CSS_STRING, '#upload-result { display: inline-block; text-align:right; }'],
+            [SC_CSS_STRING, '#upload-progress { display: inline-block; margin-right:8px; }']
         );
 
         $this->articleUrl = 'edit';
@@ -478,13 +479,13 @@ class GuidePage extends GenericPage
                 return false;
 
             // req: valid data
-            if (!in_array($this->_post['category'], $this->validCats) || !(CFG_LOCALES & (1 << $this->_post['locale'])))
+            if (!in_array($this->_post['category'], $this->validCats) || !(Cfg::get('LOCALES') & (1 << $this->_post['locale'])))
                 return false;
 
             // sanitize: spec / class
             if ($this->_post['category'] == 1)              // Classes
             {
-                if ($this->_post['classId'] && !((1 << $this->_post['classId']) & CLASS_MASK_ALL))
+                if ($this->_post['classId'] && !ChrClass::tryFrom($this->_post['classId']))
                     $this->_post['classId'] = 0;
 
                 if (!in_array($this->_post['specId'], [-1, 0, 1, 2]))
@@ -521,11 +522,11 @@ class GuidePage extends GenericPage
         $power = new StdClass();
         if (!$this->subject->error)
         {
-            $power->{'name_'.User::$localeString}    = $this->name;
-            $power->{'tooltip_'.User::$localeString} = $this->subject->renderTooltip();
+            $power->{'name_'.Lang::getLocale()->json()}    = strip_tags($this->name);
+            $power->{'tooltip_'.Lang::getLocale()->json()} = $this->subject->renderTooltip();
         }
 
-        return sprintf($this->powerTpl, Util::toJSON($this->articleUrl ?: $this->typeId), User::$localeId, Util::toJSON($power, JSON_AOWOW_POWER));
+        return sprintf($this->powerTpl, Util::toJSON($this->articleUrl ?: $this->typeId), Lang::getLocale()->value, Util::toJSON($power, JSON_AOWOW_POWER));
     }
 
     protected function generatePath() : void
@@ -551,6 +552,16 @@ class GuidePage extends GenericPage
         if ($this->subject && $this->subject->getField('status') == GUIDE_STATUS_APPROVED) {
             DB::Aowow()->query('UPDATE ?_guides SET `views` = `views` + 1 WHERE `id` = ?d', $this->typeId);
         }
+    }
+
+    protected static function checkDescription(string $str) : string
+    {
+        // run checkTextBlob and also replace \n => \s and \s+ => \s
+        $str = preg_replace(parent::PATTERN_TEXT_BLOB, '', $str);
+
+        $str = strtr($str, ["\n" => ' ', "\r" => ' ']);
+
+        return preg_replace('/\s+/', ' ', trim($str));
     }
 }
 

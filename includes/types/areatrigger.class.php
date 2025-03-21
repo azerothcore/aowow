@@ -8,9 +8,10 @@ class AreaTriggerList extends BaseType
 {
     use spawnHelper;
 
-    public static   $type      = Type::AREATRIGGER;
-    public static   $brickFile = 'areatrigger';
-    public static   $dataTable = '?_areatrigger';
+    public static   $type       = Type::AREATRIGGER;
+    public static   $brickFile  = 'areatrigger';
+    public static   $dataTable  = '?_areatrigger';
+    public static   $contribute = CONTRIBUTE_CO;
 
     protected       $queryBase = 'SELECT a.*, a.id AS ARRAY_KEY FROM ?_areatrigger a';
     protected       $queryOpts = array(
@@ -18,9 +19,9 @@ class AreaTriggerList extends BaseType
                         's'      => ['j' => ['?_spawns s ON s.type = 503 AND s.typeId = a.id', true], 's' => ', s.areaId']
                     );
 
-    public function __construct($conditions)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
-        parent::__construct($conditions);
+        parent::__construct($conditions, $miscData);
 
         foreach ($this->iterate() as $id => &$_curTpl)
             if (!$_curTpl['name'])
@@ -57,29 +58,18 @@ class AreaTriggerList extends BaseType
 class AreaTriggerListFilter extends Filter
 {
     protected $genericFilter = array(
-        2 => [FILTER_CR_NUMERIC, 'id', NUM_CAST_INT] // id
+        2 => [parent::CR_NUMERIC, 'id', NUM_CAST_INT]       // id
     );
 
     // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'  => [FILTER_V_LIST,  [2],                true ], // criteria ids
-        'crs' => [FILTER_V_RANGE, [1, 6],             true ], // criteria operators
-        'crv' => [FILTER_V_RANGE, [0, 99999],         true ], // criteria values - all criteria are numeric here
-        'na'  => [FILTER_V_REGEX, '/[\p{C};\\\\]/ui', false], // name - only printable chars, no delimiter
-        'ma'  => [FILTER_V_EQUAL, 1,                  false], // match any / all filter
-        'ty'  => [FILTER_V_RANGE, [0, 5],             true ]  // types
+        'cr'  => [parent::V_LIST,  [2],                  true ], // criteria ids
+        'crs' => [parent::V_RANGE, [1, 6],               true ], // criteria operators
+        'crv' => [parent::V_REGEX, parent::PATTERN_INT,  true ], // criteria values - all criteria are numeric here
+        'na'  => [parent::V_REGEX, parent::PATTERN_NAME, false], // name - only printable chars, no delimiter
+        'ma'  => [parent::V_EQUAL, 1,                    false], // match any / all filter
+        'ty'  => [parent::V_RANGE, [0, 5],               true ]  // types
     );
-
-    protected function createSQLForCriterium(&$cr)
-    {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCr = $this->genericCriterion($cr))
-                return $genCr;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
-    }
 
     protected function createSQLForValues()
     {

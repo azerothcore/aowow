@@ -9,11 +9,11 @@ class IconList extends BaseType
     use listviewHelper;
 
     public static   $type       = Type::ICON;
-    public static   $brickFile  = 'icon';
+    public static   $brickFile  = 'icongallery';
     public static   $dataTable  = '?_icons';
     public static   $contribute = CONTRIBUTE_CO;
 
-    private         $pseudoQry  = 'SELECT iconId AS ARRAY_KEY, COUNT(*) FROM ?# WHERE iconId IN (?a) GROUP BY iconId';
+    private         $pseudoQry  = 'SELECT `iconId` AS ARRAY_KEY, COUNT(*) FROM ?# WHERE `iconId` IN (?a) GROUP BY `iconId`';
     private         $pseudoJoin = array(
         'nItems'        => '?_items',
         'nSpells'       => '?_spell',
@@ -34,9 +34,9 @@ class IconList extends BaseType
                     );
     */
 
-    public function __construct($conditions)
+    public function __construct(array $conditions = [], array $miscData = [])
     {
-        parent::__construct($conditions);
+        parent::__construct($conditions, $miscData);
 
         if (!$this->getFoundIDs())
             return;
@@ -53,7 +53,7 @@ class IconList extends BaseType
     // use if you JUST need the name
     public static function getName($id)
     {
-        $n = DB::Aowow()->SelectRow('SELECT name FROM ?_icons WHERE id = ?d', $id );
+        $n = DB::Aowow()->SelectRow('SELECT `name` FROM ?_icons WHERE `id` = ?d', $id );
         return Util::localizedString($n, 'name');
     }
     // end static use
@@ -103,7 +103,6 @@ class IconListFilter extends Filter
 {
     public $extraOpts = null;
 
-    // cr => [type, field, misc, extraCol]
     private $criterion2field = array(
           1 => '?_items',                                   // items [num]
           2 => '?_spell',                                   // spells [num]
@@ -121,32 +120,31 @@ class IconListFilter extends Filter
     private $totalUses       = [];
 
     protected $genericFilter = array(
-         1 => [FILTER_CR_CALLBACK, 'cbUseAny'     ],        // items [num]
-         2 => [FILTER_CR_CALLBACK, 'cbUseAny'     ],        // spells [num]
-         3 => [FILTER_CR_CALLBACK, 'cbUseAny'     ],        // achievements [num]
-         6 => [FILTER_CR_CALLBACK, 'cbUseAny'     ],        // currencies [num]
-         9 => [FILTER_CR_CALLBACK, 'cbUseAny'     ],        // hunterpets [num]
-        11 => [FILTER_CR_NYI_PH,   null,      null],        // classes [num]
-        13 => [FILTER_CR_CALLBACK, 'cbUseAll'     ]         // used [num]
+         1 => [parent::CR_CALLBACK, 'cbUseAny'  ],          // items [num]
+         2 => [parent::CR_CALLBACK, 'cbUseAny'  ],          // spells [num]
+         3 => [parent::CR_CALLBACK, 'cbUseAny'  ],          // achievements [num]
+         6 => [parent::CR_CALLBACK, 'cbUseAny'  ],          // currencies [num]
+         9 => [parent::CR_CALLBACK, 'cbUseAny'  ],          // hunterpets [num]
+        11 => [parent::CR_NYI_PH,   null,      0],          // classes [num]
+        13 => [parent::CR_CALLBACK, 'cbUseAll'  ]           // used [num]
     );
 
-    // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'    => [FILTER_V_LIST,  [1, 2, 3, 6, 9, 11, 13], true ], // criteria ids
-        'crs'   => [FILTER_V_RANGE, [1, 6],                  true ], // criteria operators
-        'crv'   => [FILTER_V_RANGE, [0, 99999],              true ], // criteria values - all criteria are numeric here
-        'na'    => [FILTER_V_REGEX, '/[\p{C};%\\\\]/ui',     false], // name - only printable chars, no delimiter
-        'ma'    => [FILTER_V_EQUAL, 1,                       false]  // match any / all filter
+        'cr'  => [parent::V_LIST,  [1, 2, 3, 6, 9, 11, 13], true ], // criteria ids
+        'crs' => [parent::V_RANGE, [1, 6],                  true ], // criteria operators
+        'crv' => [parent::V_REGEX, parent::PATTERN_INT,     true ], // criteria values - all criteria are numeric here
+        'na'  => [parent::V_REGEX, parent::PATTERN_NAME,    false], // name - only printable chars, no delimiter
+        'ma'  => [parent::V_EQUAL, 1,                       false]  // match any / all filter
     );
 
-    private function _getCnd($op, $val, $tbl)
+    private function _getCnd(string $op, int $val, string $tbl) : ?array
     {
         switch ($op)
         {
             case '>':
             case '>=':
             case '=':
-                $ids = DB::Aowow()->selectCol('SELECT iconId AS ARRAY_KEY, COUNT(*) AS n FROM ?# GROUP BY iconId HAVING n '.$op.' '.$val, $tbl);
+                $ids = DB::Aowow()->selectCol('SELECT `iconId` AS ARRAY_KEY, COUNT(*) AS "n" FROM ?# GROUP BY `iconId` HAVING n '.$op.' '.$val, $tbl);
                 return $ids ? ['id', array_keys($ids)] : [1];
             case '<=':
                 if ($val)
@@ -160,21 +158,12 @@ class IconListFilter extends Filter
                 if ($val)
                     $op = '=';
                 break;
+            default:
+                return null;
         }
 
-        $ids = DB::Aowow()->selectCol('SELECT iconId AS ARRAY_KEY, COUNT(*) AS n FROM ?# GROUP BY iconId HAVING n '.$op.' '.$val, $tbl);
+        $ids = DB::Aowow()->selectCol('SELECT `iconId` AS ARRAY_KEY, COUNT(*) AS "n" FROM ?# GROUP BY `iconId` HAVING n '.$op.' '.$val, $tbl);
         return $ids ? ['id', array_keys($ids), '!'] : [1];
-    }
-
-    protected function createSQLForCriterium(&$cr)
-    {
-        if (in_array($cr[0], array_keys($this->genericFilter)))
-            if ($genCr = $this->genericCriterion($cr))
-                return $genCr;
-
-        unset($cr);
-        $this->error = true;
-        return [1];
     }
 
     protected function createSQLForValues()
@@ -190,18 +179,18 @@ class IconListFilter extends Filter
         return $parts;
     }
 
-    protected function cbUseAny($cr, $value)
+    protected function cbUseAny(int $cr, int $crs, string $crv) : ?array
     {
-        if (Util::checkNumeric($cr[2], NUM_CAST_INT) && $this->int2Op($cr[1]))
-            return $this->_getCnd($cr[1], $cr[2], $this->criterion2field[$cr[0]]);
+        if (Util::checkNumeric($crv, NUM_CAST_INT) && $this->int2Op($crs))
+            return $this->_getCnd($crs, $crv, $this->criterion2field[$cr]);
 
-        return false;
+        return null;
     }
 
-    protected function cbUseAll($cr)
+    protected function cbUseAll(int $cr, int $crs, string $crv) : ?array
     {
-        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
-            return false;
+        if (!Util::checkNumeric($crv, NUM_CAST_INT) || !$this->int2Op($crs))
+            return null;
 
         if (!$this->totalUses)
         {
@@ -210,24 +199,24 @@ class IconListFilter extends Filter
                 if (!$tbl)
                     continue;
 
-                $res = DB::Aowow()->selectCol('SELECT iconId AS ARRAY_KEY, COUNT(*) AS n FROM ?# GROUP BY iconId', $tbl);
+                $res = DB::Aowow()->selectCol('SELECT `iconId` AS ARRAY_KEY, COUNT(*) AS "n" FROM ?# GROUP BY `iconId`', $tbl);
                 Util::arraySumByKey($this->totalUses, $res);
             }
         }
 
-        if ($cr[1] == '=')
-            $cr[1] = '==';
+        if ($crs == '=')
+            $crs = '==';
 
-        $op = $cr[1];
-        if ($cr[1] == '<=' && $cr[2])
+        $op = $crs;
+        if ($crs == '<=' && $crv)
             $op = '>';
-        else if ($cr[1] == '<' && $cr[2])
+        else if ($crs == '<' && $crv)
             $op = '>=';
-        else if ($cr[1] == '!=' && $cr[2])
+        else if ($crs == '!=' && $crv)
             $op = '==';
-        $ids = array_filter($this->totalUses, function ($x) use ($op, $cr) { return eval('return '.$x.' '.$op.' '.$cr[2].';'); });
+        $ids = array_filter($this->totalUses, fn($x) => eval('return '.$x.' '.$op.' '.$crv.';'));
 
-        if ($cr[1] != $op)
+        if ($crs != $op)
             return $ids ? ['id', array_keys($ids), '!'] : [1];
         else
             return $ids ? ['id', array_keys($ids)] : ['id', array_keys($this->totalUses), '!'];
