@@ -355,8 +355,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
         }
 
         // fill learnedAt, trainingCost from trainer
-        // if ($trainer = DB::World()->select('SELECT `spellID` AS ARRAY_KEY, MIN(`ReqSkillRank`) AS `reqSkill`, MIN(`MoneyCost`) AS `cost`, `ReqAbility1` AS `reqSpellId`, COUNT(*) AS `count` FROM trainer_spell GROUP BY `SpellID`'))  // TC
-        if ($trainer = DB::World()->select('SELECT `SpellID` AS ARRAY_KEY, MIN(`ReqSkillRank`) AS `reqSkill`, MIN(`MoneyCost`) AS `cost`, COUNT(*) AS `count` FROM `npc_trainer` GROUP BY `SpellID`')) // AC
+        if ($trainer = DB::World()->select('SELECT `spellID` AS ARRAY_KEY, MIN(`ReqSkillRank`) AS `reqSkill`, MIN(`MoneyCost`) AS `cost`, `ReqAbility1` AS `reqSpellId`, COUNT(*) AS `count` FROM trainer_spell GROUP BY `SpellID`'))
         {
             $spells = DB::Aowow()->select('SELECT `id` AS ARRAY_KEY, `effect1Id`, `effect2Id`, `effect3Id`, `effect1TriggerSpell`, `effect2TriggerSpell`, `effect3TriggerSpell` FROM dbc_spell WHERE `id` IN (?a)', array_keys($trainer));
             $links  = [];
@@ -380,8 +379,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
                     $l = &$links[$effects['effect'.$i.'TriggerSpell']];
 
                     if (!isset($l))
-                        $l = [$tData['reqSkill'], $tData['cost']]; // AC
-                        // $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']]; // TC
+                        $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
 
                     if ($tData['reqSkill'] < $l[0])
                         $l[0] = $tData['reqSkill'];
@@ -395,8 +393,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
                     $l = &$links[$spell];
 
                     if (!isset($l))
-                        $l = [$tData['reqSkill'], $tData['cost']]; // AC
-                        // $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']]; // TC
+                        $l = [$tData['reqSkill'], $tData['cost'], $tData['reqSpellId']];
 
                     if ($tData['reqSkill'] < $l[0])
                         $l[0] = $tData['reqSkill'];
@@ -522,9 +519,10 @@ CLISetup::registerSetup("sql", new class extends SetupScript
             201031 => 10656,
             201032 => 10658
         );
-        foreach ($specs as $tt => $req)
-            if ($spells = DB::World()->selectCol('SELECT SpellID FROM npc_trainer WHERE ID = ?d', $tt))
-                DB::Aowow()->query('UPDATE ?_spell SET reqSpellId = ?d WHERE id IN (?a)', $req, $spells);
+        // TODO
+        // foreach ($specs as $tt => $req)
+        //     if ($spells = DB::World()->selectCol('SELECT SpellID FROM npc_trainer WHERE ID = ?d', $tt))
+        //         DB::Aowow()->query('UPDATE ?_spell SET reqSpellId = ?d WHERE id IN (?a)', $req, $spells);
         // end AC
 
 

@@ -509,10 +509,7 @@ CREATE TABLE `aowow_creature` (
   `dynamicFlags` int(10) unsigned NOT NULL DEFAULT 0,
   `family` tinyint(4) NOT NULL DEFAULT 0,
   `trainerType` tinyint(4) NOT NULL DEFAULT 0,
-  `trainerSpell` mediumint(8) unsigned NOT NULL DEFAULT 0, -- AC column
-  `trainerClass` tinyint(3) unsigned NOT NULL DEFAULT 0, -- AC column
-  `trainerRace` tinyint(3) unsigned NOT NULL DEFAULT 0, -- AC column
-  -- `trainerRequirement` smallint unsigned NOT NULL DEFAULT 0, -- TC column
+  `trainerRequirement` smallint(5) unsigned NOT NULL DEFAULT 0,
   `dmgMin` float unsigned NOT NULL DEFAULT 0,
   `dmgMax` float unsigned NOT NULL DEFAULT 0,
   `mleAtkPwrMin` smallint unsigned NOT NULL DEFAULT 0,

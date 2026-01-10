@@ -14,7 +14,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
     );
 
     protected $dbcSourceFiles  = ['charstartoutfit', 'talent', 'spell', 'skilllineability', 'itemextendedcost', 'lock'];
-    protected $worldDependency    = ['playercreateinfo_skills', 'playercreateinfo_item', 'skill_discovery_template', 'achievement_reward', 'skill_perfect_item_template', 'item_template', 'gameobject_template', 'quest_template', 'quest_template_addon', 'creature_template', 'creature', 'npc_trainer', 'npc_vendor', 'game_event_npc_vendor', 'reference_loot_template', 'item_loot_template', 'creature_loot_template', 'gameobject_loot_template', 'mail_loot_template', 'disenchant_loot_template', 'fishing_loot_template', 'skinning_loot_template', 'milling_loot_template', 'prospecting_loot_template', 'pickpocketing_loot_template'];
+    protected $worldDependency    = ['playercreateinfo_skills', 'playercreateinfo_item', 'skill_discovery_template', 'achievement_reward', 'skill_perfect_item_template', 'item_template', 'gameobject_template', 'quest_template', 'quest_template_addon', 'creature_template', 'creature', 'creature_default_trainer', 'trainer_spell', 'npc_vendor', 'game_event_npc_vendor', 'reference_loot_template', 'item_loot_template', 'creature_loot_template', 'gameobject_loot_template', 'mail_loot_template', 'disenchant_loot_template', 'fishing_loot_template', 'skinning_loot_template', 'milling_loot_template', 'prospecting_loot_template', 'pickpocketing_loot_template'];
 
     protected $setupAfter      = [['spell', 'achievement', 'items', 'itemset', 'spawns', 'creature', 'zones', 'titles'], []];
 
@@ -1038,8 +1038,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
     {
         CLI::write('[source] * #6  Trainer', CLI::LOG_BLANK, true, true);
 
-        // $tNpcs = DB::World()->select('SELECT `SpellID` AS ARRAY_KEY, cdt.`CreatureId` AS `entry`, COUNT(1) AS `qty` FROM trainer_spell ts JOIN creature_default_trainer cdt ON cdt.`TrainerId` = ts.`TrainerId` GROUP BY ARRAY_KEY'); // TC
-        $tNpcs = DB::World()->select('SELECT SpellID AS ARRAY_KEY, ID AS entry, COUNT(1) AS qty FROM npc_trainer WHERE SpellID > 0 GROUP BY ARRAY_KEY'); // AC
+        $tNpcs = DB::World()->select('SELECT `SpellID` AS ARRAY_KEY, cdt.`CreatureId` AS `entry`, COUNT(1) AS `qty` FROM trainer_spell ts JOIN creature_default_trainer cdt ON cdt.`TrainerId` = ts.`TrainerId` GROUP BY ARRAY_KEY');
         if (!$tNpcs)
         {
             CLI::write('[source] spelltrainer() - trainer_spell contained no spell or creature_default_trainer no trainer.', CLI::LOG_WARN);
