@@ -109,7 +109,7 @@ class Conditions
     public const QUESTSTATE               = 47;             //                          questId,        stateMask,      NULL
     public const QUEST_OBJECTIVE_PROGRESS = 48;             //                          questId,        objectiveIdx,   count
     public const DIFFICULTY_ID            = 49;             // map has difficulty id:   difficulty,     NULL,           NULL
-    public const GAMEMASTER               = 50;             // player is GM:            canBeGM?,       NULL,           NULL
+    public const GAMEMASTER               = 50;             // player is GM: canBeGM?, NULL, NULL - Un-used TrinityCore, doesn't exist or works different in AzerothCore
 //  public const OBJECT_ENTRY_GUID_MASTER = 51;             // ❌ reserved for TC master
 //  public const TYPE_MASK_MASTER         = 52;             // ❌ reserved for TC master
 //  public const BATTLE_PET_COUNT         = 53;             // ❌ reserved for TC master

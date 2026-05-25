@@ -146,21 +146,21 @@ class SmartAction
     public const ACTION_INVOKER_CAST                       = 134; //  spellID, castFlags
     public const ACTION_PLAY_CINEMATIC                     = 135; //  cinematic
     public const ACTION_SET_MOVEMENT_SPEED                 = 136; //  movementType, speedInteger, speedFraction
-    public const ACTION_PLAY_SPELL_VISUAL_KIT              = 137; //  [RESERVED] spellVisualKitId
-    public const ACTION_OVERRIDE_LIGHT                     = 138; //  zoneId, areaLightId, overrideLightID, transitionMilliseconds
-    public const ACTION_OVERRIDE_WEATHER                   = 139; //  zoneId, weatherId, intensity
-    public const ACTION_SET_AI_ANIM_KIT                    = 140; //  [RESERVED]
-    public const ACTION_SET_HOVER                          = 141; //  Enable/Disable hover for target units.
+    public const ACTION_PLAY_SPELL_VISUAL_KIT              = 137; //  spellVisualKitId - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_OVERRIDE_LIGHT                     = 138; //  zoneId, areaLightId, overrideLightID, transitionMilliseconds - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_OVERRIDE_WEATHER                   = 139; //  zoneId, weatherId, intensity - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_SET_AI_ANIM_KIT                    = 140; //  Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_SET_HOVER                          = 141; //  Enable/Disable hover (use ACTION_AC_SET_HOVER=207 instead) - Un-used TrinityCore, doesn't exist or works different in AzerothCore
     public const ACTION_SET_HEALTH_PCT                     = 142; //  Set current health percentage of target units.
-    public const ACTION_CREATE_CONVERSATION                = 143; //  [RESERVED]
-    public const ACTION_SET_IMMUNE_PC                      = 144; //  Enable/Disable immunity to players of target units.
-    public const ACTION_SET_IMMUNE_NPC                     = 145; //  Enable/Disable immunity to creatures of target units.
-    public const ACTION_SET_UNINTERACTIBLE                 = 146; //  Make/Reset target units uninteractible.
-    public const ACTION_ACTIVATE_GAMEOBJECT                = 147; //  Activate target gameobjects, using given action.
-    public const ACTION_ADD_TO_STORED_TARGET_LIST          = 148; //  Add selected targets to varID for later use.
-    public const ACTION_BECOME_PERSONAL_CLONE_FOR_PLAYER   = 149; //  [RESERVED]
-    public const ACTION_TRIGGER_GAME_EVENT                 = 150; //  [RESERVED]
-    public const ACTION_DO_ACTION                          = 151; //  [RESERVED]
+    public const ACTION_CREATE_CONVERSATION                = 143; //  Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_SET_IMMUNE_PC                      = 144; //  Enable/Disable immunity to players of target units. - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_SET_IMMUNE_NPC                     = 145; //  Enable/Disable immunity to creatures of target units. - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_SET_UNINTERACTIBLE                 = 146; //  Make/Reset target units uninteractible. - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_ACTIVATE_GAMEOBJECT                = 147; //  Activate target gameobjects, using given action. - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_ADD_TO_STORED_TARGET_LIST          = 148; //  Add selected targets to varID for later use. - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_BECOME_PERSONAL_CLONE_FOR_PLAYER   = 149; //  Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_TRIGGER_GAME_EVENT                 = 150; //  Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const ACTION_DO_ACTION                          = 151; //  (use ACTION_AC_DO_ACTION=223 instead) - Un-used TrinityCore, doesn't exist or works different in AzerothCore
 
     public const ACTION_MOVE_TO_POS_TARGET                 = 201; //  pointId
     public const ACTION_EXIT_VEHICLE                       = 203; //  none
@@ -228,8 +228,8 @@ class SmartAction
         self::ACTION_CALL_AREAEXPLOREDOREVENTHAPPENS    => [Type::QUEST, null, null, null, null, null, 0],  // QuestID
         self::ACTION_SET_INGAME_PHASE_ID                => [null, null, null, null, null, null, 2],  // used on 4.3.4 and higher scripts
         self::ACTION_SET_EMOTE_STATE                    => [null, null, null, null, null, null, 0],  // emoteID
-        self::ACTION_SET_UNIT_FLAG                      => [['unitFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_REMOVE_UNIT_FLAG                   => [['unitFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_SET_UNIT_FLAG                      => [['unitFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_REMOVE_UNIT_FLAG                   => [['unitFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_AUTO_ATTACK                        => [null, null, null, null, null, null, 0],  // AllowAttackState (0 = stop attack, anything else means continue attacking)
         self::ACTION_ALLOW_COMBAT_MOVEMENT              => [null, null, null, null, null, null, 0],  // AllowCombatMovement (0 = stop combat based movement, anything else continue attacking)
         self::ACTION_SET_EVENT_PHASE                    => [null, null, null, null, null, null, 0],  // Phase
@@ -268,10 +268,10 @@ class SmartAction
         self::ACTION_WP_STOP                            => [['formatTime', 10, true], Type::QUEST, null, null, null, null, 0],  // despawnTime, quest, fail?
         self::ACTION_ADD_ITEM                           => [Type::ITEM, null, null, null, null, null, 0],  // itemID, count
         self::ACTION_REMOVE_ITEM                        => [Type::ITEM, null, null, null, null, null, 0],  // itemID, count
-        self::ACTION_INSTALL_AI_TEMPLATE                => [['aiTemplate', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_INSTALL_AI_TEMPLATE                => [['aiTemplate', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_SET_RUN                            => [null, null, null, null, null, null, 0],  // 0/1
         self::ACTION_SET_DISABLE_GRAVITY                => [null, null, null, null, null, null, 0],  // 0/1
-        self::ACTION_SET_SWIM                           => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_SET_SWIM                           => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_TELEPORT                           => [null, null, null, null, null, null, 0],  // mapID,
         self::ACTION_SET_COUNTER                        => [null, null, null, null, null, null, 0],  // id, value, reset (0/1)
         self::ACTION_STORE_TARGET_LIST                  => [null, null, null, null, null, null, 0],  // varID,
@@ -285,9 +285,9 @@ class SmartAction
         self::ACTION_CLOSE_GOSSIP                       => [null, null, null, null, null, null, 0],  // none
         self::ACTION_TRIGGER_TIMED_EVENT                => [null, null, null, null, null, null, 0],  // id(>1)
         self::ACTION_REMOVE_TIMED_EVENT                 => [null, null, null, null, null, null, 0],  // id(>1)
-        self::ACTION_ADD_AURA                           => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_OVERRIDE_SCRIPT_BASE_OBJECT        => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_RESET_SCRIPT_BASE_OBJECT           => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_ADD_AURA                           => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_OVERRIDE_SCRIPT_BASE_OBJECT        => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_RESET_SCRIPT_BASE_OBJECT           => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_CALL_SCRIPT_RESET                  => [null, null, null, null, null, null, 0],  // none
         self::ACTION_SET_RANGED_MOVEMENT                => [null, null, null, null, null, null, 0],  // Distance, angle
         self::ACTION_CALL_TIMED_ACTIONLIST              => [null, null, null, null, null, null, 0],  // ID (overwrites already running actionlist), stop after combat?(0/1), timer update type(0-OOC, 1-IC, 2-ALWAYS)
@@ -303,10 +303,10 @@ class SmartAction
         self::ACTION_SET_UNIT_FIELD_BYTES_1             => [['unitFieldBytes1', 10, false], null, null, null, null, null, 0],  // bytes, target
         self::ACTION_REMOVE_UNIT_FIELD_BYTES_1          => [['unitFieldBytes1', 10, false], null, null, null, null, null, 0],  // bytes, target
         self::ACTION_INTERRUPT_SPELL                    => [null, Type::SPELL, null, null, null, null, 0],  //
-        self::ACTION_SEND_GO_CUSTOM_ANIM                => [['dynFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_SET_DYNAMIC_FLAG                   => [['dynFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_ADD_DYNAMIC_FLAG                   => [['dynFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_REMOVE_DYNAMIC_FLAG                => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_SEND_GO_CUSTOM_ANIM                => [['dynFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_SET_DYNAMIC_FLAG                   => [['dynFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_ADD_DYNAMIC_FLAG                   => [['dynFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_REMOVE_DYNAMIC_FLAG                => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_JUMP_TO_POS                        => [null, null, null, null, null, null, 0],  // speedXY, speedZ, targetX, targetY, targetZ
         self::ACTION_SEND_GOSSIP_MENU                   => [null, null, null, null, null, null, 0],  // menuId, optionId
         self::ACTION_GO_SET_LOOT_STATE                  => [['lootState', 10, false], null, null, null, null, null, 0],  // state
@@ -314,9 +314,9 @@ class SmartAction
         self::ACTION_SET_HOME_POS                       => [null, null, null, null, null, null, 0],  // none
         self::ACTION_SET_HEALTH_REGEN                   => [null, null, null, null, null, null, 0],  // 0/1
         self::ACTION_SET_ROOT                           => [null, null, null, null, null, null, 0],  // off/on
-        self::ACTION_SET_GO_FLAG                        => [['goFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_ADD_GO_FLAG                        => [['goFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_REMOVE_GO_FLAG                     => [['goFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_SET_GO_FLAG                        => [['goFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_ADD_GO_FLAG                        => [['goFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_REMOVE_GO_FLAG                     => [['goFlags', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_SUMMON_CREATURE_GROUP              => [null, null, null, null, null, null, 0],  // Group, attackInvoker
         self::ACTION_SET_POWER                          => [['powerType', 10, false], null, null, null, null, null, 0],  // PowerType, newPower
         self::ACTION_ADD_POWER                          => [['powerType', 10, false], null, null, null, null, null, 0],  // PowerType, newPower
@@ -329,14 +329,14 @@ class SmartAction
         self::ACTION_SET_CORPSE_DELAY                   => [['formatTime', 10, false], null, null, null, null, null, 0],  // timer
         self::ACTION_DISABLE_EVADE                      => [null, null, null, null, null, null, 0],  // 0/1 (1 = disabled, 0 = enabled)
         self::ACTION_GO_SET_GO_STATE                    => [null, null, null, null, null, null, 0],  // state
-        self::ACTION_SET_CAN_FLY                        => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_REMOVE_AURAS_BY_TYPE               => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_SET_SIGHT_DIST                     => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
-        self::ACTION_FLEE                               => [['formatTime', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_SET_CAN_FLY                        => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_REMOVE_AURAS_BY_TYPE               => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_SET_SIGHT_DIST                     => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_FLEE                               => [['formatTime', 10, false], null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_ADD_THREAT                         => [null, null, null, null, null, null, 0],  // +threat, -threat
         self::ACTION_LOAD_EQUIPMENT                     => [null, null, null, null, null, null, 0],  // id
         self::ACTION_TRIGGER_RANDOM_TIMED_EVENT         => [['numRange', 10, false], null, null, null, null, null, 0],  // id min range, id max range
-        self::ACTION_REMOVE_ALL_GAMEOBJECTS             => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE
+        self::ACTION_REMOVE_ALL_GAMEOBJECTS             => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_PAUSE_MOVEMENT                     => [null, ['formatTime', 10, true], null, null, null, null, 0],  // MovementSlot (default = 0, active = 1, controlled = 2), PauseTime (ms), Force
         self::ACTION_PLAY_ANIMKIT                       => [null, null, null, null, null, null, 2],  // don't use on 3.3.5a
         self::ACTION_SCENE_PLAY                         => [null, null, null, null, null, null, 2],  // don't use on 3.3.5a
@@ -347,21 +347,21 @@ class SmartAction
         self::ACTION_INVOKER_CAST                       => [Type::SPELL, ['castFlags', -1, false], null, null, null, null, 0],  // spellID, castFlags
         self::ACTION_PLAY_CINEMATIC                     => [null, null, null, null, null, null, 0],  // entry, cinematic
         self::ACTION_SET_MOVEMENT_SPEED                 => [null, null, null, null, null, null, 0],  // movementType, speedInteger, speedFraction
-        self::ACTION_PLAY_SPELL_VISUAL_KIT              => [null, null, null, null, null, null, 2],  // spellVisualKitId (RESERVED, PENDING CHERRYPICK)
-        self::ACTION_OVERRIDE_LIGHT                     => [Type::ZONE, null, null, ['formatTime', -1, true], null, null, 0],  // zoneId, overrideLightID, transitionMilliseconds
-        self::ACTION_OVERRIDE_WEATHER                   => [Type::ZONE, ['weatherState', 10, false], null, null, null, null, 0],  // zoneId, weatherId, intensity
-        self::ACTION_SET_AI_ANIM_KIT                    => [null, null, null, null, null, null, 2],  // DEPRECATED, DO REUSE (it was never used in any branch, treat as free action id)
-        self::ACTION_SET_HOVER                          => [null, null, null, null, null, null, 0],  // 0/1
+        self::ACTION_PLAY_SPELL_VISUAL_KIT              => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_OVERRIDE_LIGHT                     => [Type::ZONE, null, null, ['formatTime', -1, true], null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_OVERRIDE_WEATHER                   => [Type::ZONE, ['weatherState', 10, false], null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_SET_AI_ANIM_KIT                    => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_SET_HOVER                          => [null, null, null, null, null, null, 1],  // (use ACTION_AC_SET_HOVER=207 instead) - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::ACTION_SET_HEALTH_PCT                     => [null, null, null, null, null, null, 0],  // percent
-        self::ACTION_CREATE_CONVERSATION                => [null, null, null, null, null, null, 2],  // don't use on 3.3.5a
-        self::ACTION_SET_IMMUNE_PC                      => [null, null, null, null, null, null, 0],  // 0/1
-        self::ACTION_SET_IMMUNE_NPC                     => [null, null, null, null, null, null, 0],  // 0/1
-        self::ACTION_SET_UNINTERACTIBLE                 => [null, null, null, null, null, null, 0],  // 0/1
-        self::ACTION_ACTIVATE_GAMEOBJECT                => [null, null, null, null, null, null, 0],  // GameObjectActions
-        self::ACTION_ADD_TO_STORED_TARGET_LIST          => [null, null, null, null, null, null, 0],  // varID
-        self::ACTION_BECOME_PERSONAL_CLONE_FOR_PLAYER   => [null, null, null, null, null, null, 2],  // don't use on 3.3.5a
-        self::ACTION_TRIGGER_GAME_EVENT                 => [null, null, null, null, null, null, 2],  // eventId, useSaiTargetAsGameEventSource (RESERVED, PENDING CHERRYPICK)
-        self::ACTION_DO_ACTION                          => [null, null, null, null, null, null, 2],   // actionId (RESERVED, PENDING CHERRYPICK)
+        self::ACTION_CREATE_CONVERSATION                => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_SET_IMMUNE_PC                      => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_SET_IMMUNE_NPC                     => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_SET_UNINTERACTIBLE                 => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_ACTIVATE_GAMEOBJECT                => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_ADD_TO_STORED_TARGET_LIST          => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_BECOME_PERSONAL_CLONE_FOR_PLAYER   => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_TRIGGER_GAME_EVENT                 => [null, null, null, null, null, null, 1],  // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::ACTION_DO_ACTION                          => [null, null, null, null, null, null, 1],  // (use ACTION_AC_DO_ACTION=223 instead) - Un-used TrinityCore, doesn't exist or works different in AzerothCore
 
         self::ACTION_MOVE_TO_POS_TARGET                 => [null, null, null, null, null, null, 0],  // pointId
         self::ACTION_EXIT_VEHICLE                       => [null, null, null, null, null, null, 0],  // none

@@ -39,7 +39,7 @@ class SmartTarget
     public const TARGET_LOOT_RECIPIENTS        = 27;        //  All tagging players
     public const TARGET_FARTHEST               = 28;        //  Farthest unit on the threat list
     public const TARGET_VEHICLE_PASSENGER      = 29;        //  Vehicle can target unit in given seat
-    public const TARGET_CLOSEST_UNSPAWNED_GO   = 30;        //  entry(0any), maxDist
+    public const TARGET_CLOSEST_UNSPAWNED_GO   = 30;        //  entry(0any), maxDist - Un-used TrinityCore, doesn't exist or works different in AzerothCore
 
     public const TARGET_PLAYER_WITH_AURA       = 201;       //  spellId, negation, MaxDist, MinDist
     public const TARGET_RANDOM_POINT           = 202;       //  range, amount, self as middle (0/1)
