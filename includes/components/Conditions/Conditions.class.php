@@ -52,8 +52,8 @@ class Conditions
 //  public const SRC_SPELL_TERRAIN_SWAP          = 25;      //                             - ❌ reserved for TC master
 //  public const SRC_SPELL_PHASE                 = 26;      //                             - ❌ reserved for TC master
 //  public const SRC_SPELL_GRAVEYARD             = 27;      //                             - ❌ reserved for TC master
-//  public const SRC_SPELL_AREATRIGGER           = 28;      //                             - ❌ reserved for TC master
-//  public const SRC_SPELL_CONVERSATION_LINE     = 29;      //                             - ❌ reserved for TC master
+    public const SRC_PLAYER_LOOT_TEMPLATE        = 28;      // tplEntry,   itemId,    null
+    public const SRC_CREATURE_RESPAWN            = 29;      // null,       npcId,     null
     public const SRC_AREATRIGGER_CLIENT          = 30;      // null,       atId,      null
 //  public const SRC_SPELL_TRAINER_SPELL         = 31;      //                             - ❌ reserved for TC master
 //  public const SRC_SPELL_OBJECT_VISIBILITY     = 32;      //                             - ❌ reserved for TC master
@@ -117,6 +117,13 @@ class Conditions
 //  public const SCENE_IN_PROGRESS        = 55;             // ❌ reserved for TC master
 //  public const PLAYER_CONDITION         = 56;             // ❌ reserved for TC master
 
+    public const QUEST_SATISFY_EXCLUSIVE       = 101;            // quest_id satisfied exclusive group: questId,       NULL,           NULL
+    public const HAS_AURA_TYPE                 = 102;            // has aura type:                      auraType,      NULL,           NULL
+    public const WORLD_SCRIPT                  = 103;            // WorldState::IsConditionFulfilled:    conditionId,   state,          NULL
+    public const AI_DATA                       = 104;            // AI::GetData returns value:           dataId,        value,          NULL
+    public const PLAYER_QUEUED_RANDOM_DUNGEON  = 105;            // queued for RDF:                      checkDiff?,    difficulty,     NULL
+    public const UNIT_IN_COMBAT                = 106;            // unit is engaged in combat:           NULL,           NULL,           NULL
+
     private const IDX_SRC_GROUP = 0;
     private const IDX_SRC_ENTRY = 1;
     private const IDX_SRC_ID    = 2;
@@ -148,6 +155,8 @@ class Conditions
         self::SRC_SMART_EVENT                 => [true,         true,              true, null],
         self::SRC_NPC_VENDOR                  => [Type::NPC,    Type::ITEM,        null, null],
         self::SRC_SPELL_PROC                  => [null,         Type::SPELL,       null, null],
+        self::SRC_PLAYER_LOOT_TEMPLATE        => [null,         Type::ITEM,        null, null],
+        self::SRC_CREATURE_RESPAWN            => [null,         Type::NPC,         null, null],
         self::SRC_AREATRIGGER_CLIENT          => [null,         Type::AREATRIGGER, null, null]
     );
 
@@ -206,7 +215,14 @@ class Conditions
         self::QUESTSTATE               => [Type::QUEST,       true, null, null],
         self::QUEST_OBJECTIVE_PROGRESS => [Type::QUEST,       true, true, null],
         self::DIFFICULTY_ID            => [true,              null, null, null],
-        self::GAMEMASTER               => [true,              null, null, null]
+        self::GAMEMASTER               => [true,              null, null, null],
+
+        self::QUEST_SATISFY_EXCLUSIVE      => [Type::QUEST, null, null, null],
+        self::HAS_AURA_TYPE                => [true,        null, null, null],
+        self::WORLD_SCRIPT                 => [true,        true, null, null],
+        self::AI_DATA                      => [true,        true, null, null],
+        self::PLAYER_QUEUED_RANDOM_DUNGEON => [true,        true, null, null],
+        self::UNIT_IN_COMBAT               => [null,        null, null, null]
     );
 
     private $jsGlobals   = [];

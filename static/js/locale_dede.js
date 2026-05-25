@@ -2517,7 +2517,13 @@ var g_conditions = {
     47: 'Der Spieler hat [quest=$1]$N: nicht; $2',
     48: 'Der Questfortschritt für Ziel #$2 von [quest=$1] ist$N: nicht; $3',
     49: 'Der aktuelle Schwierigkeitsgrad für diese Instanz ist #$1',
-    50: 'Der Spieler $C$1kann$N: nicht; Gamemaster sein:ist $Nein:kein; Gamemaster;'
+    50: 'Der Spieler $C$1kann$N: nicht; Gamemaster sein:ist $Nein:kein; Gamemaster;',
+   101: 'The Player $Nhas:has not; satisfied the exclusive group for [quest=$1]',
+   102: 'The unit $Nhas:does not have; an aura of type #$1',
+   103: 'World script condition #$1 is$N: not; fulfilled with state #$2',
+   104: 'AI data index #$1 is$N: not; equal to $2',
+   105: 'The Player is$N: not; queued for a random dungeon via RDF',
+   106: 'The unit is$N: not; in combat'
 };
 
 /* end aowow custom */
