@@ -41,6 +41,13 @@ class SmartTarget
     public const TARGET_VEHICLE_PASSENGER      = 29;        //  Vehicle can target unit in given seat
     public const TARGET_CLOSEST_UNSPAWNED_GO   = 30;        //  entry(0any), maxDist
 
+    public const TARGET_PLAYER_WITH_AURA       = 201;       //  spellId, negation, MaxDist, MinDist
+    public const TARGET_RANDOM_POINT           = 202;       //  range, amount, self as middle (0/1)
+    public const TARGET_ROLE_SELECTION         = 203;       //  Range Max, TargetMask (Tanks=1, Healer=2, Damage=4)
+    public const TARGET_SUMMONED_CREATURES     = 204;       //  Entry
+    public const TARGET_INSTANCE_STORAGE       = 205;       //  Instance data index, Type (creature=1, gameobject=2)
+    public const TARGET_FORMATION              = 206;       //  Type (0: members only, 1: leader only, 2: all), CreatureEntry (0: any), ExcludeSelf (0/1)
+
     private const TARGET_TPL = '[tooltip name=t-#rowIdx#]%1$s[/tooltip][span class=tip tooltip=t-#rowIdx#]%2$s[/span]';
 
     private array $targets = array(
@@ -74,7 +81,14 @@ class SmartTarget
         self::TARGET_LOOT_RECIPIENTS        => [null,                    null,                    null, null], // all players that have tagged this creature (for kill credit)
         self::TARGET_FARTHEST               => [null,                    null,                    null, null], // maxDist, playerOnly, isInLos
         self::TARGET_VEHICLE_PASSENGER      => [null,                    null,                    null, null], // seatMask (0 - all seats)
-        self::TARGET_CLOSEST_UNSPAWNED_GO   => [Type::OBJECT,            null,                    null, null]  // entry(0any), maxDist
+        self::TARGET_CLOSEST_UNSPAWNED_GO   => [Type::OBJECT,            null,                    null, null],  // entry(0any), maxDist
+
+        self::TARGET_PLAYER_WITH_AURA       => [Type::SPELL,             null,                    null, null],  // spellId, negation, MaxDist, MinDist
+        self::TARGET_RANDOM_POINT          => [null,                    null,                    null, null],  // range, amount, self as middle (0/1)
+        self::TARGET_ROLE_SELECTION        => [null,                    null,                    null, null],  // Range Max, TargetMask (Tanks=1, Healer=2, Damage=4)
+        self::TARGET_SUMMONED_CREATURES    => [Type::NPC,               null,                    null, null],  // Entry
+        self::TARGET_INSTANCE_STORAGE      => [null,                    null,                    null, null],  // Instance data index, Type (creature=1, gameobject=2)
+        self::TARGET_FORMATION             => [Type::NPC,               null,                    null, null],  // Type (0: members, 1: leader, 2: all), CreatureEntry, ExcludeSelf
     );
 
     private array $jsGlobals = [];

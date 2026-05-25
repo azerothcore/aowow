@@ -97,6 +97,17 @@ class SmartEvent
     public const EVENT_ON_SPELL_START          = 85;        // On Spell::prapare
     public const EVENT_ON_DESPAWN              = 86;        // On before creature removed
 
+    public const EVENT_NEAR_PLAYERS            = 101;       // min, radius, first timer, repeatMin, repeatMax
+    public const EVENT_NEAR_PLAYERS_NEGATION   = 102;       // max, radius, first timer, repeatMin, repeatMax
+    public const EVENT_NEAR_UNIT               = 103;       // type (0: creature 1: gob), entry, count, range, timer
+    public const EVENT_NEAR_UNIT_NEGATION      = 104;       // type (0: creature 1: gob), entry, count, range, timer
+    public const EVENT_AREA_CASTING            = 105;       // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+    public const EVENT_AREA_RANGE              = 106;       // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+    public const EVENT_SUMMONED_UNIT_EVADE     = 107;       // CreatureId(0 all), CooldownMin, CooldownMax
+    public const EVENT_AC_WAYPOINT_REACHED     = 108;       // PointId (0: any), pathId (0: any)
+    public const EVENT_AC_WAYPOINT_ENDED       = 109;       // PointId (0: any), pathId (0: any)
+    public const EVENT_IS_IN_MELEE_RANGE       = 110;       // min, max, repeatMin, repeatMax, dist, invert (0: false, 1: true)
+
     public const FLAG_NO_REPEAT        = 0x0001;
     public const FLAG_DIFFICULTY_0     = 0x0002;
     public const FLAG_DIFFICULTY_1     = 0x0004;
@@ -196,7 +207,18 @@ class SmartEvent
         self::EVENT_ON_SPELL_CAST           => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 0], // SpellID, CooldownMin, CooldownMax
         self::EVENT_ON_SPELL_FAILED         => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 0], // SpellID, CooldownMin, CooldownMax
         self::EVENT_ON_SPELL_START          => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 0], // SpellID, CooldownMin, CooldownMax
-        self::EVENT_ON_DESPAWN              => [null,                         null,                       null,                   null,                   null, 0]  // NONE
+        self::EVENT_ON_DESPAWN              => [null,                         null,                       null,                   null,                   null, 0],  // NONE
+
+        self::EVENT_NEAR_PLAYERS            => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, radius, firstTimer, repeatMin, repeatMax
+        self::EVENT_NEAR_PLAYERS_NEGATION   => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // max, radius, firstTimer, repeatMin, repeatMax
+        self::EVENT_NEAR_UNIT               => [null,                         Type::NPC,                  null,                   ['numRange', -1, true], null, 0], // type (0: creature 1: gob), entry, count, range, timer
+        self::EVENT_NEAR_UNIT_NEGATION      => [null,                         Type::NPC,                  null,                   ['numRange', -1, true], null, 0], // type (0: creature 1: gob), entry, count, range, timer
+        self::EVENT_AREA_CASTING            => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+        self::EVENT_AREA_RANGE              => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+        self::EVENT_SUMMONED_UNIT_EVADE     => [Type::NPC,                    ['numRange', -1, true],     null,                   null,                   null, 0], // CreatureId(0 all), CooldownMin, CooldownMax
+        self::EVENT_AC_WAYPOINT_REACHED     => [null,                         null,                       null,                   null,                   null, 0], // PointId(0 any), pathId(0 any)
+        self::EVENT_AC_WAYPOINT_ENDED       => [null,                         null,                       null,                   null,                   null, 0], // PointId(0 any), pathId(0 any)
+        self::EVENT_IS_IN_MELEE_RANGE       => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, max, repeatMin, repeatMax, dist, invert
     );
 
     private array $jsGlobals = [];
