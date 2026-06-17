@@ -521,7 +521,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
         $vendors  = DB::World()->select(
            'SELECT   n.`item`, n.`npc`, SUM(n.`qty`) AS `qty`, it.`class`, it.`subclass`, it.`spellid_1`, it.`spelltrigger_1`, it.`spellid_2`, it.`spelltrigger_2`
             FROM     (SELECT `item`, `entry` AS `npc`, COUNT(1) AS `qty` FROM npc_vendor                                                           WHERE `ExtendedCost` NOT IN (?a) GROUP BY `item`, `npc` UNION
-                      SELECT `item`,  c.`id1` AS `npc`, COUNT(1) AS `qty` FROM game_event_npc_vendor genv JOIN creature c ON c.`guid` = genv.`guid` WHERE `ExtendedCost` NOT IN (?a) GROUP BY `item`, `npc`) n
+                      SELECT `item`,  c.`id` AS `npc`, COUNT(1) AS `qty` FROM game_event_npc_vendor genv JOIN creature c ON c.`guid` = genv.`guid` WHERE `ExtendedCost` NOT IN (?a) GROUP BY `item`, `npc`) n
             JOIN     item_template it ON it.`entry` = n.`item`
             GROUP BY `item`, `npc`',
             $xCostIds, $xCostIds

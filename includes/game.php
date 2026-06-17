@@ -322,7 +322,7 @@ class Game
         switch ($type)
         {
             case Type::NPC:
-                $result = DB::World()->select('SELECT `guid` AS ARRAY_KEY,              `id1`, `map`        AS `mapId`, `position_x` AS `posX`, `position_y` AS `posY` FROM creature        WHERE `guid` IN (?a)', $guids);
+                $result = DB::World()->select('SELECT `guid` AS ARRAY_KEY,              `id`, `map`        AS `mapId`, `position_x` AS `posX`, `position_y` AS `posY` FROM creature        WHERE `guid` IN (?a)', $guids);
                 break;
             case Type::OBJECT:
                 $result = DB::World()->select('SELECT `guid` AS ARRAY_KEY,              `id`, `map`         AS `mapId`, `position_x` AS `posX`, `position_y` AS `posY` FROM gameobject      WHERE `guid` IN (?a)', $guids);

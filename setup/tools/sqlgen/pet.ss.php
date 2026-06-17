@@ -50,7 +50,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
                      MAX(ct.maxlevel) AS maxLevel,
                      IF(ct.type_flags & 0x10000, 1, 0) AS exotic
             FROM     creature_template ct
-            JOIN     creature c ON ct.entry = c.id1
+            JOIN     creature c ON ct.entry = c.id
             WHERE    ct.type_flags & 0x1
             GROUP BY ct.family'
         );

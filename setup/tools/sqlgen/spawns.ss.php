@@ -160,7 +160,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
         {
             // get vehicle template accessories
             $accessories = DB::World()->select(
-               'SELECT vta.`accessory_entry` AS `typeId`,  c.`guid`,  vta.`entry`, COUNT(1) AS `nSeats` FROM vehicle_template_accessory vta LEFT JOIN creature c ON c.`id1` = vta.`entry` GROUP BY `accessory_entry`,  c.`guid` UNION
+               'SELECT vta.`accessory_entry` AS `typeId`,  c.`guid`,  vta.`entry`, COUNT(1) AS `nSeats` FROM vehicle_template_accessory vta LEFT JOIN creature c ON c.`id` = vta.`entry` GROUP BY `accessory_entry`,  c.`guid` UNION
                 SELECT  va.`accessory_entry` AS `typeId`, va.`guid`, 0 AS `entry`, COUNT(1) AS `nSeats` FROM vehicle_accessory           va                                              GROUP BY `accessory_entry`, va.`guid`'
             );
 
@@ -212,7 +212,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
     {
         // [guid, type, typeId, map, posX, posY [, respawn, spawnMask, phaseMask, areaId, floor, pathId]]
         return DB::World()->select(
-           'SELECT    c.`guid`, ?d AS `type`, c.`id1` AS `typeId`, c.`map`, c.`position_x` AS `posX`, c.`position_y` AS `posY`, c.`spawntimesecs` AS `respawn`, c.`spawnMask`, c.`phaseMask`, c.`zoneId` AS `areaId`, IFNULL(ca.`path_id`, 0) AS `pathId`
+           'SELECT    c.`guid`, ?d AS `type`, c.`id` AS `typeId`, c.`map`, c.`position_x` AS `posX`, c.`position_y` AS `posY`, c.`spawntimesecs` AS `respawn`, c.`spawnMask`, c.`phaseMask`, c.`zoneId` AS `areaId`, IFNULL(ca.`path_id`, 0) AS `pathId`
             FROM      creature c
             LEFT JOIN creature_addon ca ON ca.guid = c.guid',
             Type::NPC
@@ -278,10 +278,10 @@ CLISetup::registerSetup("sql", new class extends SetupScript
         return DB::World()->select(
            'SELECT  c.`guid`, w.`entry` AS `creatureOrPath`, w.`pointId` AS `point`, c.`zoneId` AS `areaId`, c.`map`, w.`waittime` AS `wait`, w.`location_x` AS `posX`, w.`location_y` AS `posY`
               FROM  creature c
-              JOIN  script_waypoint w ON c.`id1` = w.`entry` UNION
+              JOIN  script_waypoint w ON c.`id` = w.`entry` UNION
             SELECT  c.`guid`, w.`entry` AS `creatureOrPath`, w.`pointId` AS `point`, c.`zoneId` AS `areaId`, c.`map`,            0 AS `wait`, w.`position_x` AS `posX`, w.`position_y` AS `posY`
               FROM  creature c
-              JOIN  waypoints w ON c.`id1` = w.`entry` UNION
+              JOIN  waypoints w ON c.`id` = w.`entry` UNION
             SELECT  c.`guid`,   -w.`id` AS `creatureOrPath`,              w.`point`, c.`zoneId` AS `areaId`, c.`map`,    w.`delay` AS `wait`, w.`position_x` AS `posX`, w.`position_y` AS `posY`
               FROM  creature c
               JOIN  creature_addon ca ON ca.`guid` = c.`guid`
