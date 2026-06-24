@@ -48,8 +48,8 @@ class SmartEvent
     public const EVENT_CORPSE_REMOVED          = 36;        // On Creature Corpse Removed
     public const EVENT_AI_INIT                 = 37;        //
     public const EVENT_DATA_SET                = 38;        // On Creature/Gameobject Data Set, Can be used with SMART_ACTION_SET_DATA
-    public const EVENT_WAYPOINT_START          = 39;        // [DEPRECATED] On Creature Waypoint ID Started
-    public const EVENT_WAYPOINT_REACHED        = 40;        // On Creature Waypoint ID Reached
+    public const EVENT_ESCORT_START            = 39;        // On Creature Escort Path Started
+    public const EVENT_ESCORT_REACHED         = 40;        // On Creature Escort Path Waypoint ID Reached
     public const EVENT_TRANSPORT_ADDPLAYER     = 41;        // [RESERVED]
     public const EVENT_TRANSPORT_ADDCREATURE   = 42;        // [RESERVED]
     public const EVENT_TRANSPORT_REMOVE_PLAYER = 43;        // [RESERVED]
@@ -64,10 +64,10 @@ class SmartEvent
     public const EVENT_TEXT_OVER               = 52;        // On TEXT_OVER Event Triggered After SMART_ACTION_TALK
     public const EVENT_RECEIVE_HEAL            = 53;        // On Creature Received Healing
     public const EVENT_JUST_SUMMONED           = 54;        // On Creature Just spawned
-    public const EVENT_WAYPOINT_PAUSED         = 55;        // On Creature Paused at Waypoint ID
-    public const EVENT_WAYPOINT_RESUMED        = 56;        // On Creature Resumed after Waypoint ID
-    public const EVENT_WAYPOINT_STOPPED        = 57;        // On Creature Stopped On Waypoint ID
-    public const EVENT_WAYPOINT_ENDED          = 58;        // On Creature Waypoint Path Ended
+    public const EVENT_ESCORT_PAUSED           = 55;        // On Creature Escort Path Paused at Waypoint ID
+    public const EVENT_ESCORT_RESUMED         = 56;        // On Creature Escort Path Resumed after Waypoint ID
+    public const EVENT_ESCORT_STOPPED         = 57;        // On Creature Escort Path Stopped at Waypoint ID
+    public const EVENT_ESCORT_ENDED           = 58;        // On Creature Escort Path Ended
     public const EVENT_TIMED_EVENT_TRIGGERED   = 59;        //
     public const EVENT_UPDATE                  = 60;        //
     public const EVENT_LINK                    = 61;        // Used to link together multiple events as a chain of events.
@@ -92,10 +92,21 @@ class SmartEvent
     public const EVENT_SCENE_CANCEL            = 80;        // [RESERVED] don't use on 3.3.5a
     public const EVENT_SCENE_COMPLETE          = 81;        // [RESERVED] don't use on 3.3.5a
     public const EVENT_SUMMONED_UNIT_DIES      = 82;        //
-    public const EVENT_ON_SPELL_CAST           = 83;        // On Spell::cast
-    public const EVENT_ON_SPELL_FAILED         = 84;        // On Unit::InterruptSpell
-    public const EVENT_ON_SPELL_START          = 85;        // On Spell::prapare
-    public const EVENT_ON_DESPAWN              = 86;        // On before creature removed
+    public const EVENT_ON_SPELL_CAST           = 83;        // On Spell::cast - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const EVENT_ON_SPELL_FAILED         = 84;        // On Unit::InterruptSpell - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const EVENT_ON_SPELL_START          = 85;        // On Spell::prepare - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+    public const EVENT_ON_DESPAWN              = 86;        // On before creature removed - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+
+    public const EVENT_NEAR_PLAYERS            = 101;       // min, radius, first timer, repeatMin, repeatMax
+    public const EVENT_NEAR_PLAYERS_NEGATION   = 102;       // max, radius, first timer, repeatMin, repeatMax
+    public const EVENT_NEAR_UNIT               = 103;       // type (0: creature 1: gob), entry, count, range, timer
+    public const EVENT_NEAR_UNIT_NEGATION      = 104;       // type (0: creature 1: gob), entry, count, range, timer
+    public const EVENT_AREA_CASTING            = 105;       // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+    public const EVENT_AREA_RANGE              = 106;       // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+    public const EVENT_SUMMONED_UNIT_EVADE     = 107;       // CreatureId(0 all), CooldownMin, CooldownMax
+    public const EVENT_WAYPOINT_REACHED        = 108;       // PointId (0: any), pathId (0: any)
+    public const EVENT_WAYPOINT_ENDED          = 109;       // PointId (0: any), pathId (0: any)
+    public const EVENT_IS_IN_MELEE_RANGE       = 110;       // min, max, repeatMin, repeatMax, dist, invert (0: false, 1: true)
 
     public const FLAG_NO_REPEAT        = 0x0001;
     public const FLAG_DIFFICULTY_0     = 0x0002;
@@ -122,13 +133,13 @@ class SmartEvent
         self::EVENT_RANGE                   => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // MinDist, MaxDist, RepeatMin, RepeatMax
         self::EVENT_OOC_LOS                 => [['hostilityMode', 10, false], null,                       ['numRange', -1, true], null,                   null, 0], // hostilityModes, MaxRange, CooldownMin, CooldownMax
         self::EVENT_RESPAWN                 => [null,                         null,                       Type::ZONE,             null,                   null, 0], // type, MapId, ZoneId
-        self::EVENT_TARGET_HEALTH_PCT       => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 1], // UNUSED, DO NOT REUSE
+        self::EVENT_TARGET_HEALTH_PCT       => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::EVENT_VICTIM_CASTING          => [['numRange', -1, true],       null,                       Type::SPELL,            null,                   null, 0], // RepeatMin, RepeatMax, spellid
-        self::EVENT_FRIENDLY_HEALTH         => [null,                         null,                       ['numRange', -1, true], null,                   null, 1], // UNUSED, DO NOT REUSE
+        self::EVENT_FRIENDLY_HEALTH         => [null,                         null,                       ['numRange', -1, true], null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::EVENT_FRIENDLY_IS_CC          => [null,                         ['numRange', -1, true],     null,                   null,                   null, 0], // Radius, RepeatMin, RepeatMax
         self::EVENT_FRIENDLY_MISSING_BUFF   => [Type::SPELL,                  null,                       ['numRange', -1, true], null,                   null, 0], // SpellId, Radius, RepeatMin, RepeatMax
         self::EVENT_SUMMONED_UNIT           => [Type::NPC,                    ['numRange', -1, true],     null,                   null,                   null, 0], // CreatureId(0 all), CooldownMin, CooldownMax
-        self::EVENT_TARGET_MANA_PCT         => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 1], // UNUSED, DO NOT REUSE
+        self::EVENT_TARGET_MANA_PCT         => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::EVENT_ACCEPTED_QUEST          => [Type::QUEST,                  ['numRange', -1, true],     null,                   null,                   null, 0], // QuestID (0 = any), CooldownMin, CooldownMax
         self::EVENT_REWARD_QUEST            => [Type::QUEST,                  ['numRange', -1, true],     null,                   null,                   null, 0], // QuestID (0 = any), CooldownMin, CooldownMax
         self::EVENT_REACHED_HOME            => [null,                         null,                       null,                   null,                   null, 0], // NONE
@@ -140,7 +151,7 @@ class SmartEvent
         self::EVENT_PASSENGER_BOARDED       => [['numRange', -1, true],       null,                       null,                   null,                   null, 0], // CooldownMin, CooldownMax
         self::EVENT_PASSENGER_REMOVED       => [['numRange', -1, true],       null,                       null,                   null,                   null, 0], // CooldownMin, CooldownMax
         self::EVENT_CHARMED                 => [null,                         null,                       null,                   null,                   null, 0], // onRemove (0 - on apply, 1 - on remove)
-        self::EVENT_CHARMED_TARGET          => [null,                         null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE
+        self::EVENT_CHARMED_TARGET          => [null,                         null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::EVENT_SPELLHIT_TARGET         => [Type::SPELL,                  ['magicSchool', 10, false], ['numRange', -1, true], null,                   null, 0], // SpellID, School, CooldownMin, CooldownMax
         self::EVENT_DAMAGED                 => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // MinDmg, MaxDmg, CooldownMin, CooldownMax
         self::EVENT_DAMAGED_TARGET          => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // MinDmg, MaxDmg, CooldownMin, CooldownMax
@@ -149,8 +160,8 @@ class SmartEvent
         self::EVENT_CORPSE_REMOVED          => [null,                         null,                       null,                   null,                   null, 0], // NONE
         self::EVENT_AI_INIT                 => [null,                         null,                       null,                   null,                   null, 0], // NONE
         self::EVENT_DATA_SET                => [null,                         null,                       ['numRange', -1, true], null,                   null, 0], // Id, Value, CooldownMin, CooldownMax
-        self::EVENT_WAYPOINT_START          => [null,                         null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE
-        self::EVENT_WAYPOINT_REACHED        => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
+        self::EVENT_ESCORT_START            => [null,                         null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::EVENT_ESCORT_REACHED         => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
         self::EVENT_TRANSPORT_ADDPLAYER     => [null,                         null,                       null,                   null,                   null, 2], // NONE
         self::EVENT_TRANSPORT_ADDCREATURE   => [null,                         null,                       null,                   null,                   null, 2], // Entry (0 any)
         self::EVENT_TRANSPORT_REMOVE_PLAYER => [null,                         null,                       null,                   null,                   null, 2], // NONE
@@ -165,10 +176,10 @@ class SmartEvent
         self::EVENT_TEXT_OVER               => [null,                         Type::NPC,                  null,                   null,                   null, 0], // GroupId from creature_text,  creature entry who talks (0 any)
         self::EVENT_RECEIVE_HEAL            => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // MinHeal, MaxHeal, CooldownMin, CooldownMax
         self::EVENT_JUST_SUMMONED           => [null,                         null,                       null,                   null,                   null, 0], // none
-        self::EVENT_WAYPOINT_PAUSED         => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
-        self::EVENT_WAYPOINT_RESUMED        => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
-        self::EVENT_WAYPOINT_STOPPED        => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
-        self::EVENT_WAYPOINT_ENDED          => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
+        self::EVENT_ESCORT_PAUSED           => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
+        self::EVENT_ESCORT_RESUMED         => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
+        self::EVENT_ESCORT_STOPPED         => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
+        self::EVENT_ESCORT_ENDED           => [null,                         null,                       null,                   null,                   null, 0], // PointId(0any), pathID(0any)
         self::EVENT_TIMED_EVENT_TRIGGERED   => [null,                         null,                       null,                   null,                   null, 0], // id
         self::EVENT_UPDATE                  => [['numRange', 10, true],       null,                       ['numRange', -1, true], null,                   null, 0], // InitialMin, InitialMax, RepeatMin, RepeatMax
         self::EVENT_LINK                    => [null,                         null,                       null,                   null,                   null, 0], // INTERNAL USAGE, no params, used to link together multiple events, does not use any extra resources to iterate event lists needlessly
@@ -176,8 +187,8 @@ class SmartEvent
         self::EVENT_JUST_CREATED            => [null,                         null,                       null,                   null,                   null, 0], // none
         self::EVENT_GOSSIP_HELLO            => [null,                         null,                       null,                   null,                   null, 0], // noReportUse (for GOs)
         self::EVENT_FOLLOW_COMPLETED        => [null,                         null,                       null,                   null,                   null, 0], // none
-        self::EVENT_EVENT_PHASE_CHANGE      => [null,                         null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE
-        self::EVENT_IS_BEHIND_TARGET        => [['numRange', -1, true],       null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE
+        self::EVENT_EVENT_PHASE_CHANGE      => [null,                         null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::EVENT_IS_BEHIND_TARGET        => [['numRange', -1, true],       null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
         self::EVENT_GAME_EVENT_START        => [Type::WORLDEVENT,             null,                       null,                   null,                   null, 0], // game_event.Entry
         self::EVENT_GAME_EVENT_END          => [Type::WORLDEVENT,             null,                       null,                   null,                   null, 0], // game_event.Entry
         self::EVENT_GO_LOOT_STATE_CHANGED   => [['lootState', 10, false],     null,                       null,                   null,                   null, 0], // go LootState
@@ -193,10 +204,21 @@ class SmartEvent
         self::EVENT_SCENE_CANCEL            => [null,                         null,                       null,                   null,                   null, 2], // don't use on 3.3.5a
         self::EVENT_SCENE_COMPLETE          => [null,                         null,                       null,                   null,                   null, 2], // don't use on 3.3.5a
         self::EVENT_SUMMONED_UNIT_DIES      => [Type::NPC,                    ['numRange', -1, true],     null,                   null,                   null, 0], // CreatureId(0 all), CooldownMin, CooldownMax
-        self::EVENT_ON_SPELL_CAST           => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 0], // SpellID, CooldownMin, CooldownMax
-        self::EVENT_ON_SPELL_FAILED         => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 0], // SpellID, CooldownMin, CooldownMax
-        self::EVENT_ON_SPELL_START          => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 0], // SpellID, CooldownMin, CooldownMax
-        self::EVENT_ON_DESPAWN              => [null,                         null,                       null,                   null,                   null, 0]  // NONE
+        self::EVENT_ON_SPELL_CAST           => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::EVENT_ON_SPELL_FAILED         => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::EVENT_ON_SPELL_START          => [Type::SPELL,                  ['numRange', -1, true],     null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+        self::EVENT_ON_DESPAWN              => [null,                         null,                       null,                   null,                   null, 1], // UNUSED, DO NOT REUSE - Un-used TrinityCore, doesn't exist or works different in AzerothCore
+
+        self::EVENT_NEAR_PLAYERS            => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, radius, firstTimer, repeatMin, repeatMax
+        self::EVENT_NEAR_PLAYERS_NEGATION   => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // max, radius, firstTimer, repeatMin, repeatMax
+        self::EVENT_NEAR_UNIT               => [null,                         Type::NPC,                  null,                   ['numRange', -1, true], null, 0], // type (0: creature 1: gob), entry, count, range, timer
+        self::EVENT_NEAR_UNIT_NEGATION      => [null,                         Type::NPC,                  null,                   ['numRange', -1, true], null, 0], // type (0: creature 1: gob), entry, count, range, timer
+        self::EVENT_AREA_CASTING            => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+        self::EVENT_AREA_RANGE              => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+        self::EVENT_SUMMONED_UNIT_EVADE     => [Type::NPC,                    ['numRange', -1, true],     null,                   null,                   null, 0], // CreatureId(0 all), CooldownMin, CooldownMax
+        self::EVENT_WAYPOINT_REACHED        => [null,                         null,                       null,                   null,                   null, 0], // PointId(0 any), pathId(0 any)
+        self::EVENT_WAYPOINT_ENDED          => [null,                         null,                       null,                   null,                   null, 0], // PointId(0 any), pathId(0 any)
+        self::EVENT_IS_IN_MELEE_RANGE       => [['numRange', 10, false],      null,                       ['numRange', -1, true], null,                   null, 0], // min, max, repeatMin, repeatMax, dist, invert
     );
 
     private array $jsGlobals = [];
