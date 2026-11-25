@@ -18,10 +18,20 @@ CLISetup::registerSetup("build", new class extends SetupScript
 
     private function safeCopy(string $src, string $dst) : bool
     {
-        if (file_exists($dst) || is_link($dst))
-            @unlink($dst);
+        $tmp = $dst . '.tmp';
+        if (!@copy($src, $tmp))
+        {
+            @unlink($tmp);
+            return false;
+        }
 
-        return @copy($src, $dst);
+        if (!@rename($tmp, $dst))
+        {
+            @unlink($tmp);
+            return false;
+        }
+
+        return true;
     }
 
     private function linkOrCopy(string $relTarget, string $absTarget, string $linkPath) : bool
@@ -114,8 +124,11 @@ CLISetup::registerSetup("build", new class extends SetupScript
             $fileOk        = true;
             $uniqueSources = array_unique(array_values($foundByLoc));
 
-            // Case 1: Language-neutral sound (only one unique source file across all checked locales)
-            if (count($uniqueSources) === 1)
+            // Case 1: Language-neutral sound (only deduplicate into common/ on full locale builds)
+            $cfgMask    = (int)Cfg::get('LOCALES');
+            $targetMask = array_reduce($targetLocales, fn(int $m, Locale $l) => $m | (1 << $l->value), 0);
+            $isFullRun  = ($cfgMask === 0) ? (count($targetLocales) === count(Locale::cases())) : (($cfgMask & $targetMask) === $cfgMask);
+            if (count($uniqueSources) === 1 && $isFullRun)
             {
                 $srcFile    = reset($uniqueSources);
                 $commonFile = $commonDir . '/' . $fileId;
