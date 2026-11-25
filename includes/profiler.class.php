@@ -204,7 +204,7 @@ class Profiler
                 FROM   `realmlist`
                 WHERE  `gamebuild` = ?d',
                 WOW_BUILD
-            );
+            ) ?: []; // ensure array return if auth query fails
 
             foreach (self::$realms as $rId => &$rData)
             {

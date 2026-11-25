@@ -28,6 +28,7 @@ class DbSimple_Mysqli extends DbSimple_Database
     var $link;
 
     private $_lastQuery;
+    private $_dsn;
 
     /**
      * constructor(string $dsn)
@@ -35,6 +36,13 @@ class DbSimple_Mysqli extends DbSimple_Database
      */
     function __construct($dsn)
     {
+        $this->_dsn = $dsn;
+        $this->_connect();
+    }
+
+    private function _connect()
+    {
+        $dsn = $this->_dsn;
 
         if (!is_callable("mysqli_connect"))
             return $this->_setLastError("-1", "MySQLi extension is not loaded", "mysqli_connect");
@@ -162,8 +170,20 @@ class DbSimple_Mysqli extends DbSimple_Database
     {
         $this->_lastQuery = $queryMain;
         $this->_expandPlaceholders($queryMain, false);
-        mysqli_ping($this->link);
+        // abort early if initial connection failed ($this->link is false)
+        if (!$this->link)
+            return $this->_setDbError($queryMain[0]);
+        // mysqli_ping() is deprecated since PHP 8.4
+        if (PHP_VERSION_ID < 80200)
+            mysqli_ping($this->link);
         $result = mysqli_query($this->link, $queryMain[0]);
+        // auto-reconnect once if an idle connection timed out (e.g. during long CLI setup runs)
+        if ($result === false && in_array(mysqli_errno($this->link), [2006, 2013], true))
+        {
+            $this->_connect();
+            if ($this->link)
+                $result = mysqli_query($this->link, $queryMain[0]);
+        }
         if ($result === false)
             return $this->_setDbError($queryMain[0]);
 

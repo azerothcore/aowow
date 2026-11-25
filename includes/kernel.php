@@ -141,7 +141,7 @@ set_error_handler(function ($errNo, $errStr, $errFile, $errLine) {
             $errName  = 'USER_ERROR';
         case E_USER_ERROR:
             $errName  = 'RECOVERABLE_ERROR';
-        case E_STRICT:                                      // ignore STRICT and DEPRECATED
+        // E_STRICT was deprecated in PHP 8.4
         case E_DEPRECATED:
         case E_USER_DEPRECATED:
             return true;

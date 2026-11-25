@@ -164,6 +164,9 @@ class CLISetup
 
     public static function setLocales() : bool
     {
+        // reset cached locales so re-evaluating after siteconfig reflects updated LOCALES
+        self::$locales = [];
+
         // optional limit handled locales
         if (isset(self::$opts['locales']))
         {

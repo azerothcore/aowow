@@ -61,10 +61,12 @@ class Cfg
 
     public static function load() : void
     {
-        if (!DB::isConnectable(DB_AOWOW))
+        // skip loading config if DB is not yet created or unreachable
+        if (!DB::isConnectable(DB_AOWOW) || !DB::Aowow()->link)
             return;
 
-        $sets = DB::Aowow()->select('SELECT `key` AS ARRAY_KEY, `value` AS "0", `flags` AS "1", `cat` AS "2", `default` AS "3", `comment` AS "4" FROM ?_config ORDER BY `key` ASC');
+        // ensure array return if aowow DB or aowow_config table is not yet available
+        $sets = DB::Aowow()->select('SELECT `key` AS ARRAY_KEY, `value` AS "0", `flags` AS "1", `cat` AS "2", `default` AS "3", `comment` AS "4" FROM ?_config ORDER BY `key` ASC') ?: [];
         foreach ($sets as $key => [$value, $flags, $catg, $default, $comment])
         {
             $php = $flags & self::FLAG_PHP;

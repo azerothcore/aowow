@@ -256,7 +256,16 @@ trait TrImageProcessor
         {
             $file = $path.'.blp';
             if (CLISetup::fileExists($file))
-                $result = imagecreatefromblp($file);
+            {
+                // Blizzard shipped a few 0-byte placeholder BLPs in 3.3.5a MPQs (e.g. inv_shoulder_94.tga.blp)
+                if (filesize($file) === 0)
+                {
+                    CLI::write('[img-proc] skipping empty (0 byte) MPQ file: '.$file, CLI::LOG_INFO);
+                    $noSrc = true;
+                }
+                else
+                    $result = imagecreatefromblp($file);
+            }
             else
                 $noSrc = true;
         }
