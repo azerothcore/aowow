@@ -16,8 +16,42 @@ CLISetup::registerSetup("build", new class extends SetupScript
     protected $requiredDirs = ['static/wowsounds/'];
     protected $setupAfter   = [['sounds'], []];
 
+    private function linkOrCopy(string $relTarget, string $absTarget, string $linkPath) : bool
+    {
+        if (file_exists($linkPath) || is_link($linkPath))
+            @unlink($linkPath);
+
+        if (@symlink($relTarget, $linkPath))
+            return true;
+
+        return @copy($absTarget, $linkPath);
+    }
+
     public function generate() : bool
     {
+        $commonDir = 'static/wowsounds/common';
+        if (!CLISetup::writeDir($commonDir))
+            return false;
+
+        // Build target locale list (always ensure EN fallback exists if available)
+        $targetLocales = CLISetup::$locales;
+        $searchLocales = $targetLocales;
+        if (!isset($searchLocales[Locale::EN->value]))
+            $searchLocales[Locale::EN->value] = Locale::EN;
+
+        foreach ($targetLocales as $loc)
+        {
+            if (!CLISetup::writeDir('static/wowsounds/' . $loc->json()))
+                return false;
+        }
+
+        // Clean up legacy flat files in static/wowsounds/ from older single-locale builds
+        foreach (glob('static/wowsounds/*') ?: [] as $legacy)
+        {
+            if (is_file($legacy) && ctype_digit(basename($legacy)))
+                @unlink($legacy);
+        }
+
         // ALL files
         $files  = DB::Aowow()->selectCol('SELECT ABS(`id`) AS ARRAY_KEY, CONCAT(`path`, "/", `file`) FROM ?_sounds_files');
         $nFiles = count($files);
@@ -37,32 +71,112 @@ CLISetup::registerSetup("build", new class extends SetupScript
             // expect converted files as file.wav_ or file.mp3_
             $filePath .= '_';
 
-            // just use the first locale available .. there is no support for multiple audio files for now
-            foreach (CLISetup::$locales as $loc)
+            // Locate source audio file per locale
+            $foundByLoc = [];
+            foreach ($searchLocales as $loc)
             {
+                $locKey = $loc->json();
                 foreach ($loc->gameDirs() as $dir)
                 {
-                    // get your paths straight!
-                    $p = CLI::nicePath($filePath, CLISetup::$srcDir, $dir);
+                    $p       = CLI::nicePath($filePath, CLISetup::$srcDir, $dir);
                     $lower_p = CLI::nicePath(strtolower($filePath), CLISetup::$srcDir, $dir);
 
-                    if (!CLISetup::fileExists($p) && !CLISetup::fileExists($lower_p))
-                        continue;
-
-                    // copy over to static/wowsounds/
-                    if (copy($p, 'static/wowsounds/'.$fileId) or copy($lower_p, 'static/wowsounds/'.$fileId))
-                        continue 3;
-
-                    $this->success = false;
-                    CLI::write('[soundfiles]  - could not copy '.CLI::bold($p).' into '.CLI::bold('static/wowsounds/'.$fileId), CLI::LOG_ERROR);
-                    $time->reset();
+                    if (CLISetup::fileExists($p))
+                    {
+                        $foundByLoc[$locKey] = $p;
+                        break;
+                    }
+                    if (CLISetup::fileExists($lower_p))
+                    {
+                        $foundByLoc[$locKey] = $lower_p;
+                        break;
+                    }
                 }
             }
 
-            CLI::write('[soundfiles]  - did not find file: '.CLI::bold(CLI::nicePath($filePath, CLISetup::$srcDir, '['.implode(',', array_map(fn($x) => $x->json(), CLISetup::$locales)).']')), CLI::LOG_WARN);
-            $time->reset();
-            // flag as unusable in DB
-            DB::Aowow()->query('UPDATE ?_sounds_files SET `id` = ?d WHERE ABS(`id`) = ?d', -$fileId, $fileId);
+            if (!$foundByLoc)
+            {
+                CLI::write('[soundfiles]  - did not find file: '.CLI::bold(CLI::nicePath($filePath, CLISetup::$srcDir, '['.implode(',', array_map(fn($x) => $x->json(), CLISetup::$locales)).']')), CLI::LOG_WARN);
+                $time->reset();
+                // flag as unusable in DB
+                DB::Aowow()->query('UPDATE ?_sounds_files SET `id` = ?d WHERE ABS(`id`) = ?d', -$fileId, $fileId);
+                continue;
+            }
+
+            // Re-enable sound file in DB if it was previously flagged as missing
+            DB::Aowow()->query('UPDATE ?_sounds_files SET `id` = ?d WHERE `id` = ?d', $fileId, -$fileId);
+
+            $uniqueSources = array_unique(array_values($foundByLoc));
+
+            // Case 1: Language-neutral sound (only one unique source file across all checked locales)
+            if (count($uniqueSources) === 1)
+            {
+                $srcFile    = reset($uniqueSources);
+                $commonFile = $commonDir . '/' . $fileId;
+
+                if (!copy($srcFile, $commonFile))
+                {
+                    $this->success = false;
+                    CLI::write('[soundfiles]  - could not copy '.CLI::bold($srcFile).' into '.CLI::bold($commonFile), CLI::LOG_ERROR);
+                    $time->reset();
+                    continue;
+                }
+
+                foreach ($targetLocales as $loc)
+                {
+                    $linkPath = 'static/wowsounds/' . $loc->json() . '/' . $fileId;
+                    if (!$this->linkOrCopy('../common/' . $fileId, $commonFile, $linkPath))
+                    {
+                        $this->success = false;
+                        CLI::write('[soundfiles]  - could not link '.CLI::bold($commonFile).' into '.CLI::bold($linkPath), CLI::LOG_ERROR);
+                        $time->reset();
+                    }
+                }
+            }
+            // Case 2: Localized voice-overs (different files exist per locale)
+            else
+            {
+                $fallbackKey = isset($foundByLoc['enus']) ? 'enus' : array_key_first($foundByLoc);
+                $fallbackAbs = 'static/wowsounds/' . $fallbackKey . '/' . $fileId;
+
+                // Ensure fallback locale file is copied first so other locales can symlink to it if missing
+                if (!copy($foundByLoc[$fallbackKey], $fallbackAbs))
+                {
+                    $this->success = false;
+                    CLI::write('[soundfiles]  - could not copy '.CLI::bold($foundByLoc[$fallbackKey]).' into '.CLI::bold($fallbackAbs), CLI::LOG_ERROR);
+                    $time->reset();
+                    continue;
+                }
+
+                foreach ($targetLocales as $loc)
+                {
+                    $locKey  = $loc->json();
+                    $dstFile = 'static/wowsounds/' . $locKey . '/' . $fileId;
+
+                    if ($locKey === $fallbackKey)
+                        continue;
+
+                    if (isset($foundByLoc[$locKey]))
+                    {
+                        if (!copy($foundByLoc[$locKey], $dstFile))
+                        {
+                            $this->success = false;
+                            CLI::write('[soundfiles]  - could not copy '.CLI::bold($foundByLoc[$locKey]).' into '.CLI::bold($dstFile), CLI::LOG_ERROR);
+                            $time->reset();
+                        }
+                    }
+                    else
+                    {
+                        // Locale did not localize this specific line -> link to fallback locale
+                        if (!$this->linkOrCopy('../' . $fallbackKey . '/' . $fileId, $fallbackAbs, $dstFile))
+                        {
+                            $this->success = false;
+                            CLI::write('[soundfiles]  - could not link '.CLI::bold($fallbackAbs).' into '.CLI::bold($dstFile), CLI::LOG_ERROR);
+                            $time->reset();
+                        }
+                    }
+                }
+            }
         }
 
         return $this->success;
