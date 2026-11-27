@@ -153,7 +153,21 @@ CLISetup::registerSetup("build", new class extends SetupScript
             }
 
             $fileOk        = true;
-            $uniqueSources = array_unique(array_values($foundByLoc));
+            $uniqueSources = array_values($foundByLoc);
+
+            // identical audio may ship in several locale directories; on a full run deduplicate by content, not path
+            if ($isFullRun && count($uniqueSources) > 1)
+            {
+                $byContent = [];
+                foreach ($uniqueSources as $source)
+                {
+                    $size = @filesize($source);
+                    $hash = $size !== false ? @hash_file('sha256', $source) : false;
+                    $byContent[$hash !== false ? $size . ':' . $hash : $source] = $source;
+                }
+
+                $uniqueSources = array_values($byContent);
+            }
 
             // Case 1: Language-neutral sound (only deduplicate into common/ on full locale builds)
             if (count($uniqueSources) === 1 && $isFullRun)
@@ -205,6 +219,10 @@ CLISetup::registerSetup("build", new class extends SetupScript
                         $dstFile = 'static/wowsounds/' . $locKey . '/' . $fileId;
 
                         if ($locKey === $fallbackKey)
+                            continue;
+
+                        // partial rebuild must not replace existing audio in locales that were not searched
+                        if (!isset($searchLocales[$loc->value]) && (file_exists($dstFile) || is_link($dstFile)))
                             continue;
 
                         if (isset($foundByLoc[$locKey]))
