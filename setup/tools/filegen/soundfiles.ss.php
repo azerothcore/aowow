@@ -36,13 +36,25 @@ CLISetup::registerSetup("build", new class extends SetupScript
 
     private function linkOrCopy(string $relTarget, string $absTarget, string $linkPath) : bool
     {
-        if (file_exists($linkPath) || is_link($linkPath))
-            @unlink($linkPath);
+        $tmp = $linkPath . '.tmp.' . getmypid() . '.' . uniqid('', true);
 
-        if (@symlink($relTarget, $linkPath))
+        if (!@symlink($relTarget, $tmp) && !$this->safeCopy($absTarget, $tmp))
+        {
+            @unlink($tmp);
+            return false;
+        }
+
+        if (@rename($tmp, $linkPath))
             return true;
 
-        return @copy($absTarget, $linkPath);
+        // Windows cannot rename over an existing file
+        if (!@unlink($linkPath) || !@rename($tmp, $linkPath))
+        {
+            @unlink($tmp);
+            return false;
+        }
+
+        return true;
     }
 
     public function generate() : bool
@@ -69,6 +81,13 @@ CLISetup::registerSetup("build", new class extends SetupScript
             if (is_file($legacy) && ctype_digit(basename($legacy)))
                 @unlink($legacy);
         }
+
+        // A zero mask means "all supported locales" - same as Locale::validate()
+        $cfgMask       = (int)Cfg::get('LOCALES');
+        $targetMask    = array_reduce($targetLocales, fn(int $m, Locale $l) => $m | $l->maskBit(), 0);
+        $supportedMask = array_reduce(array_filter(Locale::cases(), fn(Locale $l) => $l->validate()), fn(int $m, Locale $l) => $m | $l->maskBit(), 0);
+        $effectiveMask = $cfgMask ?: $supportedMask;
+        $isFullRun     = ($effectiveMask & $targetMask) === $effectiveMask;
 
         // ALL files
         $files  = DB::Aowow()->selectCol('SELECT ABS(`id`) AS ARRAY_KEY, CONCAT(`path`, "/", `file`) FROM ?_sounds_files');
@@ -125,9 +144,6 @@ CLISetup::registerSetup("build", new class extends SetupScript
             $uniqueSources = array_unique(array_values($foundByLoc));
 
             // Case 1: Language-neutral sound (only deduplicate into common/ on full locale builds)
-            $cfgMask    = (int)Cfg::get('LOCALES');
-            $targetMask = array_reduce($targetLocales, fn(int $m, Locale $l) => $m | (1 << $l->value), 0);
-            $isFullRun  = ($cfgMask === 0) ? (count($targetLocales) === count(Locale::cases())) : (($cfgMask & $targetMask) === $cfgMask);
             if (count($uniqueSources) === 1 && $isFullRun)
             {
                 $srcFile    = reset($uniqueSources);
@@ -204,9 +220,11 @@ CLISetup::registerSetup("build", new class extends SetupScript
                 }
             }
 
-            // Re-enable sound file in DB only after all target outputs succeeded
+            // Keep DB flag in sync with the result of this run
             if ($fileOk)
                 DB::Aowow()->query('UPDATE ?_sounds_files SET `id` = ?d WHERE `id` = ?d', $fileId, -$fileId);
+            else
+                DB::Aowow()->query('UPDATE ?_sounds_files SET `id` = ?d WHERE `id` = ?d', -$fileId, $fileId);
         }
 
         return $this->success;
