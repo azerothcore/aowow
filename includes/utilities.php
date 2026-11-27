@@ -302,7 +302,8 @@ abstract class CLI
         if ($phpError & (E_WARNING | E_USER_WARNING | E_NOTICE | E_USER_NOTICE | E_CORE_WARNING | E_COMPILE_WARNING))
             return self::LOG_WARN;
 
-        if ($phpError & (E_STRICT | E_NOTICE | E_USER_NOTICE | E_DEPRECATED | E_USER_DEPRECATED))
+        // E_STRICT was deprecated in PHP 8.4
+        if ($phpError & (E_NOTICE | E_USER_NOTICE | E_DEPRECATED | E_USER_DEPRECATED))
             return self::LOG_INFO;
 
         return self::LOG_BLANK;

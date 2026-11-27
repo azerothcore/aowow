@@ -61,10 +61,26 @@ class Cfg
 
     public static function load() : void
     {
-        if (!DB::isConnectable(DB_AOWOW))
+        // skip loading config if DB is not yet created or unreachable
+        if (!DB::isConnectable(DB_AOWOW) || !DB::Aowow()->link)
             return;
 
-        $sets = DB::Aowow()->select('SELECT `key` AS ARRAY_KEY, `value` AS "0", `flags` AS "1", `cat` AS "2", `default` AS "3", `comment` AS "4" FROM ?_config ORDER BY `key` ASC');
+        $aowow = DB::Aowow();
+
+        // don't let probing a not-yet-created schema emit errors (recursing into aowow_errors); restore handler afterwards
+        $prevErrorHandler = $aowow->setErrorHandler(static fn() => null);
+
+        // skip if aowow_config table is not yet available (e.g. before db_structure.sql is imported)
+        if (!$aowow->selectCell('SELECT 1 FROM ?_config LIMIT 1'))
+        {
+            $aowow->setErrorHandler($prevErrorHandler);
+            return;
+        }
+
+        // ensure array return if aowow_config table is not yet available
+        $sets = $aowow->select('SELECT `key` AS ARRAY_KEY, `value` AS "0", `flags` AS "1", `cat` AS "2", `default` AS "3", `comment` AS "4" FROM ?_config ORDER BY `key` ASC') ?: [];
+
+        $aowow->setErrorHandler($prevErrorHandler);
         foreach ($sets as $key => [$value, $flags, $catg, $default, $comment])
         {
             $php = $flags & self::FLAG_PHP;
@@ -221,6 +237,10 @@ class Cfg
                 // rollback change
                 DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $oldValue, $key);
                 self::$store[$key][self::IDX_VALUE] = $oldValue;
+
+                // re-sync cached locales after restoring the old LOCALES value
+                if (CLI && $key == 'locales')
+                    CLISetup::setLocales();
 
                 return $errMsg;
             }

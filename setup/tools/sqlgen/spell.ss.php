@@ -221,7 +221,8 @@ CLISetup::registerSetup("sql", new class extends SetupScript
             $lastMax = $newMax;
 
             foreach ($spells as $spell)
-                DB::Aowow()->query('INSERT INTO ?_spell VALUES (?a)', array_values($spell));
+                // ignore entries already populated from serverside spell_dbc
+                DB::Aowow()->query('INSERT IGNORE INTO ?_spell VALUES (?a)', array_values($spell));
         }
 
         // apply spell radii, duration & casting time
@@ -244,7 +245,8 @@ CLISetup::registerSetup("sql", new class extends SetupScript
             $lastMax = $newMax;
 
             foreach ($spells as $spell)
-                DB::Aowow()->query('INSERT INTO ?_spell VALUES (?a)', array_values($spell));
+                // ignore entries already populated from serverside spell_dbc
+                DB::Aowow()->query('INSERT IGNORE INTO ?_spell VALUES (?a)', array_values($spell));
         }
 
         // apply flag: CUSTOM_DISABLED [0xD: players (0x1), pets (0x4), general (0x8); only generally disabled spells]

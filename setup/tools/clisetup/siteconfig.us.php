@@ -441,9 +441,10 @@ CLISetup::registerUtility(new class extends UtilityScript
 
     private function testCase(&$protocol, &$host, $testFile, &$status) : bool
     {
-        $res = get_headers($protocol.$host.$testFile, true);
+        // get_headers() returns false if the target host is unreachable
+        $res = @get_headers($protocol.$host.$testFile, true);
 
-        if (!preg_match('/HTTP\/[0-9\.]+\s+([0-9]+)/', $res[0], $m))
+        if (!$res || !preg_match('/HTTP\/[0-9\.]+\s+([0-9]+)/', $res[0], $m))
             return false;
 
         $status = $m[1];

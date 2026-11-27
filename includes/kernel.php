@@ -141,13 +141,16 @@ set_error_handler(function ($errNo, $errStr, $errFile, $errLine) {
             $errName  = 'USER_ERROR';
         case E_USER_ERROR:
             $errName  = 'RECOVERABLE_ERROR';
-        case E_STRICT:                                      // ignore STRICT and DEPRECATED
+        // E_STRICT was deprecated in PHP 8.4
         case E_DEPRECATED:
         case E_USER_DEPRECATED:
             return true;
     }
 
-    if (DB::isConnected(DB_AOWOW))
+    // don't recurse when the error log / config table itself is unavailable (e.g. schema not yet created)
+    if (DB::isConnected(DB_AOWOW)
+        && stripos($errStr, 'aowow_errors') === false
+        && stripos($errStr, 'aowow_config') === false)
         DB::Aowow()->query(
             'INSERT INTO ?_errors (`date`, `version`, `phpError`, `file`, `line`, `query`, `post`, `userGroups`, `message`) VALUES (UNIX_TIMESTAMP(), ?d, ?d, ?, ?d, ?, ?, ?d, ?) ON DUPLICATE KEY UPDATE `date` = UNIX_TIMESTAMP()',
             AOWOW_REVISION,

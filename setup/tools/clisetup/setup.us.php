@@ -112,6 +112,10 @@ CLISetup::registerUtility(new class extends UtilityScript
                 CLI::write('[setup] step '.($idx + 1).' / '.count($this->steps));
                 if (CLISetup::run($usName, $param))
                 {
+                    // reload active locales after siteconfig saved updated LOCALES setting
+                    if ($usName === 'siteconfig')
+                        CLISetup::setLocales();
+
                     $this->saveProgress($idx);
                     break;
                 }

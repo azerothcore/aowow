@@ -73,7 +73,8 @@ class Lang
 
     public static function getLocale() : Locale
     {
-        return self::$locale;
+        // fallback to EN if an early kernel/error page renders before Lang::load()
+        return self::$locale ?? Locale::EN;
     }
 
     public static function __callStatic(string $prop, ?array $args = []) : string|array|null
@@ -129,8 +130,9 @@ class Lang
 
             if ($n > 1 && $i < ($n - 2))
                 $b .= ', ';
+            // fallback to English conjunctions in CLI mode where Lang::load() is not called
             else if ($n > 1 && $i == $n - 2)
-                $b .= self::main($useAnd ? 'and' : 'or');
+                $b .= (self::$main[$useAnd ? 'and' : 'or'] ?? ($useAnd ? ' and ' : ' or '));
 
             $i++;
         }

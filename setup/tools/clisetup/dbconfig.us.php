@@ -13,6 +13,7 @@ if (!CLI)
 
 CLISetup::registerUtility(new class extends UtilityScript
 {
+    private bool $firstPass = true;
     public $argvOpts = ['db'];
     public $optGroup = CLISetup::OPT_GRP_SETUP;
 
@@ -53,6 +54,7 @@ CLISetup::registerUtility(new class extends UtilityScript
             if (empty($this->config[$name]) && $name != 'characters' )
                 $this->config[$name] = array_combine(array_keys($this->dbFields), ['', '', '', '', '']);
 
+        $this->firstPass = true;
         while (true)
         {
             CLI::write("select an index to use the corresponding entry", -1, false);
@@ -71,6 +73,8 @@ CLISetup::registerUtility(new class extends UtilityScript
             $tblRows[] = ['['.CLI::bold('N').']', 'new characters DB'];
             $tblRows[] = ['['.CLI::bold('S').']', 'show available realms'];
             $tblRows[] = ['['.CLI::bold('R').']', 'retest / reload DBs'];
+            $tblRows[] = ['['.CLI::bold('Enter').']', 'save and continue'];
+            $this->firstPass = false;
             CLI::writeTable($tblRows, false, true);
 
             while (true)
@@ -183,6 +187,7 @@ CLISetup::registerUtility(new class extends UtilityScript
                 else
                 {
                     CLI::write("[db] leaving db config...", CLI::LOG_INFO);
+                    CLI::write("[db] security tip: for public production setups, restrict the AoWoW DB user to SELECT, INSERT, UPDATE, DELETE after setup completes (via 'php aowow --database' or config/config.php).", CLI::LOG_INFO);
                     CLI::write();
                     break 2;
                 }
@@ -221,9 +226,19 @@ CLISetup::registerUtility(new class extends UtilityScript
                         break;
                     case DB_WORLD:
                         if (!DB::World()->selectCell('SHOW TABLES LIKE ?', 'version'))
-                            $error[] = ' * '.$what.': doesn\'t seem to contain TrinityCore world tables!';
-                        else if (DB::World()->selectCell('SELECT `cache_id` FROM `version`') < TDB_WORLD_MINIMUM_VER)
-                            $error[] = ' * '.$what.': TDB world db is structurally outdated! (min rev.: '.CLI::bold(TDB_WORLD_MINIMUM_VER).')';
+                            $error[] = ' * '.$what.': doesn\'t seem to contain world tables!';
+                        else
+                        {
+                            $row     = DB::World()->selectRow('SELECT `db_version` AS "0", `cache_id` AS "1" FROM `version`');
+                            $vString = is_array($row) ? (string)($row[0] ?? '') : '';
+                            $vNo     = is_array($row) ? (int)($row[1] ?? 0) : 0;
+                            if (strpos($vString, 'ACDB') === 0)
+                            {
+                                // AzerothCore DB detected - valid
+                            }
+                            else if ($vNo < TDB_WORLD_MINIMUM_VER)
+                                $error[] = ' * '.$what.': TDB world db is structurally outdated! (min rev.: '.CLI::bold(TDB_WORLD_MINIMUM_VER).')';
+                        }
                         break;
                     default:
                        // no further checks at this time
@@ -242,6 +257,9 @@ CLISetup::registerUtility(new class extends UtilityScript
 
         if ($dbInfo['host'])
         {
+            if ($idx == DB_AOWOW && !$this->firstPass)
+                $this->prepareAowowDB($dbInfo);
+
             $result = CLI::green('OK');
             $note   = '';
 
@@ -269,7 +287,9 @@ CLISetup::registerUtility(new class extends UtilityScript
                     case DB_WORLD:
                         if (DB::World()->selectCell('SHOW TABLES LIKE ?', 'version'))
                         {
-                            [$vString, $vNo] = DB::World()->selectRow('SELECT `db_version` AS "0", `cache_id` AS "1" FROM `version`');
+                            $row     = DB::World()->selectRow('SELECT `db_version` AS "0", `cache_id` AS "1" FROM `version`');
+                            $vString = is_array($row) ? (string)($row[0] ?? '') : '';
+                            $vNo     = is_array($row) ? (int)($row[1] ?? 0) : 0;
                             if (strpos($vString, 'TDB') === 0)
                             {
                                 if ($vNo < TDB_WORLD_MINIMUM_VER)
@@ -283,7 +303,10 @@ CLISetup::registerUtility(new class extends UtilityScript
                                 }
                             }
                             else if (strpos($vString, 'ACDB') === 0)
-                                $note = CLI::yellow('DB test found AzerothCore DB version. AzerothCore DB structure is not supported!');
+                            {
+                                $note = 'AzerothCoreDB version @ ' . $vString;
+                                $ok   = true;
+                            }
                             else
                                 $note = CLI::yellow('DB test found unexpected vendor in expected version table. Uhh.. Good Luck..!?');
                         }
@@ -311,6 +334,122 @@ CLISetup::registerUtility(new class extends UtilityScript
             $buff[] = CLI::bold('<empty>');
 
         return $buff;
+    }
+
+    private function prepareAowowDB(array $dbInfo) : void
+    {
+        // nothing to prepare without a database name
+        $dbName = $dbInfo['db'] ?? '';
+        if ($dbName === '') return;
+
+        $defPort = (int)ini_get('mysqli.default_port') ?: 3306;
+        $host    = $dbInfo['host'];
+        $port    = $defPort;
+        if (strpos($host, ':') !== false)
+            [$host, $port] = explode(':', $host, 2);
+
+        $link = @mysqli_connect($host, $dbInfo['user'], $dbInfo['pass'], '', (int)$port);
+        if (!$link)
+            return;
+
+        $escDb   = str_replace('`', '``', $dbName);
+        $escUser = mysqli_real_escape_string($link, $dbInfo['user']);
+
+        // 1. Check if database exists
+        // escape LIKE wildcards ('_' and '%') so e.g. 'aowow_test' cannot match 'aowowXtest'
+        $likeDbName = mysqli_real_escape_string($link, str_replace(['_', '%'], ['\_', '\%'], $dbName));
+        $res = @mysqli_query($link, "SHOW DATABASES LIKE '" . $likeDbName . "'");
+        $dbMissing = $res && mysqli_num_rows($res) === 0;        // no rows => database does not exist yet
+        if ($res)
+            mysqli_free_result($res);                            // free pending result before any further command
+        if ($dbMissing)
+        {
+            CLI::write("Database '" . CLI::bold($dbName) . "' does not exist on " . $dbInfo['host'] . ".", CLI::LOG_INFO);
+            if (CLI::read(['x' => ['Create database now? (y/n)', true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
+            {
+                if (@mysqli_query($link, "CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                    CLI::write("Database '" . CLI::bold($dbName) . "' created successfully!", CLI::LOG_OK);
+                else
+                {
+                    CLI::write("Could not create database: " . mysqli_error($link), CLI::LOG_ERROR);
+                    CLI::write("Run this SQL manually as root/admin:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO '{$escUser}'@'%';", -1, false);
+                }
+            }
+            else
+            {
+                CLI::write("Create it manually with:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO '{$escUser}'@'%';\nThen press [R] to retest.", -1, false);
+                mysqli_close($link);
+                return;
+            }
+        }
+
+        if (!@mysqli_select_db($link, $dbName))
+        {
+            mysqli_close($link);
+            return;
+        }
+
+        // 2. Check user privileges for setup
+        $grants = [];
+        if ($gRes = @mysqli_query($link, "SHOW GRANTS FOR CURRENT_USER()"))
+        {
+            while ($row = mysqli_fetch_row($gRes))
+                $grants[] = strtoupper($row[0]);
+            mysqli_free_result($gRes);                           // free pending result before any further command
+        }
+        $grantStr = implode("\n", $grants);
+        if (strpos($grantStr, 'ALL PRIVILEGES') === false)
+        {
+            $needed  = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER', 'INDEX'];
+            $missing = array_filter($needed, fn($p) => strpos($grantStr, $p) === false);
+            if ($missing)
+                CLI::write("Current DB user may lack setup privileges (" . implode(', ', $missing) . ") on `{$dbName}`.", CLI::LOG_WARN);
+        }
+
+        // 3. Check if db_structure.sql is imported
+        $tRes = @mysqli_query($link, "SHOW TABLES LIKE 'aowow_dbversion'");
+        $aowowMissing = $tRes && mysqli_num_rows($tRes) === 0;   // no rows => tables not yet imported
+        if ($tRes)
+            mysqli_free_result($tRes);                           // free pending result before mysqli_multi_query
+        if (!$aowowMissing && ($cRes = @mysqli_query($link, "SELECT 1 FROM aowow_dbversion LIMIT 1")))
+        {
+            // table exists but is empty (e.g. partial import after CREATE TABLE) => schema import incomplete
+            $aowowMissing = mysqli_num_rows($cRes) === 0;
+            mysqli_free_result($cRes);                           // free pending result before mysqli_multi_query
+        }
+        if ($aowowMissing)
+        {
+            $sqlFile = __DIR__.'/../../db_structure.sql';
+            CLI::write("Database '" . CLI::bold($dbName) . "' has no AoWoW tables yet.", CLI::LOG_INFO);
+            if (file_exists($sqlFile) && CLI::read(['x' => ['Import ' . $sqlFile . ' now? (y/n)', true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
+            {
+                CLI::write("Importing " . $sqlFile . "...", CLI::LOG_INFO);
+                $sql = file_get_contents($sqlFile);
+                // silence mysqli warnings; check return value + errno ourselves, and drain every result
+                $sqlImportError = null;
+                if (!@mysqli_multi_query($link, $sql))
+                    $sqlImportError = mysqli_errno($link);       // save first error before draining
+                else
+                {
+                    do {
+                        if ($r = @mysqli_store_result($link))
+                            mysqli_free_result($r);
+                    } while (@mysqli_more_results($link) && @mysqli_next_result($link));
+                    if (mysqli_errno($link))
+                        $sqlImportError = mysqli_errno($link);
+                }
+                if ($sqlImportError)
+                    CLI::write("SQL import error: " . mysqli_error($link), CLI::LOG_ERROR);
+                else
+                    CLI::write("Database structure imported successfully!", CLI::LOG_OK);
+            }
+            else
+            {
+                CLI::write("Import it manually with:\n  mysql -h {$host} -P {$port} -u {$dbInfo['user']} -p {$dbName} < {$sqlFile}\nThen press [R] to retest.", -1, false);
+            }
+        }
+
+        mysqli_close($link);
     }
 
     public function writeCLIHelp() : bool

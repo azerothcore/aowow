@@ -34,7 +34,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
                       class,                  class as classBak,
                       subclass,               subclass AS subClassBak,
                       SoundOverrideSubclass,
-                      IFNULL(sg.id, 0) AS subSubClass,
+                      IFNULL(MIN(sg.id), 0) AS subSubClass,
                       it.name,                IFNULL(itl2.Name, ""),  IFNULL(itl3.Name, ""),  IFNULL(itl4.Name, ""),  IFNULL(itl6.Name, ""),  IFNULL(itl8.Name, ""),
                       0 AS iconId,
                       displayid,
@@ -75,7 +75,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
                       delay,
                       armor,                  ArmorDamageModifier,
                       block,
-                      holy_res,               fire_res,               nature_res,             frost_res,              shadow_res,             arcane_res,
+                      IFNULL(holy_res, 0),    IFNULL(fire_res, 0),    IFNULL(nature_res, 0),    IFNULL(frost_res, 0),   IFNULL(shadow_res, 0),  IFNULL(arcane_res, 0),
                       ammo_type,
                       RangedModRange,
                       spellid_1,              spelltrigger_1,         spellcharges_1,         spellppmRate_1,         spellcooldown_1,        spellcategory_1,        spellcategorycooldown_1,
@@ -106,7 +106,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
                       DisenchantID,
                       duration,
                       ItemLimitCategory,
-                      IFNULL(ge.eventEntry, 0),
+                      IFNULL(MIN(ge.eventEntry), 0),
                       ScriptName,
                       FoodType,
                       0 AS gemEnchantmentId,
@@ -125,6 +125,8 @@ CLISetup::registerSetup("sql", new class extends SetupScript
             LEFT JOIN spell_group sg ON sg.spell_id = it.spellid_1 AND it.class = 0 AND it.subclass = 2 AND sg.id IN (1, 2)
             LEFT JOIN game_event ge ON ge.holiday = it.HolidayId AND it.HolidayId > 0
           { WHERE     it.entry IN (?a) }
+            GROUP BY  it.entry -- avoid duplicates from multi-row game_event / spell_group joins
+            ORDER BY  it.entry                                -- stable LIMIT batching across grouped results
             LIMIT     ?d, ?d';
 
         $i = 0;

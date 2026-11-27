@@ -28,6 +28,8 @@ class DbSimple_Mysqli extends DbSimple_Database
     var $link;
 
     private $_lastQuery;
+    private $_dsn;
+    private $postConnectCallback;   // re-applied after every (re)connect
 
     /**
      * constructor(string $dsn)
@@ -35,13 +37,27 @@ class DbSimple_Mysqli extends DbSimple_Database
      */
     function __construct($dsn)
     {
+        $this->_dsn = $dsn;
+        $this->_connect();
+    }
+
+    private function _connect() : void
+    {
+        // reset any stale connection so a failed (re)connect can't leave a dead mysqli in place
+        $this->link = false;
+
+        $dsn = $this->_dsn;
 
         if (!is_callable("mysqli_connect"))
-            return $this->_setLastError("-1", "MySQLi extension is not loaded", "mysqli_connect");
+        {
+            $this->_setLastError("-1", "MySQLi extension is not loaded", "mysqli_connect");
+            return;
+        }
 
         if (!empty($dsn["persist"])) {
             if (version_compare(PHP_VERSION, '5.3') < 0) {
-                return $this->_setLastError("-1", "Persistent connections in MySQLi is allowable since PHP 5.3", "mysqli_connect");
+                $this->_setLastError("-1", "Persistent connections in MySQLi is allowable since PHP 5.3", "mysqli_connect");
+                return;
             } else {
                 $dsn["host"] = "p:".$dsn["host"];
             }
@@ -67,19 +83,35 @@ class DbSimple_Mysqli extends DbSimple_Database
                 ,empty($dsn['port']) ? null : $dsn['port']
             );
         } else {
-            return $this->_setDbError('mysqli_connect()');
+            $this->_setDbError('mysqli_connect()');
+            return;
         }
         $this->_resetLastError();
-        if (!$this->link) return $this->_setDbError('mysqli_connect()');
+        if (!$this->link) { $this->_setDbError('mysqli_connect()'); return; }
 
         mysqli_set_charset($this->link, isset($dsn['enc']) ? $dsn['enc'] : 'UTF8');
+
+        // re-apply session settings (e.g. utf8mb4, sql_mode) on every (re)connect
+        if (is_callable($this->postConnectCallback))
+            call_user_func($this->postConnectCallback, $this);
+    }
+
+
+    /**
+     * Register an optional callback invoked after every (re)connect.
+     * Receives this DbSimple_Mysqli instance.
+     */
+    public function setPostConnectCallback($callback)
+    {
+        $this->postConnectCallback = $callback;
     }
 
 
     protected function _performEscape($s, $isIdent=false)
     {
+        // without a live connection, escape without mysqli_real_escape_string (PHP 8 TypeError)
         if (!$isIdent)
-            return "'" . mysqli_real_escape_string($this->link, $s) . "'";
+            return "'" . ($this->link instanceof \mysqli ? mysqli_real_escape_string($this->link, $s) : addslashes((string)$s)) . "'";
         else
             return "`" . str_replace('`', '``', $s) . "`";
     }
@@ -161,9 +193,35 @@ class DbSimple_Mysqli extends DbSimple_Database
     protected function _performQuery($queryMain)
     {
         $this->_lastQuery = $queryMain;
+        // abort early if connection failed; _expandPlaceholders would call mysqli_real_escape_string() on a dead link (PHP 8 TypeError)
+        if (!$this->link)
+            return $this->_setDbError($queryMain[0]);
         $this->_expandPlaceholders($queryMain, false);
-        mysqli_ping($this->link);
-        $result = mysqli_query($this->link, $queryMain[0]);
+
+        // suppress mysqli error reporting + custom error handler on the initial attempt, so a lost-connection
+        // error (2006/2013) reaches the reconnect check below without triggering DB::errorHandler logging first
+        $mysqliDriver   = class_exists('mysqli_driver') ? new \mysqli_driver() : null;
+        $prevReportMode = $mysqliDriver ? $mysqliDriver->report_mode : MYSQLI_REPORT_ERROR;
+        set_error_handler(static function () { return true; });
+        mysqli_report($prevReportMode & ~MYSQLI_REPORT_ERROR);
+        try {
+            $result = mysqli_query($this->link, $queryMain[0]);
+        }
+        catch (\Throwable $e) {
+            $result = false;
+        }
+        finally {
+            restore_error_handler();
+            mysqli_report($prevReportMode);
+        }
+
+        // auto-reconnect once if an idle connection timed out (e.g. during long CLI setup runs)
+        if ($result === false && in_array(mysqli_errno($this->link), [2006, 2013], true))
+        {
+            $this->_connect();
+            if ($this->link)
+                $result = mysqli_query($this->link, $queryMain[0]);
+        }
         if ($result === false)
             return $this->_setDbError($queryMain[0]);
 
