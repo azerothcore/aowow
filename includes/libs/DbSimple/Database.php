@@ -1290,11 +1290,11 @@ abstract class DbSimple_LastError
         }
         $this->error = array(
             'code'    => $code,
-            'message' => rtrim($msg),
+            'message' => rtrim($msg ?? ''),
             'query'   => $query,
             'context' => $context,
         );
-        $this->errmsg = rtrim($msg) . ($context? " at $context" : "");
+        $this->errmsg = rtrim($msg ?? '') . ($context? " at $context" : "");
 
         $this->_logQuery("  -- error #".$code.": ".preg_replace('/(\r?\n)+/s', ' ', $this->errmsg));
 

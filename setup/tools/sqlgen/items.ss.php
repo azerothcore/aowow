@@ -126,6 +126,7 @@ CLISetup::registerSetup("sql", new class extends SetupScript
             LEFT JOIN game_event ge ON ge.holiday = it.HolidayId AND it.HolidayId > 0
           { WHERE     it.entry IN (?a) }
             GROUP BY  it.entry -- avoid duplicates from multi-row game_event / spell_group joins
+            ORDER BY  it.entry                                -- stable LIMIT batching across grouped results
             LIMIT     ?d, ?d';
 
         $i = 0;

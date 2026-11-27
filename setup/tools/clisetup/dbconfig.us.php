@@ -229,7 +229,9 @@ CLISetup::registerUtility(new class extends UtilityScript
                             $error[] = ' * '.$what.': doesn\'t seem to contain world tables!';
                         else
                         {
-                            [$vString, $vNo] = DB::World()->selectRow('SELECT `db_version` AS "0", `cache_id` AS "1" FROM `version`');
+                            $row     = DB::World()->selectRow('SELECT `db_version` AS "0", `cache_id` AS "1" FROM `version`');
+                            $vString = is_array($row) ? (string)($row[0] ?? '') : '';
+                            $vNo     = is_array($row) ? (int)($row[1] ?? 0) : 0;
                             if (strpos($vString, 'ACDB') === 0)
                             {
                                 // AzerothCore DB detected - valid
@@ -285,7 +287,9 @@ CLISetup::registerUtility(new class extends UtilityScript
                     case DB_WORLD:
                         if (DB::World()->selectCell('SHOW TABLES LIKE ?', 'version'))
                         {
-                            [$vString, $vNo] = DB::World()->selectRow('SELECT `db_version` AS "0", `cache_id` AS "1" FROM `version`');
+                            $row     = DB::World()->selectRow('SELECT `db_version` AS "0", `cache_id` AS "1" FROM `version`');
+                            $vString = is_array($row) ? (string)($row[0] ?? '') : '';
+                            $vNo     = is_array($row) ? (int)($row[1] ?? 0) : 0;
                             if (strpos($vString, 'TDB') === 0)
                             {
                                 if ($vNo < TDB_WORLD_MINIMUM_VER)
@@ -334,6 +338,10 @@ CLISetup::registerUtility(new class extends UtilityScript
 
     private function prepareAowowDB(array $dbInfo) : void
     {
+        // nothing to prepare without a database name
+        $dbName = $dbInfo['db'] ?? '';
+        if ($dbName === '') return;
+
         $defPort = (int)ini_get('mysqli.default_port') ?: 3306;
         $host    = $dbInfo['host'];
         $port    = $defPort;
@@ -344,13 +352,15 @@ CLISetup::registerUtility(new class extends UtilityScript
         if (!$link)
             return;
 
-        $dbName  = $dbInfo['db'];
         $escDb   = str_replace('`', '``', $dbName);
         $escUser = mysqli_real_escape_string($link, $dbInfo['user']);
 
         // 1. Check if database exists
         $res = @mysqli_query($link, "SHOW DATABASES LIKE '" . mysqli_real_escape_string($link, $dbName) . "'");
-        if ($res && mysqli_num_rows($res) === 0)
+        $dbMissing = $res && mysqli_num_rows($res) === 0;        // no rows => database does not exist yet
+        if ($res)
+            mysqli_free_result($res);                            // free pending result before any further command
+        if ($dbMissing)
         {
             CLI::write("Database '" . CLI::bold($dbName) . "' does not exist on " . $dbInfo['host'] . ".", CLI::LOG_INFO);
             if (CLI::read(['x' => ['Create database now? (y/n)', true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
@@ -383,6 +393,7 @@ CLISetup::registerUtility(new class extends UtilityScript
         {
             while ($row = mysqli_fetch_row($gRes))
                 $grants[] = strtoupper($row[0]);
+            mysqli_free_result($gRes);                           // free pending result before any further command
         }
         $grantStr = implode("\n", $grants);
         if (strpos($grantStr, 'ALL PRIVILEGES') === false)
@@ -395,22 +406,31 @@ CLISetup::registerUtility(new class extends UtilityScript
 
         // 3. Check if db_structure.sql is imported
         $tRes = @mysqli_query($link, "SHOW TABLES LIKE 'aowow_dbversion'");
-        if ($tRes && mysqli_num_rows($tRes) === 0)
+        $aowowMissing = $tRes && mysqli_num_rows($tRes) === 0;   // no rows => tables not yet imported
+        if ($tRes)
+            mysqli_free_result($tRes);                           // free pending result before mysqli_multi_query
+        if ($aowowMissing)
         {
-            $sqlFile = 'setup/db_structure.sql';
+            $sqlFile = __DIR__.'/../../db_structure.sql';
             CLI::write("Database '" . CLI::bold($dbName) . "' has no AoWoW tables yet.", CLI::LOG_INFO);
             if (file_exists($sqlFile) && CLI::read(['x' => ['Import ' . $sqlFile . ' now? (y/n)', true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
             {
                 CLI::write("Importing " . $sqlFile . "...", CLI::LOG_INFO);
                 $sql = file_get_contents($sqlFile);
-                if (mysqli_multi_query($link, $sql))
+                // silence mysqli warnings; check return value + errno ourselves, and drain every result
+                $sqlImportError = null;
+                if (!@mysqli_multi_query($link, $sql))
+                    $sqlImportError = mysqli_errno($link);       // save first error before draining
+                else
                 {
                     do {
-                        if ($r = mysqli_store_result($link))
+                        if ($r = @mysqli_store_result($link))
                             mysqli_free_result($r);
-                    } while (mysqli_more_results($link) && mysqli_next_result($link));
+                    } while (@mysqli_more_results($link) && @mysqli_next_result($link));
+                    if (mysqli_errno($link))
+                        $sqlImportError = mysqli_errno($link);
                 }
-                if (mysqli_errno($link))
+                if ($sqlImportError)
                     CLI::write("SQL import error: " . mysqli_error($link), CLI::LOG_ERROR);
                 else
                     CLI::write("Database structure imported successfully!", CLI::LOG_OK);

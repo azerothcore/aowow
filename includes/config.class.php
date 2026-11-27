@@ -65,8 +65,22 @@ class Cfg
         if (!DB::isConnectable(DB_AOWOW) || !DB::Aowow()->link)
             return;
 
-        // ensure array return if aowow DB or aowow_config table is not yet available
-        $sets = DB::Aowow()->select('SELECT `key` AS ARRAY_KEY, `value` AS "0", `flags` AS "1", `cat` AS "2", `default` AS "3", `comment` AS "4" FROM ?_config ORDER BY `key` ASC') ?: [];
+        $aowow = DB::Aowow();
+
+        // don't let probing a not-yet-created schema emit errors (recursing into aowow_errors); restore handler afterwards
+        $prevErrorHandler = $aowow->setErrorHandler(static fn() => null);
+
+        // skip if aowow_config table is not yet available (e.g. before db_structure.sql is imported)
+        if (!$aowow->selectCell('SHOW TABLES LIKE ?', 'aowow_config'))
+        {
+            $aowow->setErrorHandler($prevErrorHandler);
+            return;
+        }
+
+        // ensure array return if aowow_config table is not yet available
+        $sets = $aowow->select('SELECT `key` AS ARRAY_KEY, `value` AS "0", `flags` AS "1", `cat` AS "2", `default` AS "3", `comment` AS "4" FROM ?_config ORDER BY `key` ASC') ?: [];
+
+        $aowow->setErrorHandler($prevErrorHandler);
         foreach ($sets as $key => [$value, $flags, $catg, $default, $comment])
         {
             $php = $flags & self::FLAG_PHP;
