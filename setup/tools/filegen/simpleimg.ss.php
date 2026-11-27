@@ -394,11 +394,15 @@ CLISetup::registerSetup("build", new class extends SetupScript
                 'interface/calendar/holidays/calendar_piratesdaystart.blp', 'interface/calendar/holidays/calendar_wotlklaunchstart.blp'
             ];
 
+            // compare extension-insensitively: $missing entries carry no image extension, known entries may end .blp/.tga.blp
+            $knownLeftovers = array_map(fn($k) => preg_replace('#(\.(blp|tga|png))+$#i', '', strtolower($k)), $knownLeftovers);
+
             $blizzardMissing = [];
             $customMissing   = [];
             foreach ($missing as $m)
             {
                 $norm = preg_replace('#^.*interface/#i', 'interface/', str_replace('\\', '/', strtolower($m)));
+                $norm = preg_replace('#(\.(blp|tga|png))+$#i', '', $norm);
                 if (in_array($norm, $knownLeftovers, true))
                     $blizzardMissing[] = $m;
                 else
