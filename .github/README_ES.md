@@ -76,6 +76,7 @@ Extraiga los siguientes directorios de los archivos del cliente a `setup/mpqdata
    > \<localeCode>/DBFilesClient/
    > \<localeCode>/Interface/WorldMap/
    > \<localeCode>/Interface/FrameXML/GlobalStrings.lua
+   > \<localeCode>/Sound/
 
    .. Una vez es suficiente (aunque aún aplica el código local):
    > \<localeCode>/Interface/TalentFrame/
@@ -88,14 +89,13 @@ Extraiga los siguientes directorios de los archivos del cliente a `setup/mpqdata
    > \<localeCode>/Interface/PvPRankBadges
    > \<localeCode>/Interface/FlavorImages
    > \<localeCode>/Interface/Calendar/Holidays/
-   > \<localeCode>/Sound/
 
    .. Opcionalmente (no usado en AoWoW):
    > \<localeCode>/Interface/GLUES/LOADINGSCREENS/
 
 **PRESTE ATENCIÓN:** debe crear un directorio en `setup/mpqdata/` como `enus` (MINÚSCULAS) que contenga los datos enumerados anteriormente.
 
-Por ejemplo, puede simplemente copiar el directorio `Interface` y `DBFilesClient` en `setup/mpqdata/enus/` y mover `Sound` a `setup/mpqdata/enus`.
+Por ejemplo, puede copiar los directorios `Interface`, `DBFilesClient` y `Sound` en `setup/mpqdata/enus/`. Extraiga `Sound` en cada directorio de configuración regional que utilice; de lo contrario, se usará el audio en inglés para todas las configuraciones regionales.
 
 Puede usar MPQ Extractor para extraer los datos; una vez que lo haya instalado correctamente, puede usar este script bash para extraer los datos en el orden correcto.
 

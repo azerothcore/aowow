@@ -53,7 +53,8 @@ class SoundList extends BaseType
                 // enum to string
                 $data['type']  = self::$fileTypes[$data['type']];
                 // get real url
-                $data['url']   = Cfg::get('STATIC_URL') . '/wowsounds/' . $data['id'];
+                $loc           = Lang::getLocale()->validate() ? Lang::getLocale() : Locale::getFallback();
+                $data['url']   = Cfg::get('STATIC_URL') . '/wowsounds/' . $loc->json() . '/' . $data['id'];
                 // v push v
                 $this->fileBuffer[$id] = $data;
             }
