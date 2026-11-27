@@ -18,7 +18,7 @@ CLISetup::registerSetup("build", new class extends SetupScript
 
     private function safeCopy(string $src, string $dst) : bool
     {
-        $tmp = $dst . '.tmp';
+        $tmp = $dst . '.tmp.' . getmypid() . '.' . uniqid('', true);
         if (!@copy($src, $tmp))
         {
             @unlink($tmp);
