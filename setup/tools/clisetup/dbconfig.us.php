@@ -335,6 +335,7 @@ CLISetup::registerUtility(new class extends UtilityScript
 
         $dbName  = $dbInfo['db'];
         $escDb   = str_replace('`', '``', $dbName);
+        $escGrantDb = str_replace(['_', '%'], ['\_', '\%'], $escDb);
         $escUser = mysqli_real_escape_string($link, $dbInfo['user']);
         $escLike = mysqli_real_escape_string($link, str_replace(['_', '%'], ['\_', '\%'], $dbName));
 
@@ -362,12 +363,12 @@ CLISetup::registerUtility(new class extends UtilityScript
                 else
                 {
                     CLI::write("Could not create database: " . mysqli_error($link), CLI::LOG_ERROR);
-                    CLI::write("Run this SQL manually as root/admin:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO {$authAccount};", -1, false);
+                    CLI::write("Run this SQL manually as root/admin:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escGrantDb}`.* TO {$authAccount};", -1, false);
                 }
             }
             else
             {
-                CLI::write("Create it manually with:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO {$authAccount};\nThen press [R] to retest.", -1, false);
+                CLI::write("Create it manually with:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escGrantDb}`.* TO {$authAccount};\nThen press [R] to retest.", -1, false);
                 mysqli_close($link);
                 return;
             }
