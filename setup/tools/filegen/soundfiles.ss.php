@@ -27,8 +27,12 @@ CLISetup::registerSetup("build", new class extends SetupScript
 
         if (!@rename($tmp, $dst))
         {
-            @unlink($tmp);
-            return false;
+            // Windows cannot rename over an existing file
+            if (!@unlink($dst) || !@rename($tmp, $dst))
+            {
+                @unlink($tmp);
+                return false;
+            }
         }
 
         return true;
@@ -69,7 +73,15 @@ CLISetup::registerSetup("build", new class extends SetupScript
         if (!isset($searchLocales[Locale::EN->value]))
             $searchLocales[Locale::EN->value] = Locale::EN;
 
+        // URLs use every config-enabled locale, even when --locales limits which sources are built
+        $outputLocales = [];
+        foreach (Locale::cases() as $loc)
+            if ($loc->validate())
+                $outputLocales[$loc->value] = $loc;
         foreach ($searchLocales as $loc)
+            $outputLocales[$loc->value] = $loc;
+
+        foreach ($outputLocales as $loc)
         {
             if (!CLISetup::writeDir('static/wowsounds/' . $loc->json()))
                 return false;
@@ -86,7 +98,7 @@ CLISetup::registerSetup("build", new class extends SetupScript
         $cfgMask       = (int)Cfg::get('LOCALES');
         $targetMask    = array_reduce($targetLocales, fn(int $m, Locale $l) => $m | $l->maskBit(), 0);
         $supportedMask = array_reduce(array_filter(Locale::cases(), fn(Locale $l) => $l->validate()), fn(int $m, Locale $l) => $m | $l->maskBit(), 0);
-        $effectiveMask = $cfgMask ?: $supportedMask;
+        $effectiveMask = ($cfgMask ?: $supportedMask) & $supportedMask;
         $isFullRun     = ($effectiveMask & $targetMask) === $effectiveMask;
 
         // ALL files
@@ -158,7 +170,7 @@ CLISetup::registerSetup("build", new class extends SetupScript
                 }
                 else
                 {
-                    foreach ($targetLocales as $loc)
+                    foreach ($outputLocales as $loc)
                     {
                         $linkPath = 'static/wowsounds/' . $loc->json() . '/' . $fileId;
                         if (!$this->linkOrCopy('../common/' . $fileId, $commonFile, $linkPath))
@@ -187,7 +199,7 @@ CLISetup::registerSetup("build", new class extends SetupScript
                 }
                 else
                 {
-                    foreach ($targetLocales as $loc)
+                    foreach ($outputLocales as $loc)
                     {
                         $locKey  = $loc->json();
                         $dstFile = 'static/wowsounds/' . $locKey . '/' . $fileId;

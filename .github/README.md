@@ -80,6 +80,7 @@ Extract the following directories from the client archives into `setup/mpqdata/`
 > \<localeCode>/DBFilesClient/
 > \<localeCode>/Interface/WorldMap/
 > \<localeCode>/Interface/FrameXML/GlobalStrings.lua
+> \<localeCode>/Sound/
 
 .. once is enough (still apply the localeCode though):
 
@@ -92,7 +93,6 @@ Extract the following directories from the client archives into `setup/mpqdata/`
 > \<localeCode>/Interface/PvPRankBadges
 > \<localeCode>/Interface/FlavorImages
 > \<localeCode>/Interface/Calendar/Holidays/
-> \<localeCode>/Sound/
 
 .. optionaly (not used in AoWoW):
 
@@ -101,7 +101,7 @@ Extract the following directories from the client archives into `setup/mpqdata/`
 
 **PAY ATTENTION:** you have to create a directory in `setup/mpqdata/` like `enus` (LOWERCASE) containing the data listed above.
 
-For example, you can just copy `Interface` and `DBFilesClient` directory into `setup/mpqdata/enus/` and move `Sound` into `setup/mpqdata/enus`.
+For example, you can just copy the `Interface`, `DBFilesClient` and `Sound` directories into `setup/mpqdata/enus/`. Extract `Sound` into every locale directory you use; otherwise the English audio is used for all locales.
 
 You can use MPQExtractor to extract the data, once you installed it succesfully you can use this bash script to make extract the data in the right order.
 
