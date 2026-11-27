@@ -372,9 +372,52 @@ CLISetup::registerSetup("build", new class extends SetupScript
 
             DB::Aowow()->query('UPDATE ?_icons SET `cuFlags` = `cuFlags` | ?d WHERE `name` IN (?a)', CUSTOM_EXCLUDE_FOR_LISTVIEW, $iconNames);
 
-            CLI::write('[simpleimg] the following '.count($missing).' images where referenced by DBC but not in the mpqData directory. They may need to be converted by hand later on.', CLI::LOG_WARN);
+            $knownLeftovers = [
+                'interface/icons/inv_robe_02.blp', 'interface/icons/inv_misc_ale_01.blp', 'interface/icons/inv_misc_igot_01.blp',
+                'interface/icons/inv_chest_fur.tga.blp', 'interface/icons/inv_misc_emptyflask_02.blp', 'interface/icons/inv_misc_emptyflask_01.blp',
+                'interface/icons/inv_food_egg_03.blp', 'interface/icons/inv_misc_rock_01.blp', 'interface/icons/inv_robe_01.blp',
+                'interface/icons/inv_robe_03.blp', 'interface/icons/inv_misc_leaf_02.blp', 'interface/icons/inv_misc_leaf_01.blp',
+                'interface/icons/inv_misc_boneclub_01.blp', 'interface/icons/inv_food_egg_04.blp', 'interface/icons/inv_misc_leaf_03.blp',
+                'interface/icons/inv_food_egg_02.blp', 'interface/icons/inv_misc_stone_01.blp', 'interface/icons/inv_misc_stone_02.blp',
+                'interface/icons/inv_ore_copper.blp', 'interface/icons/inv_ore_tin.blp', 'interface/icons/inv_ore_iron.blp',
+                'interface/icons/inv_ore_mithril.blp', 'interface/icons/inv_misc_stone_04.blp', 'interface/icons/inv_ore_arcanite.blp',
+                'interface/icons/inv_orb_arcanite.blp', 'interface/icons/inv_misc_stone_07.blp', 'interface/icons/inv_misc_stone_06.blp',
+                'interface/icons/inv_misc_dynamite_01.blp', 'interface/icons/inv_orb_arcanite_01.blp', 'interface/icons/ability_temp.blp',
+                'interface/icons/inv_misc_milk_01.blp', 'interface/icons/inv_wine_02.blp', 'interface/icons/inv_wine_01.blp',
+                'interface/icons/inv_wine_03.blp', 'interface/icons/inv_flask_01.blp', 'interface/icons/inv_misc_mug.blp',
+                'interface/icons/inv_misc_milk_02.blp', 'interface/icons/inv_wine_04.blp', 'interface/icons/inv_misc_monster_mousetail.blp',
+                'interface/icons/inv_misc_monster_browntail.blp', 'interface/icons/inv_misc_monster_greytail.blp',
+                'interface/icons/inv_food_egg_01.blp', 'interface/icons/inv_flask_02.blp', 'interface/icons/inv_flask_03.blp',
+                'interface/icons/inv_flask_04.blp', 'interface/icons/inv_misc_milk_05.blp', 'interface/icons/inv_food_egg_05.blp',
+                'interface/icons/inv_flask_05.blp', 'interface/icons/inv_weapon_shortblade_44.tga.blp',
+                'interface/icons/axe_1h_draenei_a_01blue.blp', 'interface/icons/inv_shoulder_128.tga.blp',
+                'interface/calendar/holidays/calendar_piratesdaystart.blp', 'interface/calendar/holidays/calendar_wotlklaunchstart.blp'
+            ];
+
+            // compare extension-insensitively: $missing entries carry no image extension, known entries may end .blp/.tga.blp
+            $knownLeftovers = array_map(fn($k) => preg_replace('#(\.(blp|tga|png))+$#i', '', strtolower($k)), $knownLeftovers);
+
+            $blizzardMissing = [];
+            $customMissing   = [];
             foreach ($missing as $m)
-                CLI::write(' - '.$m);
+            {
+                $norm = preg_replace('#^.*interface/#i', 'interface/', str_replace('\\', '/', strtolower($m)));
+                $norm = preg_replace('#(\.(blp|tga|png))+$#i', '', $norm);
+                if (in_array($norm, $knownLeftovers, true))
+                    $blizzardMissing[] = $m;
+                else
+                    $customMissing[] = $m;
+            }
+
+            if ($blizzardMissing)
+                CLI::write('[simpleimg] skipped '.count($blizzardMissing).' known unused Blizzard 3.3.5a DBC icon references not shipped in client MPQs.', CLI::LOG_INFO);
+
+            if ($customMissing)
+            {
+                CLI::write('[simpleimg] the following '.count($customMissing).' images were referenced by DBC but not in the mpqData directory. They may need to be converted by hand later on.', CLI::LOG_WARN);
+                foreach ($customMissing as $m)
+                    CLI::write(' - '.$m);
+            }
         }
 
         return $this->success;

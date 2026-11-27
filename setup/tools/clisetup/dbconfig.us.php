@@ -13,6 +13,7 @@ if (!CLI)
 
 CLISetup::registerUtility(new class extends UtilityScript
 {
+    private bool $firstPass = true;
     public $argvOpts = ['db'];
     public $optGroup = CLISetup::OPT_GRP_SETUP;
 
@@ -53,6 +54,7 @@ CLISetup::registerUtility(new class extends UtilityScript
             if (empty($this->config[$name]) && $name != 'characters' )
                 $this->config[$name] = array_combine(array_keys($this->dbFields), ['', '', '', '', '']);
 
+        $this->firstPass = true;
         while (true)
         {
             CLI::write("select an index to use the corresponding entry", -1, false);
@@ -71,6 +73,8 @@ CLISetup::registerUtility(new class extends UtilityScript
             $tblRows[] = ['['.CLI::bold('N').']', 'new characters DB'];
             $tblRows[] = ['['.CLI::bold('S').']', 'show available realms'];
             $tblRows[] = ['['.CLI::bold('R').']', 'retest / reload DBs'];
+            $tblRows[] = ['['.CLI::bold('Enter').']', 'save and continue'];
+            $this->firstPass = false;
             CLI::writeTable($tblRows, false, true);
 
             while (true)
@@ -183,6 +187,7 @@ CLISetup::registerUtility(new class extends UtilityScript
                 else
                 {
                     CLI::write("[db] leaving db config...", CLI::LOG_INFO);
+                    CLI::write("[db] security tip: for public production setups, restrict the AoWoW DB user to SELECT, INSERT, UPDATE, DELETE after setup completes (via 'php aowow --database' or config/config.php).", CLI::LOG_INFO);
                     CLI::write();
                     break 2;
                 }
@@ -242,6 +247,9 @@ CLISetup::registerUtility(new class extends UtilityScript
 
         if ($dbInfo['host'])
         {
+            if ($idx == DB_AOWOW && !$this->firstPass)
+                $this->prepareAowowDB($dbInfo);
+
             $result = CLI::green('OK');
             $note   = '';
 
@@ -311,6 +319,129 @@ CLISetup::registerUtility(new class extends UtilityScript
             $buff[] = CLI::bold('<empty>');
 
         return $buff;
+    }
+
+    private function prepareAowowDB(array $dbInfo) : void
+    {
+        $defPort = (int)ini_get('mysqli.default_port') ?: 3306;
+        $host    = $dbInfo['host'];
+        $port    = $defPort;
+        if (strpos($host, ':') !== false)
+            [$host, $port] = explode(':', $host, 2);
+
+        $link = @mysqli_connect($host, $dbInfo['user'], $dbInfo['pass'], '', (int)$port);
+        if (!$link)
+            return;
+
+        $dbName  = $dbInfo['db'];
+        $escDb   = str_replace('`', '``', $dbName);
+        $escGrantDb = str_replace(['_', '%'], ['\_', '\%'], $escDb);
+        $escUser = mysqli_real_escape_string($link, $dbInfo['user']);
+        $escLike = mysqli_real_escape_string($link, str_replace(['_', '%'], ['\_', '\%'], $dbName));
+
+        // 1. Check if database exists
+        $res = @mysqli_query($link, "SHOW DATABASES LIKE '" . $escLike . "'");
+        if ($res && mysqli_num_rows($res) === 0)
+        {
+            // use the authenticated account for manual GRANT hints, not just the entered user
+            $authAccount = "'{$escUser}'@'%'";
+            if ($cuRes = @mysqli_query($link, "SELECT CURRENT_USER()"))
+            {
+                $cuRow = mysqli_fetch_row($cuRes);
+                if ($cuRow && $cuRow[0] && strpos($cuRow[0], '@') !== false)
+                {
+                    [$cuUser, $cuHost] = explode('@', $cuRow[0], 2);
+                    $authAccount = "'" . mysqli_real_escape_string($link, $cuUser) . "'@'" . mysqli_real_escape_string($link, $cuHost) . "'";
+                }
+            }
+
+            CLI::write("Database '" . CLI::bold($dbName) . "' does not exist on " . $dbInfo['host'] . ".", CLI::LOG_INFO);
+            if (CLI::read(['x' => ['Create database now? (y/n)', true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
+            {
+                if (@mysqli_query($link, "CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                    CLI::write("Database '" . CLI::bold($dbName) . "' created successfully!", CLI::LOG_OK);
+                else
+                {
+                    CLI::write("Could not create database: " . mysqli_error($link), CLI::LOG_ERROR);
+                    CLI::write("Run this SQL manually as root/admin:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escGrantDb}`.* TO {$authAccount};", -1, false);
+                }
+            }
+            else
+            {
+                CLI::write("Create it manually with:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escGrantDb}`.* TO {$authAccount};\nThen press [R] to retest.", -1, false);
+                mysqli_close($link);
+                return;
+            }
+        }
+
+        if (!@mysqli_select_db($link, $dbName))
+        {
+            mysqli_close($link);
+            return;
+        }
+
+        // 2. Check user privileges for setup
+        $grants = [];
+        if ($gRes = @mysqli_query($link, "SHOW GRANTS FOR CURRENT_USER()"))
+        {
+            while ($row = mysqli_fetch_row($gRes))
+                $grants[] = strtoupper($row[0]);
+        }
+        $grantStr = implode("\n", $grants);
+        if (strpos($grantStr, 'ALL PRIVILEGES') === false)
+        {
+            $needed  = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER', 'INDEX'];
+            $missing = array_filter($needed, fn($p) => strpos($grantStr, $p) === false);
+            if ($missing)
+                CLI::write("Current DB user may lack setup privileges (" . implode(', ', $missing) . ") on `{$dbName}`.", CLI::LOG_WARN);
+        }
+
+        // 3. Check if db_structure.sql is imported
+        $tRes      = @mysqli_query($link, "SHOW TABLES LIKE 'aowow_dbversion'");
+        $hasVerTbl = $tRes && mysqli_num_rows($tRes) > 0;
+        $imported  = false;
+        if ($hasVerTbl && ($vRes = @mysqli_query($link, "SELECT 1 FROM `aowow_dbversion` LIMIT 1")))
+            $imported = (bool)mysqli_fetch_row($vRes);
+
+        if (!$imported)
+        {
+            $sqlFile = 'setup/db_structure.sql';
+            $hasTbls = false;
+            if ($t2Res = @mysqli_query($link, "SHOW TABLES"))
+                $hasTbls = mysqli_num_rows($t2Res) > 0;
+
+            CLI::write("Database '" . CLI::bold($dbName) . "' has no AoWoW DB version yet.", CLI::LOG_INFO);
+            if ($hasVerTbl)
+                CLI::write("Table `aowow_dbversion` exists but is empty; a previous import may be incomplete.", CLI::LOG_WARN);
+            if ($hasTbls)
+                CLI::write("Database already contains tables. " . $sqlFile . " will DROP them; existing data will be lost!", CLI::LOG_WARN);
+
+            $prompt = $hasTbls ? 'Existing tables will be dropped! Import ' . $sqlFile . ' anyway? (y/n)' : 'Import ' . $sqlFile . ' now? (y/n)';
+            if (file_exists($sqlFile) && CLI::read(['x' => [$prompt, true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
+            {
+                CLI::write("Importing " . $sqlFile . "...", CLI::LOG_INFO);
+                $sql = file_get_contents($sqlFile);
+                if (mysqli_multi_query($link, $sql))
+                {
+                    do {
+                        if ($r = mysqli_store_result($link))
+                            mysqli_free_result($r);
+                    } while (mysqli_more_results($link) && mysqli_next_result($link));
+                }
+                if (mysqli_errno($link))
+                    CLI::write("SQL import error: " . mysqli_error($link), CLI::LOG_ERROR);
+                else
+                    CLI::write("Database structure imported successfully!", CLI::LOG_OK);
+            }
+            else
+            {
+                if ($hasTbls)
+                    CLI::write("To preserve existing tables, move them aside or use a fresh database.", CLI::LOG_WARN);
+                CLI::write("Import it manually with:\n  mysql -h {$host} -P {$port} -u {$dbInfo['user']} -p {$dbName} < {$sqlFile}\nThen press [R] to retest.", -1, false);
+            }
+        }
+
+        mysqli_close($link);
     }
 
     public function writeCLIHelp() : bool
