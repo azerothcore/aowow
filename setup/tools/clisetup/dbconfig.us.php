@@ -336,11 +336,24 @@ CLISetup::registerUtility(new class extends UtilityScript
         $dbName  = $dbInfo['db'];
         $escDb   = str_replace('`', '``', $dbName);
         $escUser = mysqli_real_escape_string($link, $dbInfo['user']);
+        $escLike = mysqli_real_escape_string($link, str_replace(['_', '%'], ['\_', '\%'], $dbName));
 
         // 1. Check if database exists
-        $res = @mysqli_query($link, "SHOW DATABASES LIKE '" . mysqli_real_escape_string($link, $dbName) . "'");
+        $res = @mysqli_query($link, "SHOW DATABASES LIKE '" . $escLike . "'");
         if ($res && mysqli_num_rows($res) === 0)
         {
+            // use the authenticated account for manual GRANT hints, not just the entered user
+            $authAccount = "'{$escUser}'@'%'";
+            if ($cuRes = @mysqli_query($link, "SELECT CURRENT_USER()"))
+            {
+                $cuRow = mysqli_fetch_row($cuRes);
+                if ($cuRow && $cuRow[0] && strpos($cuRow[0], '@') !== false)
+                {
+                    [$cuUser, $cuHost] = explode('@', $cuRow[0], 2);
+                    $authAccount = "'" . mysqli_real_escape_string($link, $cuUser) . "'@'" . mysqli_real_escape_string($link, $cuHost) . "'";
+                }
+            }
+
             CLI::write("Database '" . CLI::bold($dbName) . "' does not exist on " . $dbInfo['host'] . ".", CLI::LOG_INFO);
             if (CLI::read(['x' => ['Create database now? (y/n)', true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
             {
@@ -349,12 +362,12 @@ CLISetup::registerUtility(new class extends UtilityScript
                 else
                 {
                     CLI::write("Could not create database: " . mysqli_error($link), CLI::LOG_ERROR);
-                    CLI::write("Run this SQL manually as root/admin:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO '{$escUser}'@'%';", -1, false);
+                    CLI::write("Run this SQL manually as root/admin:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO {$authAccount};", -1, false);
                 }
             }
             else
             {
-                CLI::write("Create it manually with:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO '{$escUser}'@'%';\nThen press [R] to retest.", -1, false);
+                CLI::write("Create it manually with:\n  CREATE DATABASE `{$escDb}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n  GRANT ALL PRIVILEGES ON `{$escDb}`.* TO {$authAccount};\nThen press [R] to retest.", -1, false);
                 mysqli_close($link);
                 return;
             }
@@ -383,12 +396,27 @@ CLISetup::registerUtility(new class extends UtilityScript
         }
 
         // 3. Check if db_structure.sql is imported
-        $tRes = @mysqli_query($link, "SHOW TABLES LIKE 'aowow_dbversion'");
-        if ($tRes && mysqli_num_rows($tRes) === 0)
+        $tRes      = @mysqli_query($link, "SHOW TABLES LIKE 'aowow_dbversion'");
+        $hasVerTbl = $tRes && mysqli_num_rows($tRes) > 0;
+        $imported  = false;
+        if ($hasVerTbl && ($vRes = @mysqli_query($link, "SELECT 1 FROM `aowow_dbversion` LIMIT 1")))
+            $imported = (bool)mysqli_fetch_row($vRes);
+
+        if (!$imported)
         {
             $sqlFile = 'setup/db_structure.sql';
-            CLI::write("Database '" . CLI::bold($dbName) . "' has no AoWoW tables yet.", CLI::LOG_INFO);
-            if (file_exists($sqlFile) && CLI::read(['x' => ['Import ' . $sqlFile . ' now? (y/n)', true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
+            $hasTbls = false;
+            if ($t2Res = @mysqli_query($link, "SHOW TABLES"))
+                $hasTbls = mysqli_num_rows($t2Res) > 0;
+
+            CLI::write("Database '" . CLI::bold($dbName) . "' has no AoWoW DB version yet.", CLI::LOG_INFO);
+            if ($hasVerTbl)
+                CLI::write("Table `aowow_dbversion` exists but is empty; a previous import may be incomplete.", CLI::LOG_WARN);
+            if ($hasTbls)
+                CLI::write("Database already contains tables. " . $sqlFile . " will DROP them; existing data will be lost!", CLI::LOG_WARN);
+
+            $prompt = $hasTbls ? 'Existing tables will be dropped! Import ' . $sqlFile . ' anyway? (y/n)' : 'Import ' . $sqlFile . ' now? (y/n)';
+            if (file_exists($sqlFile) && CLI::read(['x' => [$prompt, true, true, '/y|n/i']], $uiN) && $uiN && strtolower($uiN['x']) === 'y')
             {
                 CLI::write("Importing " . $sqlFile . "...", CLI::LOG_INFO);
                 $sql = file_get_contents($sqlFile);
@@ -406,6 +434,8 @@ CLISetup::registerUtility(new class extends UtilityScript
             }
             else
             {
+                if ($hasTbls)
+                    CLI::write("To preserve existing tables, move them aside or use a fresh database.", CLI::LOG_WARN);
                 CLI::write("Import it manually with:\n  mysql -h {$host} -P {$port} -u {$dbInfo['user']} -p {$dbName} < {$sqlFile}\nThen press [R] to retest.", -1, false);
             }
         }
