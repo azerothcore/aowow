@@ -42,16 +42,24 @@ class DB
         if (!$interface || !$interface->link)
             return;
 
-        $interface->query('SET NAMES ?', 'utf8mb4');
+        // register post-connect handler; DbSimple_Mysqli::_connect() re-applies it automatically on reconnect
+        $postConnect = function (DbSimple_Mysqli $db)
+        {
+            $db->query('SET NAMES ?', 'utf8mb4');
 
-        // disable STRICT_TRANS_TABLES and STRICT_ALL_TABLES off. It prevents usage of implicit default values.
-        // disable ONLY_FULL_GROUP_BY (Allows for non-aggregated selects in a group-by query)
-        $extraModes = ['STRICT_TRANS_TABLES', 'STRICT_ALL_TABLES', 'ONLY_FULL_GROUP_BY', 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE', 'ERROR_FOR_DIVISION_BY_ZERO'];
-        $oldModes   = explode(',', $interface->selectCell('SELECT @@sql_mode'));
-        $newModes = array_diff($oldModes, $extraModes);
+            // disable STRICT_TRANS_TABLES and STRICT_ALL_TABLES off. It prevents usage of implicit default values.
+            // disable ONLY_FULL_GROUP_BY (Allows for non-aggregated selects in a group-by query)
+            $extraModes = ['STRICT_TRANS_TABLES', 'STRICT_ALL_TABLES', 'ONLY_FULL_GROUP_BY', 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE', 'ERROR_FOR_DIVISION_BY_ZERO'];
+            $oldModes   = explode(',', $db->selectCell('SELECT @@sql_mode'));
+            $newModes = array_diff($oldModes, $extraModes);
 
-        if ($oldModes != $newModes)
-            $interface->query("SET SESSION sql_mode = ?", implode(',', $newModes));
+            if ($oldModes != $newModes)
+                $db->query('SET SESSION sql_mode = ?', implode(',', $newModes));
+        };
+        $interface->setPostConnectCallback($postConnect);
+
+        // initial connect already happened before registering; apply once now
+        $postConnect($interface);
     }
 
     public static function test(array $options, ?string &$err = '') : bool

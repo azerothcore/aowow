@@ -356,7 +356,9 @@ CLISetup::registerUtility(new class extends UtilityScript
         $escUser = mysqli_real_escape_string($link, $dbInfo['user']);
 
         // 1. Check if database exists
-        $res = @mysqli_query($link, "SHOW DATABASES LIKE '" . mysqli_real_escape_string($link, $dbName) . "'");
+        // escape LIKE wildcards ('_' and '%') so e.g. 'aowow_test' cannot match 'aowowXtest'
+        $likeDbName = mysqli_real_escape_string($link, str_replace(['_', '%'], ['\_', '\%'], $dbName));
+        $res = @mysqli_query($link, "SHOW DATABASES LIKE '" . $likeDbName . "'");
         $dbMissing = $res && mysqli_num_rows($res) === 0;        // no rows => database does not exist yet
         if ($res)
             mysqli_free_result($res);                            // free pending result before any further command
@@ -409,6 +411,12 @@ CLISetup::registerUtility(new class extends UtilityScript
         $aowowMissing = $tRes && mysqli_num_rows($tRes) === 0;   // no rows => tables not yet imported
         if ($tRes)
             mysqli_free_result($tRes);                           // free pending result before mysqli_multi_query
+        if (!$aowowMissing && ($cRes = @mysqli_query($link, "SELECT 1 FROM aowow_dbversion LIMIT 1")))
+        {
+            // table exists but is empty (e.g. partial import after CREATE TABLE) => schema import incomplete
+            $aowowMissing = mysqli_num_rows($cRes) === 0;
+            mysqli_free_result($cRes);                           // free pending result before mysqli_multi_query
+        }
         if ($aowowMissing)
         {
             $sqlFile = __DIR__.'/../../db_structure.sql';

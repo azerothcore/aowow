@@ -29,6 +29,7 @@ class DbSimple_Mysqli extends DbSimple_Database
 
     private $_lastQuery;
     private $_dsn;
+    private $postConnectCallback;   // re-applied after every (re)connect
 
     /**
      * constructor(string $dsn)
@@ -89,6 +90,20 @@ class DbSimple_Mysqli extends DbSimple_Database
         if (!$this->link) { $this->_setDbError('mysqli_connect()'); return; }
 
         mysqli_set_charset($this->link, isset($dsn['enc']) ? $dsn['enc'] : 'UTF8');
+
+        // re-apply session settings (e.g. utf8mb4, sql_mode) on every (re)connect
+        if (is_callable($this->postConnectCallback))
+            call_user_func($this->postConnectCallback, $this);
+    }
+
+
+    /**
+     * Register an optional callback invoked after every (re)connect.
+     * Receives this DbSimple_Mysqli instance.
+     */
+    public function setPostConnectCallback($callback)
+    {
+        $this->postConnectCallback = $callback;
     }
 
 
@@ -182,7 +197,24 @@ class DbSimple_Mysqli extends DbSimple_Database
         if (!$this->link)
             return $this->_setDbError($queryMain[0]);
         $this->_expandPlaceholders($queryMain, false);
-        $result = mysqli_query($this->link, $queryMain[0]);
+
+        // suppress mysqli error reporting + custom error handler on the initial attempt, so a lost-connection
+        // error (2006/2013) reaches the reconnect check below without triggering DB::errorHandler logging first
+        $mysqliDriver   = class_exists('mysqli_driver') ? new \mysqli_driver() : null;
+        $prevReportMode = $mysqliDriver ? $mysqliDriver->report_mode : MYSQLI_REPORT_ERROR;
+        set_error_handler(static function () { return true; });
+        mysqli_report($prevReportMode & ~MYSQLI_REPORT_ERROR);
+        try {
+            $result = mysqli_query($this->link, $queryMain[0]);
+        }
+        catch (\Throwable $e) {
+            $result = false;
+        }
+        finally {
+            restore_error_handler();
+            mysqli_report($prevReportMode);
+        }
+
         // auto-reconnect once if an idle connection timed out (e.g. during long CLI setup runs)
         if ($result === false && in_array(mysqli_errno($this->link), [2006, 2013], true))
         {

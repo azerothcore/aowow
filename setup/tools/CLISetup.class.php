@@ -174,6 +174,10 @@ class CLISetup
             foreach (Locale::cases() as $loc)
                 if ($loc->validate() && array_intersect(array_map('strtolower', $loc->gameDirs()), $opt))
                     self::$locales[$loc->value] = $loc;
+
+            // explicitly requested locales, none of which are enabled -> no fallback to all configured locales
+            if (!self::$locales)
+                return false;
         }
         if (!self::$locales)
             foreach (Locale::cases() as $loc)

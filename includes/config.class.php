@@ -71,7 +71,7 @@ class Cfg
         $prevErrorHandler = $aowow->setErrorHandler(static fn() => null);
 
         // skip if aowow_config table is not yet available (e.g. before db_structure.sql is imported)
-        if (!$aowow->selectCell('SHOW TABLES LIKE ?', 'aowow_config'))
+        if (!$aowow->selectCell('SELECT 1 FROM ?_config LIMIT 1'))
         {
             $aowow->setErrorHandler($prevErrorHandler);
             return;
@@ -237,6 +237,10 @@ class Cfg
                 // rollback change
                 DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $oldValue, $key);
                 self::$store[$key][self::IDX_VALUE] = $oldValue;
+
+                // re-sync cached locales after restoring the old LOCALES value
+                if (CLI && $key == 'locales')
+                    CLISetup::setLocales();
 
                 return $errMsg;
             }
